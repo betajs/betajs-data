@@ -49,13 +49,6 @@ module.exports = function(grunt) {
 					'src/modelling/validations/conditional_validators.js', 
 				]
 			},
-			dist_qunit: {
-				dest: "demos/assets/qunit-betajs.js",
-				src: [
-				      "demos/assets/beta.js",
-				      "dist/beta-data.js"
-				]
-			}
 		},
 		uglify : {
 			options : {
@@ -69,7 +62,7 @@ module.exports = function(grunt) {
 		},
 		shell: {
 			qunit: {
-		    	command: 'qunit -c BetaJS:./demos/assets/qunit-betajs.js -t ./tests/*/*',
+		    	command: 'qunit -c BetaJS:./src/compile/qunit-require.js -t ./tests/*/*',
 		    	options: {
                 	stdout: true,
                 	stderr: true,
