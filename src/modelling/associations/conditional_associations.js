@@ -9,10 +9,6 @@ BetaJS.Modelling.Associations.Association.extend("BetaJS.Modelling.Associations.
 			model.on("remove", function () {
 				this.__delete_cascade();
 			}, this);
-		if (!options["ignore_change_id"])
-			model.on("change_id", function (new_id, old_id) {
-				this._change_id(new_id, old_id);
-			}, this);
 	},
 	
 	_yield: function (callbacks) {

@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2014-10-02
+betajs-data - v1.0.0 - 2014-10-27
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -704,10 +704,8 @@ BetaJS.Class.extend("BetaJS.Stores.ListenerStore", [
 
 
 
-/** @class */
 BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.BaseStore", [
 	BetaJS.SyncAsync.SyncAsyncMixin,
-	/** @lends BetaJS.Stores.BaseStore.prototype */
 	{
 		
 	constructor: function (options) {
@@ -715,7 +713,8 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
 		options = options || {};
 		this._id_key = options.id_key || "id";
 		this._create_ids = options.create_ids || false;
-		this._last_id = 1;
+		if (this._create_ids)
+			this._id_generator = options.id_generator || this._auto_destroy(new BetaJS.Classes.TimedIdGenerator());
 		this._supportsSync = true;
 		this._supportsAsync = true;
 		this._query_model = "query_model" in options ? options.query_model : null;
@@ -727,42 +726,18 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
         return this._query_model;
     },
     
-	/** Insert data to store. Return inserted data with id.
-	 * 
- 	 * @param data data to be inserted
- 	 * @return data that has been inserted with id.
- 	 * @exception if it fails
-	 */
 	_insert: function (data, callbacks) {
 		throw new BetaJS.Stores.StoreException("unsupported: insert");
 	},
 	
-	/** Remove data from store. Return removed data.
-	 * 
- 	 * @param id data id
- 	 * @exception if it fails
-	 */
 	_remove: function (id, callbacks) {
 		throw new BetaJS.Stores.StoreException("unsupported: remove");
 	},
 	
-	/** Get data from store by id.
-	 * 
-	 * @param id data id
-	 * @return data
-	 * @exception if it fails
-	 */
 	_get: function (id, callbacks) {
 		throw new BetaJS.Stores.StoreException("unsupported: get");
 	},
 	
-	/** Update data by id.
-	 * 
-	 * @param id data id
-	 * @param data updated data
-	 * @return data from store
-	 * @exception if it fails
-	 */
 	_update: function (id, data, callbacks) {
 		throw new BetaJS.Stores.StoreException("unsupported: update");
 	},
@@ -771,9 +746,6 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
 		return {};
 	},
 	
-	/*
-	 * @exception if it fails
-	 */
 	_query: function (query, options, callbacks) {
 		throw new BetaJS.Stores.StoreException("unsupported: query");
 	},
@@ -784,11 +756,8 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
 			event_data = data[1];
 			data = data[0];
 		}			
-		if (this._create_ids && !(this._id_key in data && data[this._id_key])) {
-			while (this.get(this._last_id))
-				this._last_id++;
-			data[this._id_key] = this._last_id;
-		}
+		if (this._create_ids && !(this._id_key in data && data[this._id_key]))
+			data[this._id_key] = this._id_generator.generate();
 		return this.then(this._insert, [data], callbacks, function (row, callbacks) {
 			this._inserted(row, event_data);
 			BetaJS.SyncAsync.callback(callbacks, "success", row);
@@ -2458,15 +2427,8 @@ BetaJS.Modelling.SchemedProperties.extend("BetaJS.Modelling.AssociatedProperties
 		this.assocs = this._initializeAssociations();
 		for (var key in this.assocs)
 			this.__addAssoc(key, this.assocs[key]);
-		this.on("change:" + this.cls.primary_key(), function (new_id, old_id) {
-			this._change_id(new_id, old_id);
-			this.trigger("change_id", new_id, old_id);
-		}, this);
 	},
 	
-	_change_id: function (new_id, old_id) {
-	},
-
 	__addAssoc: function (key, obj) {
 		this[key] = function () {
 			return obj.yield();
@@ -2900,13 +2862,7 @@ BetaJS.Class.extend("BetaJS.Modelling.Associations.Association", [
 			model.on("remove", function () {
 				this.__delete_cascade();
 			}, this);
-		if (!options["ignore_change_id"])
-			model.on("change_id", function (new_id, old_id) {
-				this._change_id(new_id, old_id);
-			}, this);
 	},
-	
-	_change_id: function () {},
 	
 	__delete_cascade: function () {
 		this.yield({
@@ -3001,19 +2957,6 @@ BetaJS.Modelling.Associations.TableAssociation.extend("BetaJS.Modelling.Associat
 	allBy: function (query, callbacks, id) {
 		query[this._foreign_key] = id ? id : this._id();
 		return this._foreign_table.allBy(query, {}, callbacks);
-	},
-
-	_change_id: function (new_id, old_id) {
-		this.allBy({}, {
-			content: this,
-			success: function (objects) {
-				while (objects.hasNext()) {
-					var object = objects.next();
-					object.set(this._foreign_key, new_id);
-					object.save();
-				}
-			}
-		}, old_id);
 	}
 
 });
@@ -3080,18 +3023,6 @@ BetaJS.Modelling.Associations.TableAssociation.extend("BetaJS.Modelling.Associat
 				}, this);
 			this.callback(callbacks, "success", model);
 		});
-	},
-	
-	_change_id: function (new_id, old_id) {
-		this._yield({
-			context: this,
-			success: function (object) {
-				if (object) {
-					object.set(this._foreign_key, new_id);
-					object.save();
-				}
-			}
-		}, old_id);
 	}
 
 });
@@ -3123,10 +3054,6 @@ BetaJS.Modelling.Associations.Association.extend("BetaJS.Modelling.Associations.
 		if (options["delete_cascade"])
 			model.on("remove", function () {
 				this.__delete_cascade();
-			}, this);
-		if (!options["ignore_change_id"])
-			model.on("change_id", function (new_id, old_id) {
-				this._change_id(new_id, old_id);
 			}, this);
 	},
 	
@@ -3161,17 +3088,6 @@ BetaJS.Modelling.Associations.Association.extend("BetaJS.Modelling.Associations.
 				}, this);
 			this.callback(callbacks, "success", model);
 		});
-	},
-	
-	_change_id: function (new_id, old_id) {
-		this._yield({
-			success: function (object) {
-				if (object) {
-					object.set(this._foreign_key, new_id);
-					object.save();
-				}
-			}
-		}, old_id);
 	}
 
 });

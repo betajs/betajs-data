@@ -30,10 +30,8 @@ BetaJS.Class.extend("BetaJS.Stores.ListenerStore", [
 
 
 
-/** @class */
 BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.BaseStore", [
 	BetaJS.SyncAsync.SyncAsyncMixin,
-	/** @lends BetaJS.Stores.BaseStore.prototype */
 	{
 		
 	constructor: function (options) {
@@ -41,7 +39,8 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
 		options = options || {};
 		this._id_key = options.id_key || "id";
 		this._create_ids = options.create_ids || false;
-		this._last_id = 1;
+		if (this._create_ids)
+			this._id_generator = options.id_generator || this._auto_destroy(new BetaJS.Classes.TimedIdGenerator());
 		this._supportsSync = true;
 		this._supportsAsync = true;
 		this._query_model = "query_model" in options ? options.query_model : null;
@@ -53,42 +52,18 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
         return this._query_model;
     },
     
-	/** Insert data to store. Return inserted data with id.
-	 * 
- 	 * @param data data to be inserted
- 	 * @return data that has been inserted with id.
- 	 * @exception if it fails
-	 */
 	_insert: function (data, callbacks) {
 		throw new BetaJS.Stores.StoreException("unsupported: insert");
 	},
 	
-	/** Remove data from store. Return removed data.
-	 * 
- 	 * @param id data id
- 	 * @exception if it fails
-	 */
 	_remove: function (id, callbacks) {
 		throw new BetaJS.Stores.StoreException("unsupported: remove");
 	},
 	
-	/** Get data from store by id.
-	 * 
-	 * @param id data id
-	 * @return data
-	 * @exception if it fails
-	 */
 	_get: function (id, callbacks) {
 		throw new BetaJS.Stores.StoreException("unsupported: get");
 	},
 	
-	/** Update data by id.
-	 * 
-	 * @param id data id
-	 * @param data updated data
-	 * @return data from store
-	 * @exception if it fails
-	 */
 	_update: function (id, data, callbacks) {
 		throw new BetaJS.Stores.StoreException("unsupported: update");
 	},
@@ -97,9 +72,6 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
 		return {};
 	},
 	
-	/*
-	 * @exception if it fails
-	 */
 	_query: function (query, options, callbacks) {
 		throw new BetaJS.Stores.StoreException("unsupported: query");
 	},
@@ -110,11 +82,8 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
 			event_data = data[1];
 			data = data[0];
 		}			
-		if (this._create_ids && !(this._id_key in data && data[this._id_key])) {
-			while (this.get(this._last_id))
-				this._last_id++;
-			data[this._id_key] = this._last_id;
-		}
+		if (this._create_ids && !(this._id_key in data && data[this._id_key]))
+			data[this._id_key] = this._id_generator.generate();
 		return this.then(this._insert, [data], callbacks, function (row, callbacks) {
 			this._inserted(row, event_data);
 			BetaJS.SyncAsync.callback(callbacks, "success", row);

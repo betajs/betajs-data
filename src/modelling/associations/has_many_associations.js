@@ -44,19 +44,6 @@ BetaJS.Modelling.Associations.TableAssociation.extend("BetaJS.Modelling.Associat
 	allBy: function (query, callbacks, id) {
 		query[this._foreign_key] = id ? id : this._id();
 		return this._foreign_table.allBy(query, {}, callbacks);
-	},
-
-	_change_id: function (new_id, old_id) {
-		this.allBy({}, {
-			content: this,
-			success: function (objects) {
-				while (objects.hasNext()) {
-					var object = objects.next();
-					object.set(this._foreign_key, new_id);
-					object.save();
-				}
-			}
-		}, old_id);
 	}
 
 });

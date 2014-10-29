@@ -24,17 +24,6 @@ BetaJS.Modelling.Associations.Association.extend("BetaJS.Modelling.Associations.
 				}, this);
 			this.callback(callbacks, "success", model);
 		});
-	},
-	
-	_change_id: function (new_id, old_id) {
-		this._yield({
-			success: function (object) {
-				if (object) {
-					object.set(this._foreign_key, new_id);
-					object.save();
-				}
-			}
-		}, old_id);
 	}
 
 });

@@ -81,16 +81,6 @@ module.exports = function(grunt) {
             	src: [
             		"src/*/*.js"
             	]
-			},
-			docs: {
-				command: "java -Djsdoc.dir=$JSDOCDIR -Djsdoc.template.dir=$JSDOCTEMPLATEDIR -jar $JSDOCDIR/jsrun.jar $JSDOCDIR/app/run.js ./src -d=./docs -r -p $@",
-		    	options: {
-                	stdout: true,
-                	stderr: true,
-            	},
-            	src: [
-            		"src/*/*.js"
-            	]
 			}
 		},
 	});
@@ -103,7 +93,6 @@ module.exports = function(grunt) {
 	grunt.registerTask('default', ['newer:concat', 'newer:uglify']);
 	grunt.registerTask('qunit', ['shell:qunit']);
 	grunt.registerTask('lint', ['shell:lint']);	
-	grunt.registerTask('docs', ['shell:docs']);
 	grunt.registerTask('check', ['lint', 'qunit']);
 
 };

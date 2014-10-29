@@ -226,15 +226,8 @@ BetaJS.Modelling.SchemedProperties.extend("BetaJS.Modelling.AssociatedProperties
 		this.assocs = this._initializeAssociations();
 		for (var key in this.assocs)
 			this.__addAssoc(key, this.assocs[key]);
-		this.on("change:" + this.cls.primary_key(), function (new_id, old_id) {
-			this._change_id(new_id, old_id);
-			this.trigger("change_id", new_id, old_id);
-		}, this);
 	},
 	
-	_change_id: function (new_id, old_id) {
-	},
-
 	__addAssoc: function (key, obj) {
 		this[key] = function () {
 			return obj.yield();
