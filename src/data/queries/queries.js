@@ -8,7 +8,7 @@ BetaJS.Queries = {
 	 * query :== {pair, ...}
 	 * pair :== string: value | $or : queries | $and: queries
 	 * value :== simple | {condition, ...}  
-	 * condition :== $in: simples | $gt: simple | $lt: simple | $sw: simple | $gtic: simple | $ltic: simple | $swic: simple
+	 * condition :== $in: simples | $gt: simple | $lt: simple | $sw: simple | $gtic: simple | $ltic: simple | $swic: simple | $ct: simple | $ctic: simple
 	 *
 	 */
 	
@@ -101,6 +101,10 @@ BetaJS.Queries = {
 					result = result && object_value.indexOf(tar) === 0;
 				if (op == "$swic")
 					result = result && object_value.toLowerCase().indexOf(tar.toLowerCase()) === 0;
+				if (op == "$ct")
+					result = result && object_value.indexOf(tar) >= 0;
+				if (op == "$ctic")
+					result = result && object_value.toLowerCase().indexOf(tar.toLowerCase()) >= 0;
 			}, this);
 			return result;
 		}
@@ -108,19 +112,25 @@ BetaJS.Queries = {
 	},
 	
 	__evaluate_or: function (arr, object) {
+		var result = false;
 		BetaJS.Objs.iter(arr, function (query) {
-			if (this.__evaluate_query(query, object))
-				return true;
+			if (this.__evaluate_query(query, object)) {
+				result = true;
+				return false;
+			}
 		}, this);
-		return false;
+		return result;
 	},
 	
 	__evaluate_and: function (arr, object) {
+		var result = true;
 		BetaJS.Objs.iter(arr, function (query) {
-			if (!this.__evaluate_query(query, object))
+			if (!this.__evaluate_query(query, object)) {
+				result = false;
 				return false;
+			}
 		}, this);
-		return true;
+		return result;
 	},
 	
 	format: function (query) {
