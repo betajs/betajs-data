@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2014-11-04
+betajs-data - v1.0.0 - 2014-11-05
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -13,7 +13,7 @@ BetaJS.Queries = {
 	 * query :== {pair, ...}
 	 * pair :== string: value | $or : queries | $and: queries
 	 * value :== simple | {condition, ...}  
-	 * condition :== $in: simples | $gt: simple | $lt: simple | $sw: simple | $gtic: simple | $ltic: simple | $swic: simple | $ct: simple | $ctic: simple
+	 * condition :== $in: simples | $gt: simple | $lt: simple | $ge: simple | $le: simple | $sw: simple | $gtic: simple | $ltic: simple | $geic: simple | $leic: simple | $swic: simple | $ct: simple | $ctic: simple
 	 *
 	 */
 	
@@ -95,12 +95,20 @@ BetaJS.Queries = {
 				if (op == "$in")
 					result = result && BetaJS.Objs.contains_value(tar, object_value);
 				if (op == "$gt")
-					result = result && object_value >= tar;
+					result = result && object_value > tar;
 				if (op == "$gtic")
-					result = result && object_value.toLowerCase() >= tar.toLowerCase();
+					result = result && object_value.toLowerCase() > tar.toLowerCase();
 				if (op == "$lt")
-					result = result && object_value <= tar;
+					result = result && object_value < tar;
 				if (op == "$ltic")
+					result = result && object_value.toLowerCase() < tar.toLowerCase();
+				if (op == "$ge")
+					result = result && object_value >= tar;
+				if (op == "$geic")
+					result = result && object_value.toLowerCase() >= tar.toLowerCase();
+				if (op == "$le")
+					result = result && object_value <= tar;
+				if (op == "$leic")
 					result = result && object_value.toLowerCase() <= tar.toLowerCase();
 				if (op == "$sw")
 					result = result && object_value.indexOf(tar) === 0;
