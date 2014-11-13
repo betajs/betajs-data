@@ -8,7 +8,7 @@ BetaJS.Properties.Properties.extend("BetaJS.Modelling.SchemedProperties", {
 		this.__unvalidated = {};
 		for (var key in scheme) {
 			if ("def" in scheme[key]) 
-				this.set(key, scheme[key].def);
+				this.set(key, BetaJS.Types.is_function(scheme[key].def) ? scheme[key].def() : scheme[key].def);
 			else if (scheme[key].auto_create)
 				this.set(key, scheme[key].auto_create(this));
 			else
