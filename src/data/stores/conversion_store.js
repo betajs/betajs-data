@@ -11,6 +11,10 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.ConversionStore", {
 		this.__value_decoding = options["value_decoding"] || {};
 	},
 	
+	store: function () {
+		return this.__store;
+	},
+	
 	encode_object: function (obj) {
 		var result = {};
 		for (var key in obj) {

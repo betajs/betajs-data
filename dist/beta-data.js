@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2014-11-12
+betajs-data - v1.0.0 - 2014-11-28
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -1681,6 +1681,10 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.ConversionStore", {
 		this.__key_decoding = options["key_decoding"] || {};
 		this.__value_encoding = options["value_encoding"] || {};
 		this.__value_decoding = options["value_decoding"] || {};
+	},
+	
+	store: function () {
+		return this.__store;
 	},
 	
 	encode_object: function (obj) {
