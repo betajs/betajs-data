@@ -4,17 +4,17 @@ BetaJS.Modelling.AssociatedProperties.extend("BetaJS.Modelling.Model", [
 	
 	constructor: function (attributes, options) {
 		options = options || {};
+		this.__table = options["table"] || this.cls.defaultTable();
+		this._supportsAsync = this.__table.supportsAsync();
+		this._supportsSync = this.__table.supportsSync();
 		this._inherited(BetaJS.Modelling.Model, "constructor", attributes, options);
 		this.__saved = "saved" in options ? options["saved"] : false;
 		this.__new = "new" in options ? options["new"] : true;
 		this.__removed = false;
 		if (this.__saved)
 			this._properties_changed = {};
-		this.__table = options["table"] || this.cls.defaultTable();
 		this.__table._model_register(this);
 		this.__destroying = false;
-		this._supportsAsync = this.__table.supportsAsync();
-		this._supportsSync = this.__table.supportsSync();
 	},
 	
 	destroy: function () {
@@ -55,7 +55,7 @@ BetaJS.Modelling.AssociatedProperties.extend("BetaJS.Modelling.Model", [
 		if (options && options.silent)
 			return;
 		if (this.__table)
-			this.__table._model_set_value(this, key, value, options);
+			this.__table._model_set_value(this, key, value);
 	},
 	
 	_after_create: function () {

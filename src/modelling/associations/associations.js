@@ -11,6 +11,8 @@ BetaJS.Class.extend("BetaJS.Modelling.Associations.Association", [
 			model.on("remove", function () {
 				this.__delete_cascade();
 			}, this);
+		this._supportsAsync = model.supportsAsync();
+		this._supportsSync = model.supportsSync();
 	},
 	
 	__delete_cascade: function () {

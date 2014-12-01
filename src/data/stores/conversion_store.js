@@ -16,6 +16,8 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.ConversionStore", {
 	},
 	
 	encode_object: function (obj) {
+		if (!obj)
+			return null;
 		var result = {};
 		for (var key in obj) {
 		    var encoded_key = this.encode_key(key);
@@ -26,6 +28,8 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.ConversionStore", {
 	},
 	
 	decode_object: function (obj) {
+		if (!obj)
+			return null;
 		var result = {};
 		for (var key in obj) {
 		    var decoded_key = this.decode_key(key);

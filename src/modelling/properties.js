@@ -230,7 +230,7 @@ BetaJS.Modelling.SchemedProperties.extend("BetaJS.Modelling.AssociatedProperties
 	
 	__addAssoc: function (key, obj) {
 		this[key] = function () {
-			return obj.yield();
+			return obj.yield.apply(obj, arguments);
 		};
 	},
 	

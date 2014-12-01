@@ -213,7 +213,7 @@ BetaJS.Class.extend("BetaJS.Modelling.Table", [
 			return this.__models_by_id[id];
 		} else
 			return this.then(this.__store, this.__store.get, [id], callbacks, function (attrs, callbacks) {
-				this.callback(callbacks, "success", this.__materialize(this.__store.get(id)));
+				this.callback(callbacks, "success", this.__materialize(attrs));
 			});
 	},
 
