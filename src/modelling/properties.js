@@ -1,6 +1,6 @@
 BetaJS.Properties.Properties.extend("BetaJS.Modelling.SchemedProperties", {
 	
-	constructor: function (attributes, options) {
+	constructor: function (attributes) {
 		this._inherited(BetaJS.Modelling.SchemedProperties, "constructor");
 		var scheme = this.cls.scheme();
 		this._properties_changed = {};
@@ -14,7 +14,6 @@ BetaJS.Properties.Properties.extend("BetaJS.Modelling.SchemedProperties", {
 			else
 				this.set(key, null);
 		}
-		options = options || {};
 		this._properties_changed = {};
 		this.__errors = {};
 		//this.__unvalidated = {};
@@ -49,6 +48,10 @@ BetaJS.Properties.Properties.extend("BetaJS.Modelling.SchemedProperties", {
 			var f = BetaJS.Types.is_string(scheme[key].after_set) ? this[scheme[key].after_set] : scheme[key].after_set;
 			f.apply(this, [value]);
 		}
+	},
+	
+	isChanged: function () {
+		return !BetaJS.Types.is_empty(this._properties_changed);
 	},
 
 	properties_changed: function (filter_valid) {
@@ -173,7 +176,7 @@ BetaJS.Properties.Properties.extend("BetaJS.Modelling.SchemedProperties", {
 	
 	validation_exception_conversion: function (e) {
 		var source = e;
-		if (e.instance_of(BetaJS.Stores.RemoteStoreException))
+		if ("instance_of" in e && e.instance_of(BetaJS.Stores.RemoteStoreException))
 			source = e.source();
 		else if (!("status_code" in source && "data" in source))
 			return e;
@@ -221,8 +224,8 @@ BetaJS.Properties.Properties.extend("BetaJS.Modelling.SchemedProperties", {
 
 BetaJS.Modelling.SchemedProperties.extend("BetaJS.Modelling.AssociatedProperties", {
 	
-	constructor: function (attributes, options) {
-		this._inherited(BetaJS.Modelling.AssociatedProperties, "constructor", attributes, options);
+	constructor: function (attributes) {
+		this._inherited(BetaJS.Modelling.AssociatedProperties, "constructor", attributes);
 		this.assocs = this._initializeAssociations();
 		for (var key in this.assocs)
 			this.__addAssoc(key, this.assocs[key]);

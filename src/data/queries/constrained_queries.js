@@ -30,14 +30,13 @@ BetaJS.Queries.Constrained = {
 		};
 	},
 	
-	emulate: function (constrained_query, query_capabilities, query_function, query_context, callbacks) {
+	emulate: function (constrained_query, query_capabilities, query_function, query_context) {
 		var query = constrained_query.query || {};
 		var options = constrained_query.options || {};
 		var execute_query = {};
 		var execute_options = {};
 		if ("sort" in options && "sort" in query_capabilities)
 			execute_options.sort = options.sort;
-		// Test
 		execute_query = query;
 		if ("query" in query_capabilities || BetaJS.Types.is_empty(query)) {
 			execute_query = query;
@@ -51,10 +50,7 @@ BetaJS.Queries.Constrained = {
 				}
 			}
 		}  
-		var params = [execute_query, execute_options];
-		if (callbacks)
-			params.push(callbacks);
-		var success_call = function (raw) {
+		return query_function.call(query_context || this, execute_query, execute_options).mapSuccess(function (raw) {
 			var iter = raw;
 			if (raw === null)
 				iter = new BetaJS.Iterators.ArrayIterator([]);
@@ -70,31 +66,8 @@ BetaJS.Queries.Constrained = {
 				iter = new BetaJS.Iterators.SkipIterator(iter, options["skip"]);
 			if ("limit" in options && !("limit" in execute_options))
 				iter = new BetaJS.Iterators.LimitIterator(iter, options["limit"]);
-			if (callbacks && callbacks.success)
-				BetaJS.SyncAsync.callback(callbacks, "success", iter);
 			return iter;
-		};
-		var exception_call = function (e) {
-			if (callbacks && callbacks.exception)
-				BetaJS.SyncAsync.callback(callbacks, "exception", e);
-			else
-				throw e;
-		};
-		if (callbacks) 
-			query_function.apply(query_context || this, [execute_query, execute_options, {
-				success: success_call,
-				exception: exception_call,
-				sync: callbacks.sync,
-				context: callbacks.context || this
-			}]);
-		else
-			try {
-				var raw = query_function.apply(query_context || this, [execute_query, execute_options]);
-				return success_call(raw);
-			} catch (e) {
-				exception_call(e);
-			}
-		return true;	
+		});
 	},
 	
 	subsumizes: function (query, query2) {

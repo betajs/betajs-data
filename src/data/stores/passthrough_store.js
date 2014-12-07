@@ -6,8 +6,6 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.PassthroughStore", {
 		options.id_key = store.id_key();
 		this._projection = options.projection || {};
 		this._inherited(BetaJS.Stores.PassthroughStore, "constructor", options);
-		this._supportsAsync = store.supportsAsync();
-		this._supportsSync = store.supportsSync();
         if (options.destroy_store)
             this._auto_destroy(store);
 	},
@@ -16,24 +14,24 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.PassthroughStore", {
 		return this.__store._query_capabilities();
 	},
 
-	_insert: function (data, callbacks) {
-		return this.__store.insert(BetaJS.Objs.extend(data, this._projection), callbacks);
+	_insert: function (data) {
+		return this.__store.insert(BetaJS.Objs.extend(data, this._projection));
 	},
 	
-	_remove: function (id, callbacks) {
-		return this.__store.remove(id, callbacks);
+	_remove: function (id) {
+		return this.__store.remove(id);
 	},
 	
-	_get: function (id, callbacks) {
-		return this.__store.get(id, callbacks);
+	_get: function (id) {
+		return this.__store.get(id);
 	},
 	
-	_update: function (id, data, callbacks) {
-		return this.__store.update(id, data, callbacks);
+	_update: function (id, data) {
+		return this.__store.update(id, data);
 	},
 	
-	_query: function (query, options, callbacks) {
-		return this.__store.query(BetaJS.Objs.extend(query, this._projection), options, callbacks);
+	_query: function (query, options) {
+		return this.__store.query(BetaJS.Objs.extend(query, this._projection), options);
 	},
 	
 	_ensure_index: function (key) {

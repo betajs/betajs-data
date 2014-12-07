@@ -1,13 +1,11 @@
 test("test tables findById", function() {
 	var store = new BetaJS.Stores.MemoryStore();
 	var Model = BetaJS.Modelling.Model.extend("Model", {});
-	var table = new BetaJS.Modelling.Table(store, Model, {});
-	var model = new Model({}, {
-		table : table
-	});
+	var table = new BetaJS.Modelling.Table(store, Model, {});	
+	var model = table.newModel();
 	model.save();
-	QUnit.equal(table.findById(model.id()), model);
-	QUnit.equal(table.findById(model.id() + 1), null);
+	ok(table.findById(model.id()).value() != null);
+	QUnit.equal(table.findById(model.id() + 1).value(), null);
 });
 
 
@@ -15,32 +13,28 @@ test("test tables all", function() {
 	var store = new BetaJS.Stores.MemoryStore();
 	var Model = BetaJS.Modelling.Model.extend("Model", {});
 	var table = new BetaJS.Modelling.Table(store, Model, {});
-	var model = new Model({}, {
-		table : table
+	var created = 0;
+	table.on("create", function (obj) {
+		created++;
 	});
+	var model = table.newModel();
 	model.save();
-	var models = table.all().asArray();
+	var models = table.all().value().asArray();
 	QUnit.equal(models.length, 1);
-	QUnit.equal(models[0], model);
+	QUnit.equal(models[0].id(), model.id());
+	QUnit.equal(created, 1);
 });
 
 test("test tables all async", function() {
 	var store = new BetaJS.Stores.MemoryStore();
 	var Model = BetaJS.Modelling.Model.extend("Model", {});
 	var table = new BetaJS.Modelling.Table(store, Model, {});
-	var model = new Model({}, {
-		table : table
-	});
+	var model = table.newModel();
 	model.save();
-	var models = table.all({}, {
-		success: function (result) {
-			var models = result.asArray();
-			QUnit.equal(models.length, 1);
-			QUnit.equal(models[0], model);
-		},
-		exception: function () {
-			ok(false);
-		}
+	table.all().success(function (result) {
+		var models = result.asArray();
+		QUnit.equal(models.length, 1);
+		QUnit.equal(models[0].id(), model.id());
 	});
 });
 
@@ -48,10 +42,8 @@ test("test tables findBy", function() {
 	var store = new BetaJS.Stores.MemoryStore();
 	var Model = BetaJS.Modelling.Model.extend("Model", {});
 	var table = new BetaJS.Modelling.Table(store, Model, {});
-	var model = new Model({}, {
-		table : table
-	});
+	var model = table.newModel();
 	model.save();
-	var model2 = table.findBy({});
-	QUnit.equal(model2, model);
+	var model2 = table.findBy({}).value();
+	QUnit.equal(model2.id(), model.id());
 });

@@ -30,9 +30,7 @@ BetaJS.Class.extend("BetaJS.Stores.ListenerStore", [
 
 
 
-BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.BaseStore", [
-	BetaJS.SyncAsync.SyncAsyncMixin,
-	{
+BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.BaseStore", {
 		
 	constructor: function (options) {
 		this._inherited(BetaJS.Stores.BaseStore, "constructor", options);
@@ -41,8 +39,6 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
 		this._create_ids = options.create_ids || false;
 		if (this._create_ids)
 			this._id_generator = options.id_generator || this._auto_destroy(new BetaJS.Classes.TimedIdGenerator());
-		this._supportsSync = true;
-		this._supportsAsync = true;
 		this._query_model = "query_model" in options ? options.query_model : null;
 	},
 	
@@ -52,31 +48,31 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
         return this._query_model;
     },
     
-	_insert: function (data, callbacks) {
-		throw new BetaJS.Stores.StoreException("unsupported: insert");
+	_insert: function (data) {
+		return BetaJS.Promise.create(null, new BetaJS.Stores.StoreException("unsupported: insert"));
 	},
 	
-	_remove: function (id, callbacks) {
-		throw new BetaJS.Stores.StoreException("unsupported: remove");
+	_remove: function (id) {
+		return BetaJS.Promise.create(null, new BetaJS.Stores.StoreException("unsupported: remove"));
 	},
 	
-	_get: function (id, callbacks) {
-		throw new BetaJS.Stores.StoreException("unsupported: get");
+	_get: function (id) {
+		return BetaJS.Promise.create(null, new BetaJS.Stores.StoreException("unsupported: get"));
 	},
 	
-	_update: function (id, data, callbacks) {
-		throw new BetaJS.Stores.StoreException("unsupported: update");
+	_update: function (id, data) {
+		return BetaJS.Promise.create(null, new BetaJS.Stores.StoreException("unsupported: update"));
 	},
 	
 	_query_capabilities: function () {
 		return {};
 	},
 	
-	_query: function (query, options, callbacks) {
-		throw new BetaJS.Stores.StoreException("unsupported: query");
+	_query: function (query, options) {
+		return BetaJS.Promise.create(null, new BetaJS.Stores.StoreException("unsupported: query"));
 	},
 	
-	insert: function (data, callbacks) {
+	insert: function (data) {
 		var event_data = null;
 		if (BetaJS.Types.is_array(data)) {
 			event_data = data[1];
@@ -84,67 +80,52 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
 		}			
 		if (this._create_ids && !(this._id_key in data && data[this._id_key]))
 			data[this._id_key] = this._id_generator.generate();
-		return this.then(this._insert, [data], callbacks, function (row, callbacks) {
+		return this._insert(data).success(function (row) {
 			this._inserted(row, event_data);
-			BetaJS.SyncAsync.callback(callbacks, "success", row);
-		});
+		}, this);
 	},
 	
-	insert_all: function (data, callbacks, query) {
+	insert_all: function (data, query) {
 		var event_data = null;
-		if (arguments.length > 3)
-			event_data = arguments[3];
+		if (arguments.length > 2)
+			event_data = arguments[2];
 		if (query && this._query_model) {
 			this.trigger("query_register", query);
 			this._query_model.register(query);
 		}
-		if (callbacks) {
-			var self = this;
-			var f = function (i) {
-				if (i >= data.length) {
-					BetaJS.SyncAsync.callback(callbacks, "success");
-					return;
-				}
-				this.insert(event_data ? [data[i], event_data] : data[i], BetaJS.SyncAsync.mapSuccess(callbacks, function () {
-					f.call(self, i + 1);
-				}));
-			};
-			f.call(this, 0);
-		} else {
-			for (var i = 0; i < data.length; ++i)
-				this.insert(event_data ? [data[i], event_data] : data[i]);
-		}
+		var promise = BetaJS.Promise.and();
+		for (var i = 0; i < data.length; ++i)
+			and = promise.and(this.insert(event_data ? [data[i], event_data] : data[i]));
+		return and.end();
 	},
 
-	remove: function (id, callbacks) {
+	remove: function (id) {
 		var event_data = null;
 		if (BetaJS.Types.is_array(id)) {
 			event_data = id[1];
 			id = id[0];
 		}			
-		return this.then(this._remove, [id], callbacks, function (result, callbacks) {
+		return this._remove(id).success(function () {
 			this._removed(id, event_data);
-			BetaJS.SyncAsync.callback(callbacks, "success", id);
-		});
+		}, this);
 	},
 	
-	get: function (id, callbacks) {
-		return this.delegate(this._get, [id], callbacks);
+	get: function (id) {
+		return this._get(id);
 	},
 	
-	update: function (id, data, callbacks) {
+	update: function (id, data) {
 		var event_data = null;
 		if (BetaJS.Types.is_array(data)) {
 			event_data = data[1];
 			data = data[0];
 		}			
-		return this.then(this._update, [id, data], callbacks, function (row, callbacks) {
+		return this._update(id, data).success(function (row) {
 			this._updated(row, data, event_data);
-			BetaJS.SyncAsync.callback(callbacks, "success", row, data);
-		});
+		}, this);
 	},
 	
-	query: function (query, options, callbacks) {
+	query: function (query, options) {
 		if (options) {
 			if (options.limit)
 				options.limit = parseInt(options.limit, 10);
@@ -155,24 +136,15 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
 		    var subsumizer = this._query_model.subsumizer_of({query: query, options: options});
     		if (!subsumizer) {
     			this.trigger("query_miss", {query: query, options: options});
-    			var e = new BetaJS.Stores.StoreException("Cannot execute query");
-    			if (callbacks)
-    			    BetaJS.SyncAsync.callback(callbacks, "exception", e);
-    			else
-    				throw e;
-    			return null;
-    		} else
-    		    this.trigger("query_hit", {query: query, options: options}, subsumizer);
+    			return BetaJS.Promise.error(new BetaJS.Stores.StoreException("Cannot execute query"));
+    		}
+    		this.trigger("query_hit", {query: query, options: options}, subsumizer);
 		}
-		var q = function (callbacks) {
-			return BetaJS.Queries.Constrained.emulate(
+		return BetaJS.Queries.Constrained.emulate(
 				BetaJS.Queries.Constrained.make(query, options || {}),
 				this._query_capabilities(),
 				this._query,
-				this,
-				callbacks);			
-		};
-		return this.either(callbacks, q, q);
+				this);
 	},
 	
 	_query_applies_to_id: function (query, id) {
@@ -180,71 +152,35 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
 		return row && BetaJS.Queries.overloaded_evaluate(query, row);
 	},
 	
-	clear: function (callbacks) {
-		return this.then(this.query, [{}, {}], callbacks, function (iter, callbacks) {
-			var promises = [];
-			while (iter.hasNext())
-				promises.push(this.remove, [iter.next().id]);
-			return this.join(promises, callbacks);
-		});
-	},
-	
 	_ensure_index: function (key) {
 	},
 	
 	ensure_index: function (key) {
-		this._ensure_index(key);
+		return this._ensure_index(key);
 	},
 	
-	perform: function (commit, callbacks) {
+	clear: function () {
+		return this.query().mapSuccess(function (iter) {
+			var promise = BetaJS.Promise.and();
+			while (iter.hasNext()) {
+				var obj = iter.next();
+				promise = promise.and(this.remove(obj[this._id_key]));
+			}
+			return promise;
+		}, this);
+	},
+	
+	perform: function (commit) {
 		var action = BetaJS.Objs.keyByIndex(commit);
 		var data = BetaJS.Objs.valueByIndex(commit);
 		if (action == "insert")
-			this.insert(data, callbacks);
+			return this.insert(data);
 		else if (action == "remove")
-			this.remove(data, callbacks);
+			return this.remove(data);
 		else if (action == "update")
-			this.update(BetaJS.Objs.keyByIndex(data), BetaJS.Objs.valueByIndex(data), callbacks);
+			return this.update(BetaJS.Objs.keyByIndex(data), BetaJS.Objs.valueByIndex(data));
 		else
-			throw new BetaJS.Stores.StoreException("unsupported: perform " + action);
-	},
-	
-	bulk: function (commits, optimistic, callbacks) {
-		var result = [];
-		if (callbacks) {
-			var helper = function () {
-				if (result.length < commits.length) {
-					this.perform(commits[result.length], {
-						context: this,
-						success: function () {
-							result.push(true);
-							helper.apply(this);
-						},
-						exception: function (e) {
-							result.push(false);
-							if (optimistic)
-								helper.apply(this);
-							else
-								callbacks.exception.apply(callbacks.context || this, e);
-						}
-					});
-				} else
-					callbacks.success.call(callbacks.context || this, result);
-			};
-			helper.apply(this);
-		} else {
-			for (var i = 0; i < commits.length; ++i) {
-				try {
-					this.perform(commits[i]);
-					result.push(true);
-				} catch (e) {
-					result.push(false);
-					if (!optimistic)
-						throw e;
-				}
-			}
-		}
-		return result;
-	}	
+			return BetaJS.Promise.error(new BetaJS.Stores.StoreException("unsupported: perform " + action));
+	}
 
-}]);
+});

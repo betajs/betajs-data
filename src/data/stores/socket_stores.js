@@ -21,10 +21,6 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.SocketStore", {
 	
 	_update: function (id, data) {
 		this.__send("update", BetaJS.Objs.objectBy(id, data));
-	},
-	
-	bulk: function (commits, optimistic, callbacks) {
-		this.__send("bulk", commits);
 	}	
 	
 });

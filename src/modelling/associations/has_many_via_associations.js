@@ -6,39 +6,43 @@ BetaJS.Modelling.Associations.HasManyAssociation.extend("BetaJS.Modelling.Associ
 		this._intermediate_key = intermediate_key;
 	},
 
-	findBy: function (query, callbacks) {
-		var intermediate_query = {};
-		intermediate_query[this._intermediate_key] = this._id();
-		return this.then(this._intermediate_table, this._intermediate_table.findBy, [intermediate_query], function (intermediate) {
-			if (!intermediate)
-				return this.callback(callbacks, "success", null);
-			else {
-				query[this._foreign_table.primary_key()] = intermediate.get(this._foreign_key);
-				return this._foreign_table.findBy(query, callbacks);
-			}
-		});
+	findBy: function (query) {
+		var returnPromise = BetaJS.Promise.create();
+		var intermediateQuery = BetaJS.Objs.objectBy(this._intermediate_key, this._id());
+		this._intermediate_table.findBy(intermediateQuery).forwardError(return_promise).success(function (intermediate) {
+			if (intermediate) {
+				var full_query = BetaJS.Objs.extend(
+					BetaJS.Objs.clone(query, 1),
+					BetaJS.Objs.objectBy(this._foreign_table.primary_key(), intermediate.get(this._foreign_key)));
+				this._foreign_table.findBy(full_query).forwardCallback(returnPromise);
+			} else
+				returnPromise.asyncSuccess(null);
+		}, this);
+		return returnPromise;
 	},
 
-	allBy: function (query, callbacks, id) {
-		var intermediate_query = {};
-		intermediate_query[this._intermediate_key] = id ? id : this._id();
-		return this.then(this._intermediate_table, this._intermediate_table.allBy, [intermediate_query], callbacks, function (intermediates, callbacks) {
-			var promises = [];
+	allBy: function (query, id) {
+		var returnPromise = BetaJS.Promise.create();
+		var intermediateQuery = BetaJS.Objs.objectBy(this._intermediate_key, id ? id : this._id());
+		this._intermediate_table.allBy(intermediateQuery).forwardError(return_promise).success(function (intermediates) {
+			var promises = BetaJS.Promise.and();
 			while (intermediates.hasNext()) {
 				var intermediate = intermediates.next();
-				var query_clone = BetaJS.Objs.clone(query, 1);
-				query_clone[this._foreign_table.primary_key()] = intermediate.get(this._foreign_key);
-				promises.push(this._foreign_table.promise(this._foreign_table.allBy, query_clone));
+				var full_query = BetaJS.Objs.extend(
+					BetaJS.Objs.clone(query, 1),
+					BetaJS.Objs.objectBy(this._foreign_table.primary_key(), intermediate.get(this._foreign_key)));
+				promises = promises.and(this._foreign_table.allBy(full_query));
 			}
-			this.join(promises, BetaJS.SyncAsync.mapSuccess(callbacks, function (foreignss) {
+			promises.forwardError(returnPromise).success(function (foreignss) {
 				var results = [];
 				BetaJS.Objs.iter(foreignss, function (foreigns) {
 					while (foreigns.hasNext())
 						results.push(foreigns.next());
 				});
-				this.callback(callbacks, "success", results);
-			}));
-		});
+				returnPromise.asyncSuccess(results);
+			}, this);
+		}, this);
+		return returnPromise;
 	}
 
 });

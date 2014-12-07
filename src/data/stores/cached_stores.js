@@ -50,12 +50,8 @@ BetaJS.Stores.DualStore.extend("BetaJS.Stores.CachedStore", {
 	
 	invalidate_query: function (query, reload) {
 	    this.cache().query_model().invalidate(query);
-	    if (reload) {
-	        if (this.supportsAsync())
-	           this.query(query.query, query.options, {});
-	        else
-	           this.query(query.query, query.options);
-	    }
+	    if (reload) 
+           this.query(query.query, query.options);
         this.trigger("invalidate_query", query, reload);
 	},
 	

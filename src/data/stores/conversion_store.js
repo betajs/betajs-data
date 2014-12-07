@@ -9,6 +9,7 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.ConversionStore", {
 		this.__key_decoding = options["key_decoding"] || {};
 		this.__value_encoding = options["value_encoding"] || {};
 		this.__value_decoding = options["value_decoding"] || {};
+		this.__projection = options["projection"] || {};
 	},
 	
 	store: function () {
@@ -24,7 +25,7 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.ConversionStore", {
 		    if (encoded_key)
 			    result[encoded_key] = this.encode_value(key, obj[key]);
 		}
-		return result;
+		return BetaJS.Objs.extend(result, this.__projection);
 	},
 	
 	decode_object: function (obj) {
@@ -36,6 +37,8 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.ConversionStore", {
 		    if (decoded_key)
 			    result[decoded_key] = this.decode_value(key, obj[key]);
 	    }
+		for (key in this.__projection)
+			delete result[key];
 		return result;
 	},
 	
@@ -63,35 +66,26 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.ConversionStore", {
 		return this.__store.ensure_index(key);
 	},
 	
-	_insert: function (data, callbacks) {
-		return this.then(this.__store, this.__store.insert, [this.encode_object(data)], callbacks, function (result, callbacks) {
-			callbacks.success(this.decode_object(result));
-		});
+	_insert: function (data) {
+		return this.__store.insert(this.encode_object(data)).mapSuccess(this.decode_object, this);
 	},
 	
-	_remove: function (id, callbacks) {
-		return this.delegate(this.__store, this.__store.remove, [this.encode_value(this._id_key, id)], callbacks);
+	_remove: function (id) {
+		return this.__store.remove(this.encode_value(this._id_key, id));
 	},
 
-	_get: function (id, callbacks) {
-		return this.then(this.__store, this.__store.get, [this.encode_value(this._id_key, id)], callbacks, function (result, callbacks) {
-			callbacks.success(this.decode_object(result));
-		});
+	_get: function (id) {
+		return this.__store.get(this.encode_value(this._id_key, id)).mapSuccess(this.decode_object, this);
 	},
 	
-	_update: function (id, data, callbacks) {
-		return this.then(this.__store, this.__store.update, [this.encode_value(this._id_key, id), this.encode_object(data)], callbacks, function (result, callbacks) {
-			callbacks.success(this.decode_object(result));
-		});
+	_update: function (id, data) {
+		return this.__store.update(this.encode_value(this._id_key, id), this.encode_object(data)).mapSuccess(this.decode_object, this);
 	},
 	
-	_query: function (query, options, callbacks) {
-		return this.then(this.__store, this.__store.query, [this.encode_object(query), options], callbacks, function (result, callbacks) {
-			var mapped = new BetaJS.Iterators.MappedIterator(result, function (row) {
-				return this.decode_object(row);
-			}, this);
-			callbacks.success(mapped);
-		});
+	_query: function (query, options) {
+		return this.__store.query(this.encode_object(query), options).mapSuccess(function (result) {
+			return new BetaJS.Iterators.MappedIterator(result, this.decode_object, this);
+		}, this);
 	}		
 
 });

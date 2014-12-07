@@ -78,36 +78,27 @@ BetaJS.Queries.DefaultQueryModel.extend("BetaJS.Queries.StoreQueryModel", {
 		this._inherited(BetaJS.Queries.StoreQueryModel, "constructor");
 	},
 	
-	initialize: function (callbacks) {
-		this.__store.query({}, {}, {
-		    context: this,
-			success: function (result) {
-				while (result.hasNext()) {
-					var query = result.next();
-					delete query["id"];
-                    this._insert(query);
-				}
-				BetaJS.SyncAsync.callback(callbacks, "success");
-			}, exception: function (err) {
-			    BetaJS.SyncAsync.callback(callbacks, "exception", err);
+	initialize: function () {
+		return this.__store.mapSuccess(function (result) {
+			while (result.hasNext()) {
+				var query = result.next();
+				delete query["id"];
+                this._insert(query);
 			}
-		});
+		}, this);
 	},
 	
 	_insert: function (query) {
 		this._inherited(BetaJS.Queries.StoreQueryModel, "_insert", query);
-		this.__store.insert(query, {});
+		this.__store.insert(query);
 	},
 	
 	_remove: function (query) {
 		delete this.__queries[BetaJS.Queries.Constrained.serialize(query)];
-		this.__store.query({query: query}, {}, {
-		    context: this,
-			success: function (result) {
-				while (result.hasNext())
-					this.__store.remove(result.next().id, {});
-			}
-		});
+		this.__store.query({query: query}).success(function (result) {
+			while (result.hasNext())
+				this.__store.remove(result.next().id);
+		}, this);
 	}
 
 });

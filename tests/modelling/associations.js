@@ -25,17 +25,18 @@ test("test belongs to all", function() {
 		}
 	});
 	var table1 = new BetaJS.Modelling.Table(new BetaJS.Stores.MemoryStore(), Model1, {});
-	var model1 = new Model1({}, {
-		table : table1
-	});
+	var model1 = table1.newModel();
 	model1.save();
-	QUnit.equal(model1.model2(), null);
-	var model2 = new Model2({}, {
-		table : table2
+	model1.model2().success(function (m) {
+		QUnit.equal(m, null);
 	});
+	var model2 = table2.newModel();
 	model2.save();
 	model1.update({
 		model2id: model2.id()
 	});
-	QUnit.equal(model1.model2(), model2);
+	model1.assocs.model2.invalidate();
+	model1.model2().success(function (m) {
+		QUnit.equal(m.id(), model2.id());
+	});	
 });

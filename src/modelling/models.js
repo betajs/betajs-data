@@ -1,101 +1,126 @@
-BetaJS.Modelling.AssociatedProperties.extend("BetaJS.Modelling.Model", [
-	BetaJS.SyncAsync.SyncAsyncMixin,
-	{
+BetaJS.Modelling.AssociatedProperties.extend("BetaJS.Modelling.Model", {
 	
-	constructor: function (attributes, options) {
-		options = options || {};
-		this.__table = options["table"] || this.cls.defaultTable();
-		this._supportsAsync = this.__table.supportsAsync();
-		this._supportsSync = this.__table.supportsSync();
-		this._inherited(BetaJS.Modelling.Model, "constructor", attributes, options);
-		this.__saved = "saved" in options ? options["saved"] : false;
-		this.__new = "new" in options ? options["new"] : true;
-		this.__removed = false;
-		if (this.__saved)
+	constructor: function (attributes, table, options) {
+		this.__table = table;
+		this.__options = BetaJS.Objs.extend({
+			newModel: true,
+			removed: false
+		}, options);
+		this.__silent = 1;
+		this._inherited(BetaJS.Modelling.Model, "constructor", attributes);
+		this.__silent = 0;
+		if (!this.isNew()) {
 			this._properties_changed = {};
-		this.__table._model_register(this);
-		this.__destroying = false;
+			this._registerEvents();
+		}
+		if (this.option("auto_create") && this.isNew())
+			this.save();
 	},
 	
 	destroy: function () {
-		if (this.__destroying || !this.__table)
-			return;
-		this.__destroying = true;
-		this.__table._model_unregister(this);
+		this.__table.off(null, null, this);
 		this.trigger("destroy");
 		this._inherited(BetaJS.Modelling.Model, "destroy");
 	},
-
+	
+	option: function (key) {
+		var opts = key in this.__options ? this.__options : this.table().options();
+		return opts[key];
+	},
+	
+	table: function () {
+		return this.__table;
+	},
+	
 	isSaved: function () {
-		return this.__saved;
+		return this.isRemoved() || (!this.isNew() && !this.isChanged());
 	},
 	
 	isNew: function () {
-		return this.__new;
+		return this.option("newModel");
 	},
 	
 	isRemoved: function () {
-		return this.__removed;
+		return this.option("removed");
 	},
 
-	update: function (data, options, callbacks) {
-		this.setAll(data, {silent: true});
-		this.save(callbacks);
+	_registerEvents: function () {
+		this.__table.on("update:" + this.id(), function (data) {
+			if (this.isRemoved())
+				return;
+			this.__silent++;
+			for (var key in data) {
+				if (!this._properties_changed[key])
+					this.set(key, data);
+			}
+			this.__silent--;
+		}, this);
+		this.__table.on("remove:" + this.id(), function () {
+			if (this.isRemoved())
+				return;
+			this.trigger("remove");
+			this.__options.removed = true;
+		}, this);
+	},
+	
+	update: function (data) {
+		this.__silent++;
+		this.setAll(data);
+		this.__silent--;
+		if (this.option("auto_update") && !this.isNew())
+			this.save();
 	},
 
 	_afterSet: function (key, value, old_value, options) {
 		this._inherited(BetaJS.Modelling.Model, "_afterSet", key, value, old_value, options);
 		var scheme = this.cls.scheme();
-		if (!(key in scheme))
+		if (!(key in scheme) || this.__silent > 0)
 			return;
-		if (options && options.no_change)
-			this._unsetChanged(key);
-		else
-			this.__saved = false;
-		if (options && options.silent)
-			return;
-		if (this.__table)
-			this.__table._model_set_value(this, key, value);
+		if (this.option("auto_update") && !this.isNew())
+			this.save();
 	},
 	
-	_after_create: function () {
-	},
-	
-	_before_create: function () {
-	},
-	
-	save: function (callbacks) {
-		if (this.__new)
-			this._before_create();
-		return this.then(this.__table, this.__table._model_save, [this], callbacks, function (result, callbacks) {
+	save: function () {
+		if (this.isRemoved())
+			return BetaJS.Promise.create({});
+		if (!this.validate() && !this.options("save_invalid")) 
+			return BetaJS.Promise.create(null, new BetaJS.Modelling.ModelInvalidException(this));
+		var attrs;
+		if (this.isNew()) {
+			attrs = this.cls.filterPersistent(this.get_all_properties());
+			if (this.__options.type_column)
+				attrs[this.__options.type_column] = model.cls.classname;
+		} else {
+			attrs = this.cls.filterPersistent(this.properties_changed());
+			if (BetaJS.Types.is_empty(attrs))
+				return BetaJS.Promise.create(attrs);
+		}
+		var wasNew = this.isNew();
+		var promise = this.isNew() ? this.__table.store().insert(attrs) : this.__table.store().update(this.id(), attrs);
+		return promise.mapCallback(function (err, result) {
+			if (err)
+				return BetaJS.Exceptions.ensure(this.validation_exception_conversion(err));
+			this.__silent++;
+			this.setAll(result);
+			this.__silent--;
+			this._properties_changed = {};
 			this.trigger("save");
-			this.__saved = true;
-			var was_new = this.__new;
-			this.__new = false;
-			if (was_new)
-				this._after_create();
-			this.callback(callbacks, "success", result);
-		});
+			if (wasNew) {
+				this.__options.newModel = false;
+				this._registerEvents();
+			}
+			return result;
+		}, this);
 	},
 	
-	remove: function (callbacks) {
-		return this.then(this.__table, this.__table._model_remove, [this], callbacks, function (result, callbacks) {
+	remove: function () {
+		if (this.isNew() || this.isRemoved())
+			return BetaJS.Promise.create(true);
+		return this.__table.store().remove(this.id()).mapSuccess(function (result) {
 			this.trigger("remove");		
-			this.__removed = true;
-			this.callback(callbacks, "success", result);
-		});
-	},
-	
-	table: function () {
-		return this.__table;
-	}
-	
-}], {
-	
-	defaultTable: function () {
-		if (!this.table)
-			this.table = new BetaJS.Modelling.Table(new BetaJS.Stores.MemoryStore(), this);
-		return this.table;
-	}
-	
+			this.__options.removed = true;
+			return result;
+		}, this);
+	}	
+		
 });

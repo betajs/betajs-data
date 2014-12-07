@@ -44,83 +44,58 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.RemoteStore", {
 		};		
 	},
 	
-	__invoke: function (options, callbacks, parse_json) {
-		if (callbacks) {
-			return this.__ajax.asyncCall(options, {
-				success: function (result) {
-					if (parse_json && BetaJS.Types.is_string(result)) {
-						try {
-							result = JSON.parse(result);
-						} catch (e) {}
-					}
-					BetaJS.SyncAsync.callback(callbacks, "success", result);
-				}, exception: function (e) {
-					BetaJS.SyncAsync.callback(callbacks, "exception", new BetaJS.Stores.RemoteStoreException(e));					
-				}
-			});
-		} else {
-			try {
-				var result = this.__ajax.syncCall(options);
-				if (parse_json && BetaJS.Types.is_string(result)) {
-					try {
-						return JSON.parse(result);
-					} catch (e) {}
-				}
-				return result;
-			} catch (e) {
-				throw new BetaJS.Stores.RemoteStoreException(e); 			
+	__invoke: function (options, parse_json) {
+		var promise = BetaJS.Promise.create();
+		this.__ajax.asyncCall(options, promise.asCallback());
+		return promise.mapCallback(function (e, result) {
+			if (e)
+				return new BetaJS.Stores.RemoteStoreException(e);
+			if (parse_json && BetaJS.Types.is_string(result)) {
+				try {
+					result = JSON.parse(result);
+				} catch (e) {}
 			}
-			return false;
-		}
+			return result;
+		});
 	},
 	
-	_insert : function(data, callbacks) {
+	_insert : function(data) {
 		return this.__invoke({
 			method: "POST",
 			uri: this.prepare_uri("insert", data),
 			data: data
-		}, callbacks, true);
+		}, true);
 	},
 
-	_get : function(id, callbacks) {
+	_get : function(id) {
 		var data = {};
 		data[this._id_key] = id;
 		return this.__invoke({
 			uri: this.prepare_uri("get", data)
-		}, callbacks);
+		});
 	},
 
-	_update : function(id, data, callbacks) {
+	_update : function(id, data) {
 		var copy = BetaJS.Objs.clone(data, 1);
 		copy[this._id_key] = id;
 		return this.__invoke({
 			method: this.__options.update_method,
 			uri: this.prepare_uri("update", copy),
 			data: data
-		}, callbacks);
+		});
 	},
 	
-	_remove : function(id, callbacks) {
+	_remove : function(id) {
 		var data = {};
 		data[this._id_key] = id;
 		return this.__invoke({
 			method: "DELETE",
 			uri: this.prepare_uri("remove", data)
-		}, callbacks);
+		});
 	},
 
-	_query : function(query, options, callbacks) {
-		return this.__invoke(this._encode_query(query, options), callbacks, true);
-	},
-	
-	bulk: function (commits, optimistic, callbacks) {
-		if (!this.__options["supports_bulk"]) 
-			return this._inherited(BetaJS.Stores.RemoteStore, "bulk", commits, optimistic);
-		return this.__invoke({
-			method: this.__options["bulk_method"],
-			uri: this.prepare_uri("bulk"),
-			data: commits
-		});
+	_query : function(query, options) {
+		return this.__invoke(this._encode_query(query, options), true);
 	}	
 	
 });
