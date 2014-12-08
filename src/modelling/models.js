@@ -67,8 +67,7 @@ BetaJS.Modelling.AssociatedProperties.extend("BetaJS.Modelling.Model", {
 		this.__silent++;
 		this.setAll(data);
 		this.__silent--;
-		if (this.option("auto_update") && !this.isNew())
-			this.save();
+		return this.isNew() ? BetaJS.Promise.create(true) : this.save();
 	},
 
 	_afterSet: function (key, value, old_value, options) {

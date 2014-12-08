@@ -1,5 +1,5 @@
 /*!
-betajs - v1.0.0 - 2014-12-06
+betajs - v1.0.0 - 2014-12-07
 Copyright (c) Oliver Friedmann,Victor Lingenthal
 MIT Software License.
 */
@@ -163,7 +163,21 @@ BetaJS.Types = {
 		if (this.is_array(x))
 			return "array";
 		return typeof x;
+	},
+	
+	parseType: function (x, type) {
+		if (!BetaJS.Types.is_string(x))
+			return x;
+		type = type.toLowerCase();
+		if (type == "bool" || type == "boolean")
+			return this.parseBool(x);
+		if (type == "int" || type == "integer")
+			return parseInt(x, 10);
+		if (type == "date" || type == "time" || type == "datetime")
+			return parseInt(x, 10);
+		return x;
 	}
+
 
 };
 
@@ -2810,6 +2824,25 @@ BetaJS.Class.extend("BetaJS.Classes.PathResolver", {
 	}
 	
 });
+
+
+BetaJS.Class.extend("BetaJS.Classes.MultiDelegatable", {
+
+	constructor: function (objects, methods) {
+		this._inherited(BetaJS.Classes.MultiDelegatable, "constructor");
+		BetaJS.Objs.iter(methods, function (method) {
+			this[method] = function () {
+				var args = arguments;
+				BetaJS.Objs.iter(objects, function (object) {
+					object[method].apply(object, args);
+				}, this);
+				return this;
+			};
+		}, this);
+	}
+	
+});
+
 BetaJS.Properties = {};
 
 

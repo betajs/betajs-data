@@ -20,9 +20,7 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.RemoteStore", {
 		this.__ajax = ajax;
 		this.__options = BetaJS.Objs.extend({
 			"update_method": "PUT",
-			"uri_mappings": {},
-			"bulk_method": "POST",
-			"supports_bulk": false
+			"uri_mappings": {}
 		}, options || {});
 	},
 	

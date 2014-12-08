@@ -126,6 +126,7 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
 	},
 	
 	query: function (query, options) {
+		query = BetaJS.Objs.clone(query, -1);
 		if (options) {
 			if (options.limit)
 				options.limit = parseInt(options.limit, 10);

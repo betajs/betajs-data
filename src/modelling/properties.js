@@ -30,8 +30,8 @@ BetaJS.Properties.Properties.extend("BetaJS.Modelling.SchemedProperties", {
 		if (!(key in scheme))
 			return value;
 		var sch = scheme[key];
-		if (sch.type == "boolean")
-			return BetaJS.Types.parseBool(value);
+		if (sch.type)
+			value = BetaJS.Types.parseType(value, sch.type);
 		if (sch.transform)
 			value = sch.transform.apply(this, [value]);
 		return value;
@@ -205,7 +205,7 @@ BetaJS.Properties.Properties.extend("BetaJS.Modelling.SchemedProperties", {
 		var result = {};
 		var scheme = this.scheme();
 		for (var key in obj) {
-			if (!BetaJS.Types.is_defined(scheme[key].persistent) || scheme[key].persistent)
+			if ((!BetaJS.Types.is_defined(scheme[key].persistent) || scheme[key].persistent) && (BetaJS.Types.is_defined(obj[key])))
 				result[key] = obj[key];
 		}
 		return result;
@@ -264,7 +264,8 @@ BetaJS.Modelling.SchemedProperties.extend("BetaJS.Modelling.AssociatedProperties
 	_initializeScheme: function () {
 		var s = this._inherited(BetaJS.Modelling.AssociatedProperties, "_initializeScheme");
 		s[this.primary_key()] = {
-			type: "id"
+			type: "id",
+			tags: ["read"]
 		};
 		return s;
 	}
