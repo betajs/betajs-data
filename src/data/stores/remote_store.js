@@ -44,7 +44,10 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.RemoteStore", {
 	
 	__invoke: function (options, parse_json) {
 		var promise = BetaJS.Promise.create();
-		this.__ajax.asyncCall(options, promise.asCallback());
+		this.__ajax.asyncCall(options, {
+			success: BetaJS.Functions.as_method(promise.asyncSuccess, promise),
+			exception: BetaJS.Functions.as_method(promise.asyncError, promise)
+		});
 		return promise.mapCallback(function (e, result) {
 			if (e)
 				return new BetaJS.Stores.RemoteStoreException(e);

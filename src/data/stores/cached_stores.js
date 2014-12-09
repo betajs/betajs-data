@@ -31,7 +31,7 @@ BetaJS.Stores.DualStore.extend("BetaJS.Stores.CachedStore", {
 	           var s = BetaJS.Queries.Constrained.serialize(subsumizer);
 	           if (!this.__queries[s]) {
 	               this.__queries[s] = true;
-	               BetaJS.SyncAsync.eventually(function () {
+	               BetaJS.Async.eventually(function () {
 	                   this.invalidate_query(subsumizer, true);	                   
 	               }, [], this);
 	           }

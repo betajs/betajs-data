@@ -95,8 +95,8 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
 		}
 		var promise = BetaJS.Promise.and();
 		for (var i = 0; i < data.length; ++i)
-			and = promise.and(this.insert(event_data ? [data[i], event_data] : data[i]));
-		return and.end();
+			promise = promise.and(this.insert(event_data ? [data[i], event_data] : data[i]));
+		return promise.end();
 	},
 
 	remove: function (id) {

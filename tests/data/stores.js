@@ -140,7 +140,7 @@ test("test cached store with store as query model and invalidation", function ()
     });
     var result3 = dual.query({}).value().asArray();
     stop();
-    BetaJS.SyncAsync.eventually(function () {
+    BetaJS.Async.eventually(function () {
         QUnit.equal(result.length, result3.length);
         QUnit.equal(hit, 2);
         QUnit.equal(miss, 2);

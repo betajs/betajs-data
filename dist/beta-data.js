@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2014-12-07
+betajs-data - v1.0.0 - 2014-12-09
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -752,8 +752,8 @@ BetaJS.Stores.BaseStore = BetaJS.Stores.ListenerStore.extend("BetaJS.Stores.Base
 		}
 		var promise = BetaJS.Promise.and();
 		for (var i = 0; i < data.length; ++i)
-			and = promise.and(this.insert(event_data ? [data[i], event_data] : data[i]));
-		return and.end();
+			promise = promise.and(this.insert(event_data ? [data[i], event_data] : data[i]));
+		return promise.end();
 	},
 
 	remove: function (id) {
@@ -1454,7 +1454,7 @@ BetaJS.Stores.DualStore.extend("BetaJS.Stores.CachedStore", {
 	           var s = BetaJS.Queries.Constrained.serialize(subsumizer);
 	           if (!this.__queries[s]) {
 	               this.__queries[s] = true;
-	               BetaJS.SyncAsync.eventually(function () {
+	               BetaJS.Async.eventually(function () {
 	                   this.invalidate_query(subsumizer, true);	                   
 	               }, [], this);
 	           }
@@ -1743,7 +1743,10 @@ BetaJS.Stores.BaseStore.extend("BetaJS.Stores.RemoteStore", {
 	
 	__invoke: function (options, parse_json) {
 		var promise = BetaJS.Promise.create();
-		this.__ajax.asyncCall(options, promise.asCallback());
+		this.__ajax.asyncCall(options, {
+			success: BetaJS.Functions.as_method(promise.asyncSuccess, promise),
+			exception: BetaJS.Functions.as_method(promise.asyncError, promise)
+		});
 		return promise.mapCallback(function (e, result) {
 			if (e)
 				return new BetaJS.Stores.RemoteStoreException(e);
@@ -2613,9 +2616,12 @@ BetaJS.Modelling.Associations.TableAssociation.extend("BetaJS.Modelling.Associat
 BetaJS.Modelling.Associations.TableAssociation.extend("BetaJS.Modelling.Associations.BelongsToAssociation", {
 	
 	_yield: function () {
+		var value = this._model.get(this._foreign_key);
+		if (!value)
+			return BetaJS.Promise.value(null);
 		return this._primary_key ?
-			this._foreign_table.findBy(BetaJS.Objs.objectBy(this._primary_key, this._model.get(this._foreign_key))) :
-			this._foreign_table.findById(this._model.get(this._foreign_key));
+			this._foreign_table.findBy(BetaJS.Objs.objectBy(this._primary_key, value)) :
+			this._foreign_table.findById(value);
 	}
 	
 });
