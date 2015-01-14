@@ -9,8 +9,9 @@ BetaJS.Modelling.Validators.Validator.extend("BetaJS.Modelling.Validators.Unique
 	validate: function (value, context) {
 		var query = {};
 		query[this.__key] = value;
-		var item = context.table().findBy(query);
-		return (!item || (!context.isNew() && context.id() == item.id())) ? null : this.__error_string;
+		return context.table().findBy(query).mapSuccess(function (item) {
+			return (!item || (!context.isNew() && context.id() == item.id())) ? null : this.__error_string;
+		}, this);		
 	}
 
 });

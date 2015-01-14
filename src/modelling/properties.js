@@ -5,7 +5,6 @@ BetaJS.Properties.Properties.extend("BetaJS.Modelling.SchemedProperties", {
 		var scheme = this.cls.scheme();
 		this._properties_changed = {};
 		this.__errors = {};
-		this.__unvalidated = {};
 		for (var key in scheme) {
 			if ("def" in scheme[key]) 
 				this.set(key, BetaJS.Types.is_function(scheme[key].def) ? scheme[key].def() : scheme[key].def);
@@ -16,7 +15,6 @@ BetaJS.Properties.Properties.extend("BetaJS.Modelling.SchemedProperties", {
 		}
 		this._properties_changed = {};
 		this.__errors = {};
-		//this.__unvalidated = {};
 		for (key in attributes)
 			this.set(key, attributes[key]);
 	},
@@ -42,7 +40,6 @@ BetaJS.Properties.Properties.extend("BetaJS.Modelling.SchemedProperties", {
 		if (!(key in scheme))
 			return;
 		this._properties_changed[key] = value;
-		this.__unvalidated[key] = true;
 		delete this.__errors[key];
 		if (scheme[key].after_set) {
 			var f = BetaJS.Types.is_string(scheme[key].after_set) ? this[scheme[key].after_set] : scheme[key].after_set;
@@ -54,12 +51,8 @@ BetaJS.Properties.Properties.extend("BetaJS.Modelling.SchemedProperties", {
 		return !BetaJS.Types.is_empty(this._properties_changed);
 	},
 
-	properties_changed: function (filter_valid) {
-		if (!BetaJS.Types.is_boolean(filter_valid))
-			return this._properties_changed;
-		return BetaJS.Objs.filter(this._properties_changed, function (value, key) {
-			return this.validateAttr(key) == filter_valid;
-		}, this);
+	properties_changed: function () {
+		return this._properties_changed;
 	},
 	
 	get_all_properties: function () {
@@ -70,57 +63,55 @@ BetaJS.Properties.Properties.extend("BetaJS.Modelling.SchemedProperties", {
 		return result;
 	},
 	
-	properties_by: function (filter_valid) {
-		if (!BetaJS.Types.is_boolean(filter_valid))
-			return this.get_all_properties();
-		return BetaJS.Objs.filter(this.get_all_properties(), function (value, key) {
-			return this.validateAttr(key) == filter_valid;
+	validate: function () {
+		this.trigger("validate");
+		var promises = [];
+		for (var key in this.cls.scheme())
+			promises.push(this._validateAttr(key));
+		promises.push(BetaJS.Promise.box(this._customValidate, this));
+		return BetaJS.Promise.and(promises).end().mapSuccess(function (arr) {
+			var valid = true;
+			BetaJS.Objs.iter(arr, function (entry) {
+				valid = valid && entry;
+			});
+			return valid;
+		});
+	},
+	
+	_customValidate: function () {
+		return true;
+	},
+	
+	_validateAttr: function (attr) {
+		delete this.__errors[attr];
+		var scheme = this.cls.scheme();
+		var entry = scheme[attr];
+		var validate = entry["validate"];
+		if (!validate)
+			return BetaJS.Promise.value(true);
+		if (!BetaJS.Types.is_array(validate))
+			validate = [validate];
+		var value = this.get(attr);
+		var promises = [];
+		BetaJS.Objs.iter(validate, function (validator) {
+			promises.push(BetaJS.Promise.box(validator.validate, validator, [value, this]));
+		}, this);
+		return BetaJS.Promise.and(promises).end().mapSuccess(function (arr) {
+			var valid = true;
+			BetaJS.Objs.iter(arr, function (entry) {
+				if (entry !== null) {
+					valid = false;
+					this.__errors[attr] = entry;
+				}
+			}, this);
+			this.trigger("validate:" + attr, valid, this.__errors[attr]);
+			return valid;
 		}, this);
 	},
 	
-	validate: function () {
-		this.trigger("validate");
-		for (var key in this.__unvalidated)
-			this.validateAttr(key);
-		this._customValidate();
-		return BetaJS.Types.is_empty(this.__errors);
-	},
-	
-	_customValidate: function () {},
-	
-	validateAttr: function (attr) {
-		if (attr in this.__unvalidated) {
-			delete this.__unvalidated[attr];
-			delete this.__errors[attr];
-			var scheme = this.cls.scheme();
-			var entry = scheme[attr];
-			if ("validate" in entry) {
-				var validate = entry["validate"];
-				if (!BetaJS.Types.is_array(validate))
-					validate = [validate];
-				var value = this.get(attr);
-				BetaJS.Objs.iter(validate, function (validator) {
-					var result = validator.validate(value, this);
-					if (result)
-						this.__errors[attr] = result;
-					return result === null;
-				}, this);
-			}
-			this.trigger("validate:" + attr, !(attr in this.__errors), this.__errors[attr]);
-		}
-		return !(attr in this.__errors);
-	},
-	
 	setError: function (attr, error) {
-		delete this.__unvalidated[attr];
 		this.__errors[attr] = error;
 		this.trigger("validate:" + attr, !(attr in this.__errors), this.__errors[attr]);
-	},
-	
-	revalidate: function () {
-		this.__errors = {};
-		this.__unvalidated = this.keys(true);
-		return this.validate();
 	},
 	
 	errors: function () {

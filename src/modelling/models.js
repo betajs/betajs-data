@@ -82,33 +82,36 @@ BetaJS.Modelling.AssociatedProperties.extend("BetaJS.Modelling.Model", {
 	save: function () {
 		if (this.isRemoved())
 			return BetaJS.Promise.create({});
-		if (!this.validate() && !this.options("save_invalid")) 
-			return BetaJS.Promise.create(null, new BetaJS.Modelling.ModelInvalidException(this));
-		var attrs;
-		if (this.isNew()) {
-			attrs = this.cls.filterPersistent(this.get_all_properties());
-			if (this.__options.type_column)
-				attrs[this.__options.type_column] = model.cls.classname;
-		} else {
-			attrs = this.cls.filterPersistent(this.properties_changed());
-			if (BetaJS.Types.is_empty(attrs))
-				return BetaJS.Promise.create(attrs);
-		}
-		var wasNew = this.isNew();
-		var promise = this.isNew() ? this.__table.store().insert(attrs) : this.__table.store().update(this.id(), attrs);
-		return promise.mapCallback(function (err, result) {
-			if (err)
-				return BetaJS.Exceptions.ensure(this.validation_exception_conversion(err));
-			this.__silent++;
-			this.setAll(result);
-			this.__silent--;
-			this._properties_changed = {};
-			this.trigger("save");
-			if (wasNew) {
-				this.__options.newModel = false;
-				this._registerEvents();
+		var promise = this.option("save_invalid") ? BetaJS.Promise.value(true) : this.validate();
+		return promise.mapSuccess(function (valid) {
+			if (!valid)
+				return BetaJS.Promise.create(null, new BetaJS.Modelling.ModelInvalidException(this));
+			var attrs;
+			if (this.isNew()) {
+				attrs = this.cls.filterPersistent(this.get_all_properties());
+				if (this.__options.type_column)
+					attrs[this.__options.type_column] = model.cls.classname;
+			} else {
+				attrs = this.cls.filterPersistent(this.properties_changed());
+				if (BetaJS.Types.is_empty(attrs))
+					return BetaJS.Promise.create(attrs);
 			}
-			return result;
+			var wasNew = this.isNew();
+			var promise = this.isNew() ? this.__table.store().insert(attrs) : this.__table.store().update(this.id(), attrs);
+			return promise.mapCallback(function (err, result) {
+				if (err)
+					return BetaJS.Exceptions.ensure(this.validation_exception_conversion(err));
+				this.__silent++;
+				this.setAll(result);
+				this.__silent--;
+				this._properties_changed = {};
+				this.trigger("save");
+				if (wasNew) {
+					this.__options.newModel = false;
+					this._registerEvents();
+				}
+				return result;
+			}, this);
 		}, this);
 	},
 	
