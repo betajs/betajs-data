@@ -10,7 +10,7 @@ BetaJS.Modelling.Associations.Association.extend("BetaJS.Modelling.Associations.
 
 	_yield: function (id) {
 		var value = id ? id : (this._primary_key ? this._model.get(this._primary_key) : this._model.id());
-		var foreign_table = BetaJS.Scopes.resolve(this._model.get(this._foreign_table_key));
+		var foreign_table = Scoped.getGlobal(this._model.get(this._foreign_table_key));
 		return foreign_table.findBy(BetaJS.Objs.objectBy(this._foreign_key, value));
 	}
 

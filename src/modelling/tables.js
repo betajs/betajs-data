@@ -31,7 +31,8 @@ BetaJS.Class.extend("BetaJS.Modelling.Table", [
 	},
 	
 	modelClass: function (cls) {
-		return cls ? (BetaJS.Types.is_string(cls) ? BetaJS.Scopes.resolve(cls) : cls) : BetaJS.Scopes.resolve(this.__model_type);
+		cls = cls || this.__model_type;
+		return BetaJS.Types.is_string(cls) ? Scoped.getGlobal(cls) : cls;
 	},
 	
 	newModel: function (attributes, cls) {
@@ -76,7 +77,7 @@ BetaJS.Class.extend("BetaJS.Modelling.Table", [
 	},
 	
 	primary_key: function () {
-		return BetaJS.Scopes.resolve(this.__model_type).primary_key();
+		return (BetaJS.Types.is_string(this.__model_type) ? Scoped.getGlobal(this.__model_type) : this.__model_type).primary_key();
 	},
 	
 	all: function (options) {
