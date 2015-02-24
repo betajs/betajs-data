@@ -1,5 +1,5 @@
 test("test store update sync", function() {
-	var store = new BetaJS.Stores.MemoryStore();
+	var store = new BetaJS.Data.Stores.MemoryStore();
 	var object = store.insert({x: 5}).value();
 	ok(!!object.id);
 	QUnit.equal(object.x, 5);
@@ -9,7 +9,7 @@ test("test store update sync", function() {
 
 
 test("test store update async", function() {
-	var store = new BetaJS.Stores.MemoryStore();
+	var store = new BetaJS.Data.Stores.MemoryStore();
 	var object = store.insert({x: 5}).value();
 	ok(!!object.id);
 	QUnit.equal(object.x, 5);
@@ -28,11 +28,11 @@ test("test store update async", function() {
 
 
 test("test cached store", function () {
-    var base = new BetaJS.Stores.MemoryStore();
+    var base = new BetaJS.Data.Stores.MemoryStore();
     for (var i = 1; i <= 5; ++i)
         for (var j = 1; j <= 5; ++j)
             base.insert({i: i, j: j});
-    var dual = new BetaJS.Stores.CachedStore(base);
+    var dual = new BetaJS.Data.Stores.CachedStore(base);
     var hit = 0;
     var miss = 0;
     var invalidate = 0;
@@ -55,15 +55,15 @@ test("test cached store", function () {
 
 
 test("test cached store with store as query model", function () {
-    var base = new BetaJS.Stores.MemoryStore();
+    var base = new BetaJS.Data.Stores.MemoryStore();
     for (var i = 1; i <= 5; ++i)
         for (var j = 1; j <= 5; ++j)
             base.insert({i: i, j: j});
-    var query_store = new BetaJS.Stores.MemoryStore();
-    var cache_store = new BetaJS.Stores.MemoryStore();
-    var dual = new BetaJS.Stores.CachedStore(base, {
+    var query_store = new BetaJS.Data.Stores.MemoryStore();
+    var cache_store = new BetaJS.Data.Stores.MemoryStore();
+    var dual = new BetaJS.Data.Stores.CachedStore(base, {
         cache_store: cache_store,
-        cache_query_model: new BetaJS.Queries.StoreQueryModel(query_store)
+        cache_query_model: new BetaJS.Data.Queries.StoreQueryModel(query_store)
     });
     var hit = 0;
     var miss = 0;
@@ -83,9 +83,9 @@ test("test cached store with store as query model", function () {
     QUnit.equal(hit, 1);
     QUnit.equal(miss, 1);
     dual.destroy();
-    var dual = new BetaJS.Stores.CachedStore(base, {
+    var dual = new BetaJS.Data.Stores.CachedStore(base, {
         cache_store: cache_store,
-        cache_query_model: new BetaJS.Queries.StoreQueryModel(query_store)
+        cache_query_model: new BetaJS.Data.Queries.StoreQueryModel(query_store)
     });
     var result3 = dual.query({}).value().asArray();
     QUnit.equal(result.length, result3.length);
@@ -96,15 +96,15 @@ test("test cached store with store as query model", function () {
 
 
 test("test cached store with store as query model and invalidation", function () {
-    var base = new BetaJS.Stores.MemoryStore();
+    var base = new BetaJS.Data.Stores.MemoryStore();
     for (var i = 1; i <= 5; ++i)
         for (var j = 1; j <= 5; ++j)
             base.insert({i: i, j: j});
-    var query_store = new BetaJS.Stores.MemoryStore();
-    var cache_store = new BetaJS.Stores.MemoryStore();
-    var dual = new BetaJS.Stores.CachedStore(base, {
+    var query_store = new BetaJS.Data.Stores.MemoryStore();
+    var cache_store = new BetaJS.Data.Stores.MemoryStore();
+    var dual = new BetaJS.Data.Stores.CachedStore(base, {
         cache_store: cache_store,
-        cache_query_model: new BetaJS.Queries.StoreQueryModel(query_store),
+        cache_query_model: new BetaJS.Data.Queries.StoreQueryModel(query_store),
         invalidation: {
             reload_after_first_hit: true
         }
@@ -128,9 +128,9 @@ test("test cached store with store as query model and invalidation", function ()
     QUnit.equal(miss, 1);
     QUnit.equal(invalidate, 0);
     dual.destroy();
-    var dual = new BetaJS.Stores.CachedStore(base, {
+    var dual = new BetaJS.Data.Stores.CachedStore(base, {
         cache_store: cache_store,
-        cache_query_model: new BetaJS.Queries.StoreQueryModel(query_store),
+        cache_query_model: new BetaJS.Data.Queries.StoreQueryModel(query_store),
         invalidation: {
             reload_after_first_hit: true
         }

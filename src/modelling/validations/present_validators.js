@@ -1,12 +1,19 @@
-BetaJS.Modelling.Validators.Validator.extend("BetaJS.Modelling.Validators.PresentValidator", {
-	
-	constructor: function (error_string) {
-		this._inherited(BetaJS.Modelling.Validators.PresentValidator, "constructor");
-		this.__error_string = error_string ? error_string : "Field is required";
-	},
+Scoped.define("module:Modelling.Validators.PresentValidator", [
+        "module:Modelling.Validators.Validator",
+        "base:Types"
+    ], function (Validator, Types, scoped) {
+    return Validator.extend({scoped: scoped}, function (inherited) {
+		return {
+			
+			constructor: function (error_string) {
+				inherited.constructor.call(this);
+				this.__error_string = error_string ? error_string : "Field is required";
+			},
+		
+			validate: function (value, context) {
+				return Types.is_null(value) || value === "" ? this.__error_string : null;
+			}
 
-	validate: function (value, context) {
-		return BetaJS.Types.is_null(value) || value === "" ? this.__error_string : null;
-	}
-
+		};
+    });
 });

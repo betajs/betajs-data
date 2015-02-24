@@ -1,15 +1,15 @@
 test("test model validation", function() {
-	var store = new BetaJS.Stores.MemoryStore();
-	var Model = BetaJS.Modelling.Model.extend("Model", {}, {
+	var store = new BetaJS.Data.Stores.MemoryStore();
+	var Model = BetaJS.Data.Modelling.Model.extend("Model", {}, {
 		_initializeScheme: function () {
 			return BetaJS.Objs.extend({
 				present: {
-					validate: new BetaJS.Modelling.Validators.PresentValidator()
+					validate: new BetaJS.Data.Modelling.Validators.PresentValidator()
 				}
 			}, this._inherited(Model, "_initializeScheme"));
 		}		
 	});
-	var table = new BetaJS.Modelling.Table(store, Model, {});	
+	var table = new BetaJS.Data.Modelling.Table(store, Model, {});	
 	var model = table.newModel();
 	model.save();
 	ok(table.findById(model.id()).value() == null);

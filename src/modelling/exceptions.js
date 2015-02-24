@@ -1,31 +1,50 @@
-BetaJS.Exceptions.Exception.extend("BetaJS.Modelling.ModelException", {
+Scoped.define("module:Modelling.ModelException", [
+          "base:Exceptions.Exception"
+  	], function (Exception, scoped) {
+  	return Exception.extend({scoped: scoped}, function (inherited) {			
+  		return {
+			
+			constructor: function (model, message) {
+				inherited.constructor.call(this, message);
+				this.__model = model;
+			},
+			
+			model: function () {
+				return this.__model;
+			}
 	
-	constructor: function (model, message) {
-		this._inherited(BetaJS.Modelling.ModelException, "constructor", message);
-		this.__model = model;
-	},
-	
-	model: function () {
-		return this.__model;
-	}
-	
+  		};
+  	});
 });
 
 
-BetaJS.Modelling.ModelException.extend("BetaJS.Modelling.ModelMissingIdException", {
-	
-	constructor: function (model) {
-		this._inherited(BetaJS.Modelling.ModelMissingIdException, "constructor", model, "No id given.");
-	}
+Scoped.define("module:Modelling.ModelMissingIdException", [
+          "module:Modelling.ModelException"
+  	], function (Exception, scoped) {
+  	return Exception.extend({scoped: scoped}, function (inherited) {			
+  		return {
+			
+			constructor: function (model) {
+				inherited.constructor.call(this, model, "No id given.");
+			}
 
+  		};
+  	});
 });
 
 
-BetaJS.Modelling.ModelException.extend("BetaJS.Modelling.ModelInvalidException", {
-	
-	constructor: function (model) {
-		var message = BetaJS.Objs.values(model.errors()).join("\n");
-		this._inherited(BetaJS.Modelling.ModelInvalidException, "constructor", model, message);
-	}
+Scoped.define("module:Modelling.ModelInvalidException", [
+           "module:Modelling.ModelException",
+           "base:Objs"
+   	], function (Exception, Objs, scoped) {
+   	return Exception.extend({scoped: scoped}, function (inherited) {			
+   		return {
+ 			
+   			constructor: function (model) {
+   				var message = Objs.values(model.errors()).join("\n");
+ 				inherited.constructor.call(this, model, message);
+ 			}
 
-});
+   		};
+   	});
+ });

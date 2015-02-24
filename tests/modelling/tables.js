@@ -1,7 +1,7 @@
 test("test tables findById", function() {
-	var store = new BetaJS.Stores.MemoryStore();
-	var Model = BetaJS.Modelling.Model.extend("Model", {});
-	var table = new BetaJS.Modelling.Table(store, Model, {});	
+	var store = new BetaJS.Data.Stores.MemoryStore();
+	var Model = BetaJS.Data.Modelling.Model.extend("Model", {});
+	var table = new BetaJS.Data.Modelling.Table(store, Model, {});	
 	var model = table.newModel();
 	model.save();
 	ok(table.findById(model.id()).value() != null);
@@ -10,9 +10,9 @@ test("test tables findById", function() {
 
 
 test("test tables all", function() {
-	var store = new BetaJS.Stores.MemoryStore();
-	var Model = BetaJS.Modelling.Model.extend("Model", {});
-	var table = new BetaJS.Modelling.Table(store, Model, {});
+	var store = new BetaJS.Data.Stores.MemoryStore();
+	var Model = BetaJS.Data.Modelling.Model.extend("Model", {});
+	var table = new BetaJS.Data.Modelling.Table(store, Model, {});
 	var created = 0;
 	table.on("create", function (obj) {
 		created++;
@@ -26,9 +26,9 @@ test("test tables all", function() {
 });
 
 test("test tables all async", function() {
-	var store = new BetaJS.Stores.MemoryStore();
-	var Model = BetaJS.Modelling.Model.extend("Model", {});
-	var table = new BetaJS.Modelling.Table(store, Model, {});
+	var store = new BetaJS.Data.Stores.MemoryStore();
+	var Model = BetaJS.Data.Modelling.Model.extend("Model", {});
+	var table = new BetaJS.Data.Modelling.Table(store, Model, {});
 	var model = table.newModel();
 	model.save();
 	table.all().success(function (result) {
@@ -39,9 +39,9 @@ test("test tables all async", function() {
 });
 
 test("test tables findBy", function() {
-	var store = new BetaJS.Stores.MemoryStore();
-	var Model = BetaJS.Modelling.Model.extend("Model", {});
-	var table = new BetaJS.Modelling.Table(store, Model, {});
+	var store = new BetaJS.Data.Stores.MemoryStore();
+	var Model = BetaJS.Data.Modelling.Model.extend("Model", {});
+	var table = new BetaJS.Data.Modelling.Table(store, Model, {});
 	var model = table.newModel();
 	model.save();
 	var model2 = table.findBy({}).value();

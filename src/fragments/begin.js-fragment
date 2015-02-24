@@ -4,6 +4,7 @@ var Scoped = this.subScope();
 
 Scoped.binding("module", "global:BetaJS.Data");
 Scoped.binding("base", "global:BetaJS");
+Scoped.binding("json", "global:JSON");
 
 Scoped.define("module:", function () {
 	return {

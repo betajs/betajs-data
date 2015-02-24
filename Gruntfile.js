@@ -4,7 +4,6 @@ module.exports = function(grunt) {
 
 	grunt.initConfig({
 		pkg : grunt.file.readJSON('package.json'),
-
 		'revision-count': {
 		    options: {
 		      property: 'revisioncount',
@@ -19,37 +18,11 @@ module.exports = function(grunt) {
 				dest : 'dist/beta-data-raw.js',
 				src : [
 					'src/fragments/begin.js-fragment',
-					'src/data/queries/queries.js', 
-					'src/data/queries/constrained_queries.js', 
-					'src/data/queries/query_model.js', 
-					'src/data/queries/query_collection.js',
-					'src/data/stores/base_store.js',
-					'src/data/stores/assoc_store.js',
-					'src/data/stores/memory_store.js',
-					'src/data/stores/dumb_store.js',
-					'src/data/stores/assoc_dumb_store.js',
-					'src/data/stores/local_store.js',
-					'src/data/stores/dual_store.js',
-					'src/data/stores/cached_stores.js',
-					'src/data/stores/conversion_store.js',
-					'src/data/stores/passthrough_store.js',
-					'src/data/stores/socket_stores.js',
-					'src/data/stores/remote_store.js',
-					'src/data/support/stores_monitor.js',
-					'src/data/support/store_history.js',
-					'src/modelling/exceptions.js',
-					'src/modelling/properties.js',
-					'src/modelling/models.js',
-					'src/modelling/tables.js',
-					'src/modelling/associations/associations.js', 
-					'src/modelling/associations/table_associations.js', 
-					'src/modelling/associations/has_many_associations.js', 
-					'src/modelling/associations/has_many_through_array_associations.js', 
-					'src/modelling/associations/has_one_associations.js', 
-					'src/modelling/associations/belongs_to_associations.js', 
-					'src/modelling/associations/conditional_associations.js', 
-					'src/modelling/associations/polymorphic_has_one_associations.js', 
-					'src/modelling/validations/validators.js', 
+					'src/data/queries/*.js', 
+					'src/data/stores/*.js',
+					'src/data/support/*.js',
+					'src/modelling/*.js',
+					'src/modelling/associations/*.js', 
 					'src/modelling/validations/*.js', 
 					'src/fragments/end.js-fragment'
 				]
