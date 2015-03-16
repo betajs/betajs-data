@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-02-24
+betajs-data - v1.0.0 - 2015-03-16
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -545,7 +545,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.0 - 2015-02-24
+betajs-data - v1.0.0 - 2015-03-16
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -560,7 +560,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '15.1424758918482'
+		version: '16.1426549179204'
 	};
 });
 
@@ -1148,128 +1148,6 @@ Scoped.define("module:Collections.ActiveQueryCollection", [
     });
 });
 
-Scoped.define("module:Queries.AbstractQueryModel", [
-	    "base:Class"
-	], function (Class, scoped) {
-	return Class.extend({scoped: scoped}, {
-	
-		register: function (query) {},
-		
-		executable: function (query) {}
-
-	});
-});
-
-
-Scoped.define("module:Queries.DefaultQueryModel", [
-        "module:Queries.AbstractQueryModel",
-        "module:Queries.Constrained",
-        "base:Objs"
-    ], function (AbstractQueryModel, Constrained, Objs, scoped) {
-    return AbstractQueryModel.extend({scoped: scoped}, function (inherited) {
-		return {
-					
-			constructor: function () {
-				inherited.constructor.call(this);
-		        this.__queries = {};    
-			},
-			
-			_insert: function (query) {
-				this.__queries[Constrained.serialize(query)] = query;
-			},
-			
-			_remove: function (query) {
-				delete this.__queries[Constrained.serialize(query)];
-			},
-			
-			exists: function (query) {
-				return Constrained.serialize(query) in this.__queries;
-			},
-			
-			subsumizer_of: function (query) {
-		        if (this.exists(query))
-		            return query;
-		        var result = null;
-		        Objs.iter(this.__queries, function (query2) {
-		            if (Constrained.subsumizes(query2, query))
-		                result = query2;
-		            return !result;
-		        }, this);
-		        return result;
-			},
-			
-			executable: function (query) {
-			    return !!this.subsumizer_of(query);
-			},
-			
-			register: function (query) {
-				var changed = true;
-				while (changed) {
-					changed = false;
-					Objs.iter(this.__queries, function (query2) {
-						if (Constrained.subsumizes(query, query2)) {
-							this._remove(query2);
-							changed = true;
-						}/* else if (Constrained.mergable(query, query2)) {
-							this._remove(query2);
-							changed = true;
-							query = Constrained.merge(query, query2);
-						} */
-					}, this);
-				}
-				this._insert(query);
-			},
-			
-			invalidate: function (query) {
-			    var subsumizer = this.subsumizer_of(query);
-			    if (subsumizer)
-			       this._remove(subsumizer);
-			}
-	
-		};
-    });
-});
-
-
-Scoped.define("module:Queries.StoreQueryModel", [
-       "module:Queries.DefaultQueryModel",
-       "module:Queries.Constrained"
-   ], function (DefaultQueryModel, Constrained, scoped) {
-   return DefaultQueryModel.extend({scoped: scoped}, function (inherited) {
-	   return {
-			
-			constructor: function (store) {
-		        this.__store = store;
-		        inherited.constructor.call(this);
-			},
-			
-			initialize: function () {
-				return this.__store.mapSuccess(function (result) {
-					while (result.hasNext()) {
-						var query = result.next();
-						delete query["id"];
-		                this._insert(query);
-					}
-				}, this);
-			},
-			
-			_insert: function (query) {
-				inherited._insert.call(this, query);
-				this.__store.insert(query);
-			},
-			
-			_remove: function (query) {
-				delete this.__queries[Constrained.serialize(query)];
-				this.__store.query({query: query}).success(function (result) {
-					while (result.hasNext())
-						this.__store.remove(result.next().id);
-				}, this);
-			}
-
-	    };
-    });
-});
-
 Scoped.define("module:Stores.AssocDumbStore", ["module:Stores.DumbStore"], function (DumbStore, scoped) {
   	return DumbStore.extend({scoped: scoped}, {
 		
@@ -1621,85 +1499,6 @@ Scoped.define("module:Stores.BaseStore", [
 });
 
 
-Scoped.define("module:Stores.CachedStore", [
-          "module:Stores.DualStore",
-          "module:Stores.MemoryStore",
-          "module:Queries.DefaultQueryModel",
-          "module:Queries.Constrained",
-          "base:Objs",
-          "base:Async"
-  	], function (DualStore, MemoryStore, DefaultQueryModel, Constrained, Objs, Async, scoped) {
-  	return DualStore.extend({scoped: scoped}, function (inherited) {			
-  		return {
-
-			constructor: function (parent, options) {
-				options = options || {};
-				var cache_store = options.cache_store;
-				if (!("cache_store" in options)) {
-				    cache_store = this._auto_destroy(new MemoryStore({
-		                id_key: parent.id_key()
-		            }));
-		        }
-		        if (!cache_store.query_model())
-		            cache_store.query_model(options.cache_query_model ? options.cache_query_model : this._auto_destroy(new DefaultQueryModel()));
-		        this.__invalidation_options = options.invalidation || {};
-		        inherited.constructor.call(this,
-					parent,
-					cache_store,
-					Objs.extend({
-						get_options: {
-							start: "second",
-							strategy: "or"
-						},
-						query_options: {
-							start: "second",
-							strategy: "or",
-							clone: true,
-							or_on_null: false
-						}
-					}, options));
-			   if (this.__invalidation_options.reload_after_first_hit) {
-			       this.__queries = {};
-			       this.cache().on("query_hit", function (query, subsumizer) {
-			           var s = Constrained.serialize(subsumizer);
-			           if (!this.__queries[s]) {
-			               this.__queries[s] = true;
-			               Async.eventually(function () {
-			                   this.invalidate_query(subsumizer, true);	                   
-			               }, [], this);
-			           }
-			       }, this);
-		           this.cache().on("query_miss", function (query) {
-		               var s = Constrained.serialize(query);
-		               this.__queries[s] = true;
-		           }, this);
-			   }
-			},
-			
-			destroy: function () {
-			    this.cache().off(null, null, this);
-			    inherited.destroy.call(this);
-			},
-			
-			invalidate_query: function (query, reload) {
-			    this.cache().query_model().invalidate(query);
-			    if (reload) 
-		           this.query(query.query, query.options);
-		        this.trigger("invalidate_query", query, reload);
-			},
-			
-			cache: function () {
-				return this.second();
-			},
-			
-			store: function () {
-				return this.first();
-			}
-			
-  		};
-  	});
-});
-
 Scoped.define("module:Stores.ConversionStore", [
           "module:Stores.BaseStore",
           "base:Objs",
@@ -1795,269 +1594,6 @@ Scoped.define("module:Stores.ConversionStore", [
 					return new MappedIterator(result, this.decode_object, this);
 				}, this);
 			}		
-
-  		};
-  	});
-});
-
-
-Scoped.define("module:Stores.DualStore", [
-          "module:Stores.BaseStore",
-          "base:Objs",
-          "base:Iterators.ArrayIterator"
-  	], function (BaseStore, Objs, ArrayIterator, scoped) {
-  	return BaseStore.extend({scoped: scoped}, function (inherited) {			
-  		return {
-			
-			constructor: function (first, second, options) {
-				options = Objs.extend({
-					create_options: {},
-					update_options: {},
-					delete_options: {},
-					get_options: {},
-					query_options: {}
-				}, options || {});
-				options.id_key = first._id_key;
-				this.__first = first;
-				this.__second = second;
-				inherited.constructor.call(this, options);
-				this.__create_options = Objs.extend({
-					start: "first", // "second"
-					strategy: "then", // "or", "single"
-					auto_replicate: "first" // "first", "second", "both", "none"
-				}, options.create_options);
-				this.__update_options = Objs.extend({
-					start: "first", // "second"
-					strategy: "then", // "or", "single"
-					auto_replicate: "first" // "first", "second", "both", "none"
-				}, options.update_options);
-				this.__remove_options = Objs.extend({
-					start: "first", // "second"
-					strategy: "then", // "or", "single",
-					auto_replicate: "first" // "first", "second", "both", "none"
-				}, options.delete_options);
-				this.__get_options = Objs.extend({
-					start: "first", // "second"
-					strategy: "or", // "single"
-					clone: true, // false
-					clone_second: false,
-					or_on_null: true // false
-				}, options.get_options);
-				this.__query_options = Objs.extend({
-					start: "first", // "second"
-					strategy: "or", // "single"
-					clone: true, // false
-					clone_second: false,
-					or_on_null: true // false
-				}, options.query_options);
-				this.__first.on("insert", this.__inserted_first, this);
-				this.__second.on("insert", this.__inserted_second, this);
-				this.__first.on("update", this.__updated_first, this);
-				this.__second.on("update", this.__updated_second, this);
-				this.__first.on("remove", this.__removed_first, this);
-				this.__second.on("remove", this.__removed_second, this);
-			},
-			
-			__inserted_first: function (row, event_data) {
-				if (event_data && event_data.dual_insert)
-					return;
-				if (this.__create_options.auto_replicate == "first" || this.__create_options.auto_replicate == "both")
-					this.__second.insert([row, {dual_insert: true}]);
-				this._inserted(row);
-			},
-			
-			__inserted_second: function (row, event_data) {
-				if (event_data && event_data.dual_insert)
-					return;
-				if (this.__create_options.auto_replicate == "second" || this.__create_options.auto_replicate == "both")
-					this.__first.insert([row, {dual_insert: true}]);
-				this._inserted(row);
-			},
-		
-			__updated_first: function (row, update, event_data) {
-				if (event_data && event_data.dual_update)
-					return;
-				if (this.__update_options.auto_replicate == "first" || this.__update_options.auto_replicate == "both")
-					this.__second.update(row[this.id_key()], [update, {dual_update: true}]);
-				this._updated(row, update);
-			},
-			
-			__updated_second: function (row, update, event_data) {
-				if (event_data && event_data.dual_update)
-					return;
-				if (this.__update_options.auto_replicate == "second" || this.__update_options.auto_replicate == "both")
-					this.__first.update(row[this.id_key()], [update, {dual_update: true}]);
-				this._updated(row, update);
-			},
-		
-			__removed_first: function (id, event_data) {
-				if (event_data && event_data.dual_remove)
-					return;
-				if (this.__remove_options.auto_replicate == "first" || this.__remove_options.auto_replicate == "both")
-					this.__second.remove([id, {dual_remove: true}]);
-				this._removed(id);
-			},
-			
-			__removed_second: function (id, event_data) {
-				if (event_data && event_data.dual_remove)
-					return;
-				if (this.__remove_options.auto_replicate == "second" || this.__remove_options.auto_replicate == "both")
-					this.__first.remove([id, {dual_remove: true}]);
-				this._removed(id);
-			},
-		
-			first: function () {
-				return this.__first;
-			},
-			
-			second: function () {
-				return this.__second;
-			},
-		
-			_insert: function (data) {
-				var first = this.__first;
-				var second = this.__second;
-				if (this.__create_options.start != "first") {
-					first = this.__second;
-					second = this.__first;
-				}
-				var strategy = this.__create_options.strategy;
-				if (strategy == "then")
-					return first.insert([data, {dual_insert: true}]).mapSuccess(function (row) {
-						return second.insert([row, {dual_insert: true}]);
-					}, this);
-				else if (strategy == "or")
-					return first.insert([data, {dual_insert: true}]).mapError(function () {
-						return second.insert([data, {dual_insert: true}]);
-					}, this);
-				else
-					return first.insert([data, {dual_insert: true}]);
-			},
-		
-			_update: function (id, data) {
-				var first = this.__first;
-				var second = this.__second;
-				if (this.__update_options.start != "first") {
-					first = this.__second;
-					second = this.__first;
-				}
-				var strategy = this.__update_options.strategy;
-				if (strategy == "then")
-					return first.update(id, [data, {dual_update: true}]).mapSuccess(function (row) {
-						return second.update(id, [row, {dual_update: true}]);
-					}, this);
-				else if (strategy == "or")
-					return first.update(id, [data, {dual_update: true}]).mapError(function () {
-						return second.update(id, [data, {dual_update: true}]);
-					}, this);
-				else
-					return first.update(id, [data, {dual_update: true}]);
-			},
-		
-			_remove: function (id) {
-				var first = this.__first;
-				var second = this.__second;
-				if (this.__remove_options.start != "first") {
-					first = this.__second;
-					second = this.__first;
-				}
-				var strategy = this.__remove_options.strategy;
-				if (strategy == "then")
-					return first.remove([id, {dual_remove: true}]).mapSuccess(function () {
-						return second.remove([id, {dual_remove: true}]);
-					}, this);
-				else if (strategy == "or")
-					return first.remove([id, {dual_remove: true}]).mapError(function () {
-						return second.remove([id, {dual_remove: true}]);
-					}, this);
-				else
-					return first.remove(id);
-			},
-		
-			_query_capabilities: function () {
-				return {
-					"query": true,
-					"sort": true,
-					"limit": true,
-					"skip": true
-				};
-			},
-		
-			_get: function (id) {
-				var first = this.__first;
-				var second = this.__second;
-				if (this.__get_options.start != "first") {
-					first = this.__second;
-					second = this.__first;
-				}
-				var strategy = this.__get_options.strategy;
-				var clone = this.__get_options.clone;
-				var clone_second = this.__get_options.clone_second;
-				var or_on_null = this.__get_options.or_on_null;
-				var result = null;
-				if (strategy == "or") {
-					return first.get(id).mapCallback(function (error, result) {
-						if (error || (!result && or_on_null))
-							return second.get(id).mapSuccess(function (result) {
-								return result && clone ? first.insert(result) : result;
-							}, this);
-						if (!clone_second)
-							return result;
-						return second.get(id).mapCallback(function (error, row) {
-							if (error || !row)
-								return second.insert(result);
-							return result;
-						}, this);
-					}, this);
-				} else
-					return first.get(id);
-			},
-		
-			_query: function (query, options) {
-				var first = this.__first;
-				var second = this.__second;
-				if (this.__query_options.start != "first") {
-					first = this.__second;
-					second = this.__first;
-				}
-				var strategy = this.__query_options.strategy;
-				var clone = this.__query_options.clone;
-				var clone_second = this.__get_options.clone_second;
-				var or_on_null = this.__query_options.or_on_null;
-				var result = null;
-				if (strategy == "or") {
-					this.trigger("query_first", query, options);
-					return first.query(query, options).mapCallback(function (error, result) {
-						if (error || (!result && or_on_null)) {
-							this.trigger("query_second", query, options);
-							return second.query(query, options).mapSuccess(function (result) {
-								if (result && clone) {
-									var arr = result.asArray();
-									return first.insert_all(arr, {query: query, options: options}, {dual_insert: true}).mapSuccess(function () {
-										return new ArrayIterator(arr);
-									});
-								}
-								return result;
-							}, this);
-						}
-						if (!clone_second)
-							return result;
-						this.trigger("query_second", query, options);
-						return second.query(query, options).mapCallback(function (error, result2) {
-							if (error || !result2) {
-								var arr = result.asArray();
-								return second.insert_all(arr, {query: query, options: options}, {dual_insert: true}).mapSuccess(function () {
-									return new ArrayIterator(arr);
-								});
-							}
-							return result;
-						}, this);
-					}, this);
-				} else {
-					this.trigger("query_first", query, options);
-					return first.query(query, options);
-				}
-			}
 
   		};
   	});
@@ -2588,150 +2124,578 @@ Scoped.define("module:Stores.SocketListenerStore", [
 		};
 	});
 });
-Scoped.define("module:Stores.StoreHistory", [
-          "base:Class",
-          "base:Events.EventsMixin",
-          "base:Objs"
-  	], function (Class, EventsMixin, Objs, scoped) {
-  	return Class.extend({scoped: scoped}, [EventsMixin, function (inherited) {			
+Scoped.define("module:Stores.AbstractIndex", [
+	"base:Class",
+	"base:Comparators"
+], function (Class, Comparators, scoped) {
+  	return Class.extend({scoped: scoped}, function (inherited) {
+  		return {
+  			
+  			constructor: function (store, key, compare) {
+  				inherited.constructor.call(this);
+  				this._compare = compare || Comparators.byValue;
+  				this._store = store;
+  				var id_key = store.id_key();
+  				store.query({}).value().iterate(function (row) {
+  					this._insert(row[id_key], row[key]);
+  				}, this);
+  				store.on("insert", function (row) {
+  					this._insert(row[id_key], row[key]);
+  				}, this);
+  				store.on("remove", function (id) {
+  					this._remove(id);
+  				}, this);
+  				store.on("update", function (id, data) {
+  					if (key in data)
+  						this._update(id, data[key]);
+  				}, this);
+  			},
+
+  			destroy: function () {
+  				store.off(null, null, this);
+  				inherited.destroy.call(this);
+  			},
+  			
+  			iterate: function (key, direction, callback, context) {
+  				this._iterate(key, direction, callback, context);
+  			},
+  			
+  			itemIterate: function (key, direction, callback, context) {
+  				this.iterate(key, direction, function (iterKey, id) {
+  					return callback.call(context, iterKey, this._store.get(id).value());
+  				}, this); 
+  			},
+  			
+  			_iterate: function (key, direction, callback, context) {},
+  			
+  			_insert: function (id, key) {},
+  			
+  			_remove: function (id) {},
+  			
+  			_update: function (id, key) {}
+  		
+  		};
+  	});
+});
+
+Scoped.define("module:Stores.MemoryIndex", [
+	"module:Stores.AbstractIndex",
+	"base:Structures.TreeMap",
+	"base:Objs"
+], function (AbstractIndex, TreeMap, Objs, scoped) {
+  	return AbstractIndex.extend({scoped: scoped}, function (inherited) {
+  		return {
+  			
+  			constructor: function (store, key, compare) {
+  				inherited.constructor.call(this, store, key, compare);
+  				this._treeMap = TreeMap.empty(this._compare);
+  				this._idToKey = {};
+  			},
+  			
+  			_insert: function (id, key) {
+				this._idToKey[id] = key;
+  				var value = TreeMap.find(key, this._treeMap);
+  				if (value)
+  					value[id] = true;
+  				else 
+  					this._treeMap = TreeMap.add(key, Objs.objectBy(id, true), this._treeMap);
+  			},
+  			
+  			_remove: function (id) {
+  				var key = this._idToKey[id];
+  				delete this._idToKey[id];
+  				var value = TreeMap.find(key, this._treeMap);
+  				delete value[id];
+  				if (Objs.is_empty(value))
+  					this._treeMap = TreeMap.remove(key, this._treeMap);
+  			},
+  			
+  			_update: function (id, key) {
+  				var old_key = this._idToKey[id];
+  				if (old_key == key)
+  					return;
+  				this._remove(id);
+  				this._insert(id, key);
+  			},
+  			
+  			_iterate: function (key, direction, callback, context) {
+  				TreeMap.iterate_from(key, this._treeMap, function (iterKey, value) {
+  					for (var id in value) {
+  						if (callback.call(context, iterKey, id) === false)
+  							return false;
+  					}
+  					return true;
+  				}, this, !direction);
+  			}  			
+  		
+  		};
+  	});
+});
+
+
+Scoped.define("module:Stores.CachedStore", [
+          "module:Stores.DualStore",
+          "module:Stores.MemoryStore",
+          "module:Queries.DefaultQueryModel",
+          "module:Queries.Constrained",
+          "base:Objs",
+          "base:Async"
+  	], function (DualStore, MemoryStore, DefaultQueryModel, Constrained, Objs, Async, scoped) {
+  	return DualStore.extend({scoped: scoped}, function (inherited) {			
   		return {
 
-			constructor: function (store, options) {
-				inherited.constructor.call(this);
+			constructor: function (parent, options) {
 				options = options || {};
-				this._combine_update_update = options.combine_update_update || false;
-				this._combine_insert_update = options.combine_insert_update || false;
-				this._combine_insert_remove = options.combine_insert_remove || false;
-				this._combine_update_remove = options.combine_update_remove || false;
-				this._commits = {};
-				this._revision_id = null;
-				this._store = store;
-				this._item_commits = {};
-				this._store.on("insert", function (data) {
-					this.__add_commit({action: "insert", id: data[this._store.id_key()], data: data});
-				}, this);
-				this._store.on("remove", function (id) {
-					this.__add_commit({action: "remove", id: id});
-				}, this);
-				this._store.on("update", function (id, data) {
-					this.__add_commit({action: "update", id: id, data: data});
-				}, this);
+				var cache_store = options.cache_store;
+				if (!("cache_store" in options)) {
+				    cache_store = this._auto_destroy(new MemoryStore({
+		                id_key: parent.id_key()
+		            }));
+		        }
+		        if (!cache_store.query_model())
+		            cache_store.query_model(options.cache_query_model ? options.cache_query_model : this._auto_destroy(new DefaultQueryModel()));
+		        this.__invalidation_options = options.invalidation || {};
+		        inherited.constructor.call(this,
+					parent,
+					cache_store,
+					Objs.extend({
+						get_options: {
+							start: "second",
+							strategy: "or"
+						},
+						query_options: {
+							start: "second",
+							strategy: "or",
+							clone: true,
+							or_on_null: false
+						}
+					}, options));
+			   if (this.__invalidation_options.reload_after_first_hit) {
+			       this.__queries = {};
+			       this.cache().on("query_hit", function (query, subsumizer) {
+			           var s = Constrained.serialize(subsumizer);
+			           if (!this.__queries[s]) {
+			               this.__queries[s] = true;
+			               Async.eventually(function () {
+			                   this.invalidate_query(subsumizer, true);	                   
+			               }, [], this);
+			           }
+			       }, this);
+		           this.cache().on("query_miss", function (query) {
+		               var s = Constrained.serialize(query);
+		               this.__queries[s] = true;
+		           }, this);
+			   }
 			},
 			
-			__remove_commit: function (revision_id) {
-				this.trigger("remove", this._commits[revision_id]);
-				var id = this._commits[revision_id].id;
-				delete this._commits[revision_id];
-				delete this._item_commits[id];
-				if (Objs.is_empty(this._item_commits[id]))
-					delete this._item_commits[id];
+			destroy: function () {
+			    this.cache().off(null, null, this);
+			    inherited.destroy.call(this);
 			},
 			
-			__add_commit: function (object) {
-				object.revision_id = this._new_revision_id();
-				var has_insert = false;
-				var has_update = false;
-				var last_rev_id = null;
-				for (var rev_id in this._item_commits[object.id]) {
-					var obj = this._commits[rev_id];
-					has_insert = has_insert || obj.action == "insert";
-					has_update = has_update || obj.action == "update";
-					last_rev_id = rev_id;
-				}	
-				this._revision_id = object.revision_id;
-				this._commits[this._revision_id] = object;
-				this._item_commits[object.id] = this._item_commits[object.id] || {};
-				this._item_commits[object.id][object.revision_id] = true;
-				this.trigger("commit", object);
-				if (object.action == "update") {
-					if ((this._combine_insert_update && !has_update && has_insert) || (this._combine_update_update && has_update)) {
-						this.__remove_commit(object.revision_id);
-						this._commits[last_rev_id].data = Objs.extend(this._commits[last_rev_id].data, object.data);
-					}
-				} else if (object.action == "remove") {
-					for (rev_id in this._item_commits[object.id]) {
-						obj = this._commits[rev_id];
-						if ((has_insert && this._combine_insert_remove) || (obj.action == "update" && this._combine_update_remove))
-							this.__remove_commit(rev_id);
-					}
-				}
+			invalidate_query: function (query, reload) {
+			    this.cache().query_model().invalidate(query);
+			    if (reload) 
+		           this.query(query.query, query.options);
+		        this.trigger("invalidate_query", query, reload);
 			},
 			
-			flush: function (revision_id) {
-				revision_id = revision_id || this._revision_id;
-				for (var id in this._commits) {
-					if (id > revision_id)
-						break;
-					this.__remove_commit(id);
-				}
+			cache: function () {
+				return this.second();
 			},
 			
-			serialize: function (revision_id) {
-				var commit = this._commits[revision_id];
-				if (commin.action == "insert")
-					return {
-						"insert": commit.data
-					};
-				else if (commit.action == "remove")
-					return {
-						"remove": commit.id
-					};
-				else if (commit == "update")
-					return {
-						"update": Objs.objectBy(commit.id, commit.data) 
-					};
-				return null;
-			},
-			
-			serialize_bulk: function (revision_id) {
-				revision_id = revision_id || this._revision_id;
-				var result = [];
-				for (var id in this._commits) {
-					if (id > revision_id)
-						break;
-					result.push(this.serialize(id));
-				}
-				return result;
-			},
-			
-			revision_id: function () {
-				return this._revision_id;
-			},
-			
-			_new_revision_id: function () {
-				return this.cls.__revision_id + 1;
+			store: function () {
+				return this.first();
 			}
 			
-		};
-  	}], {
-		
-		__revision_id: 0
-		
-	});
-});  	
-Scoped.define("module:Stores.StoresMonitor", [
-          "base:Class",
-          "base:Events.EventsMixin"
-  	], function (Class, EventsMixin, scoped) {
-  	return Class.extend({scoped: scoped}, [EventsMixin, {
-
-	  	attach: function (ident, store) {
-			store.on("insert", function (row) {
-				this.trigger("insert", ident, store, row);
-				this.trigger("write", "insert", ident, store, row);
-			}, this);
-			store.on("remove", function (id) {
-				this.trigger("remove", ident, store, id);
-				this.trigger("write", "remove", ident, store, id);
-			}, this);
-			store.on("update", function (row, data) {
-				this.trigger("update", ident, store, row, data);
-				this.trigger("write", "update", ident, store, row, data);
-			}, this);
-		}
-		
-  	}]);
+  		};
+  	});
 });
+
+Scoped.define("module:Stores.DualStore", [
+          "module:Stores.BaseStore",
+          "base:Objs",
+          "base:Iterators.ArrayIterator"
+  	], function (BaseStore, Objs, ArrayIterator, scoped) {
+  	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+  		return {
+			
+			constructor: function (first, second, options) {
+				options = Objs.extend({
+					create_options: {},
+					update_options: {},
+					delete_options: {},
+					get_options: {},
+					query_options: {}
+				}, options || {});
+				options.id_key = first._id_key;
+				this.__first = first;
+				this.__second = second;
+				inherited.constructor.call(this, options);
+				this.__create_options = Objs.extend({
+					start: "first", // "second"
+					strategy: "then", // "or", "single"
+					auto_replicate: "first" // "first", "second", "both", "none"
+				}, options.create_options);
+				this.__update_options = Objs.extend({
+					start: "first", // "second"
+					strategy: "then", // "or", "single"
+					auto_replicate: "first" // "first", "second", "both", "none"
+				}, options.update_options);
+				this.__remove_options = Objs.extend({
+					start: "first", // "second"
+					strategy: "then", // "or", "single",
+					auto_replicate: "first" // "first", "second", "both", "none"
+				}, options.delete_options);
+				this.__get_options = Objs.extend({
+					start: "first", // "second"
+					strategy: "or", // "single"
+					clone: true, // false
+					clone_second: false,
+					or_on_null: true // false
+				}, options.get_options);
+				this.__query_options = Objs.extend({
+					start: "first", // "second"
+					strategy: "or", // "single"
+					clone: true, // false
+					clone_second: false,
+					or_on_null: true // false
+				}, options.query_options);
+				this.__first.on("insert", this.__inserted_first, this);
+				this.__second.on("insert", this.__inserted_second, this);
+				this.__first.on("update", this.__updated_first, this);
+				this.__second.on("update", this.__updated_second, this);
+				this.__first.on("remove", this.__removed_first, this);
+				this.__second.on("remove", this.__removed_second, this);
+			},
+			
+			__inserted_first: function (row, event_data) {
+				if (event_data && event_data.dual_insert)
+					return;
+				if (this.__create_options.auto_replicate == "first" || this.__create_options.auto_replicate == "both")
+					this.__second.insert([row, {dual_insert: true}]);
+				this._inserted(row);
+			},
+			
+			__inserted_second: function (row, event_data) {
+				if (event_data && event_data.dual_insert)
+					return;
+				if (this.__create_options.auto_replicate == "second" || this.__create_options.auto_replicate == "both")
+					this.__first.insert([row, {dual_insert: true}]);
+				this._inserted(row);
+			},
+		
+			__updated_first: function (row, update, event_data) {
+				if (event_data && event_data.dual_update)
+					return;
+				if (this.__update_options.auto_replicate == "first" || this.__update_options.auto_replicate == "both")
+					this.__second.update(row[this.id_key()], [update, {dual_update: true}]);
+				this._updated(row, update);
+			},
+			
+			__updated_second: function (row, update, event_data) {
+				if (event_data && event_data.dual_update)
+					return;
+				if (this.__update_options.auto_replicate == "second" || this.__update_options.auto_replicate == "both")
+					this.__first.update(row[this.id_key()], [update, {dual_update: true}]);
+				this._updated(row, update);
+			},
+		
+			__removed_first: function (id, event_data) {
+				if (event_data && event_data.dual_remove)
+					return;
+				if (this.__remove_options.auto_replicate == "first" || this.__remove_options.auto_replicate == "both")
+					this.__second.remove([id, {dual_remove: true}]);
+				this._removed(id);
+			},
+			
+			__removed_second: function (id, event_data) {
+				if (event_data && event_data.dual_remove)
+					return;
+				if (this.__remove_options.auto_replicate == "second" || this.__remove_options.auto_replicate == "both")
+					this.__first.remove([id, {dual_remove: true}]);
+				this._removed(id);
+			},
+		
+			first: function () {
+				return this.__first;
+			},
+			
+			second: function () {
+				return this.__second;
+			},
+		
+			_insert: function (data) {
+				var first = this.__first;
+				var second = this.__second;
+				if (this.__create_options.start != "first") {
+					first = this.__second;
+					second = this.__first;
+				}
+				var strategy = this.__create_options.strategy;
+				if (strategy == "then")
+					return first.insert([data, {dual_insert: true}]).mapSuccess(function (row) {
+						return second.insert([row, {dual_insert: true}]);
+					}, this);
+				else if (strategy == "or")
+					return first.insert([data, {dual_insert: true}]).mapError(function () {
+						return second.insert([data, {dual_insert: true}]);
+					}, this);
+				else
+					return first.insert([data, {dual_insert: true}]);
+			},
+		
+			_update: function (id, data) {
+				var first = this.__first;
+				var second = this.__second;
+				if (this.__update_options.start != "first") {
+					first = this.__second;
+					second = this.__first;
+				}
+				var strategy = this.__update_options.strategy;
+				if (strategy == "then")
+					return first.update(id, [data, {dual_update: true}]).mapSuccess(function (row) {
+						return second.update(id, [row, {dual_update: true}]);
+					}, this);
+				else if (strategy == "or")
+					return first.update(id, [data, {dual_update: true}]).mapError(function () {
+						return second.update(id, [data, {dual_update: true}]);
+					}, this);
+				else
+					return first.update(id, [data, {dual_update: true}]);
+			},
+		
+			_remove: function (id) {
+				var first = this.__first;
+				var second = this.__second;
+				if (this.__remove_options.start != "first") {
+					first = this.__second;
+					second = this.__first;
+				}
+				var strategy = this.__remove_options.strategy;
+				if (strategy == "then")
+					return first.remove([id, {dual_remove: true}]).mapSuccess(function () {
+						return second.remove([id, {dual_remove: true}]);
+					}, this);
+				else if (strategy == "or")
+					return first.remove([id, {dual_remove: true}]).mapError(function () {
+						return second.remove([id, {dual_remove: true}]);
+					}, this);
+				else
+					return first.remove(id);
+			},
+		
+			_query_capabilities: function () {
+				return {
+					"query": true,
+					"sort": true,
+					"limit": true,
+					"skip": true
+				};
+			},
+		
+			_get: function (id) {
+				var first = this.__first;
+				var second = this.__second;
+				if (this.__get_options.start != "first") {
+					first = this.__second;
+					second = this.__first;
+				}
+				var strategy = this.__get_options.strategy;
+				var clone = this.__get_options.clone;
+				var clone_second = this.__get_options.clone_second;
+				var or_on_null = this.__get_options.or_on_null;
+				var result = null;
+				if (strategy == "or") {
+					return first.get(id).mapCallback(function (error, result) {
+						if (error || (!result && or_on_null))
+							return second.get(id).mapSuccess(function (result) {
+								return result && clone ? first.insert(result) : result;
+							}, this);
+						if (!clone_second)
+							return result;
+						return second.get(id).mapCallback(function (error, row) {
+							if (error || !row)
+								return second.insert(result);
+							return result;
+						}, this);
+					}, this);
+				} else
+					return first.get(id);
+			},
+		
+			_query: function (query, options) {
+				var first = this.__first;
+				var second = this.__second;
+				if (this.__query_options.start != "first") {
+					first = this.__second;
+					second = this.__first;
+				}
+				var strategy = this.__query_options.strategy;
+				var clone = this.__query_options.clone;
+				var clone_second = this.__get_options.clone_second;
+				var or_on_null = this.__query_options.or_on_null;
+				var result = null;
+				if (strategy == "or") {
+					this.trigger("query_first", query, options);
+					return first.query(query, options).mapCallback(function (error, result) {
+						if (error || (!result && or_on_null)) {
+							this.trigger("query_second", query, options);
+							return second.query(query, options).mapSuccess(function (result) {
+								if (result && clone) {
+									var arr = result.asArray();
+									return first.insert_all(arr, {query: query, options: options}, {dual_insert: true}).mapSuccess(function () {
+										return new ArrayIterator(arr);
+									});
+								}
+								return result;
+							}, this);
+						}
+						if (!clone_second)
+							return result;
+						this.trigger("query_second", query, options);
+						return second.query(query, options).mapCallback(function (error, result2) {
+							if (error || !result2) {
+								var arr = result.asArray();
+								return second.insert_all(arr, {query: query, options: options}, {dual_insert: true}).mapSuccess(function () {
+									return new ArrayIterator(arr);
+								});
+							}
+							return result;
+						}, this);
+					}, this);
+				} else {
+					this.trigger("query_first", query, options);
+					return first.query(query, options);
+				}
+			}
+
+  		};
+  	});
+});
+
+Scoped.define("module:Queries.AbstractQueryModel", [
+	    "base:Class"
+	], function (Class, scoped) {
+	return Class.extend({scoped: scoped}, {
+	
+		register: function (query) {},
+		
+		executable: function (query) {}
+
+	});
+});
+
+
+Scoped.define("module:Queries.DefaultQueryModel", [
+        "module:Queries.AbstractQueryModel",
+        "module:Queries.Constrained",
+        "base:Objs"
+    ], function (AbstractQueryModel, Constrained, Objs, scoped) {
+    return AbstractQueryModel.extend({scoped: scoped}, function (inherited) {
+		return {
+					
+			constructor: function () {
+				inherited.constructor.call(this);
+		        this.__queries = {};    
+			},
+			
+			_insert: function (query) {
+				this.__queries[Constrained.serialize(query)] = query;
+			},
+			
+			_remove: function (query) {
+				delete this.__queries[Constrained.serialize(query)];
+			},
+			
+			exists: function (query) {
+				return Constrained.serialize(query) in this.__queries;
+			},
+			
+			subsumizer_of: function (query) {
+		        if (this.exists(query))
+		            return query;
+		        var result = null;
+		        Objs.iter(this.__queries, function (query2) {
+		            if (Constrained.subsumizes(query2, query))
+		                result = query2;
+		            return !result;
+		        }, this);
+		        return result;
+			},
+			
+			executable: function (query) {
+			    return !!this.subsumizer_of(query);
+			},
+			
+			register: function (query) {
+				var changed = true;
+				while (changed) {
+					changed = false;
+					Objs.iter(this.__queries, function (query2) {
+						if (Constrained.subsumizes(query, query2)) {
+							this._remove(query2);
+							changed = true;
+						}/* else if (Constrained.mergable(query, query2)) {
+							this._remove(query2);
+							changed = true;
+							query = Constrained.merge(query, query2);
+						} */
+					}, this);
+				}
+				this._insert(query);
+			},
+			
+			invalidate: function (query) {
+			    var subsumizer = this.subsumizer_of(query);
+			    if (subsumizer)
+			       this._remove(subsumizer);
+			}
+	
+		};
+    });
+});
+
+
+Scoped.define("module:Queries.StoreQueryModel", [
+       "module:Queries.DefaultQueryModel",
+       "module:Queries.Constrained"
+   ], function (DefaultQueryModel, Constrained, scoped) {
+   return DefaultQueryModel.extend({scoped: scoped}, function (inherited) {
+	   return {
+			
+			constructor: function (store) {
+		        this.__store = store;
+		        inherited.constructor.call(this);
+			},
+			
+			initialize: function () {
+				return this.__store.mapSuccess(function (result) {
+					while (result.hasNext()) {
+						var query = result.next();
+						delete query["id"];
+		                this._insert(query);
+					}
+				}, this);
+			},
+			
+			_insert: function (query) {
+				inherited._insert.call(this, query);
+				this.__store.insert(query);
+			},
+			
+			_remove: function (query) {
+				delete this.__queries[Constrained.serialize(query)];
+				this.__store.query({query: query}).success(function (result) {
+					while (result.hasNext())
+						this.__store.remove(result.next().id);
+				}, this);
+			}
+
+	    };
+    });
+});
+
 Scoped.define("module:Modelling.ModelException", [
           "base:Exceptions.Exception"
   	], function (Exception, scoped) {
