@@ -60,7 +60,7 @@ Scoped.define("module:Queries", [
 		},
 		
 		__dependencies_query: function (query, dep) {
-			for (key in query)
+			for (var key in query)
 				dep = this.__dependencies_pair(key, query[key], dep);
 			return dep;
 		},

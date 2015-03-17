@@ -1,15 +1,21 @@
 Scoped.define("module:Modelling.Validators.LengthValidator", [
         "module:Modelling.Validators.Validator",
-        "base:Types"
-    ], function (Validator, Types, scoped) {
+        "base:Types",
+        "base:Objs"
+    ], function (Validator, Types, Objs, scoped) {
     return Validator.extend({scoped: scoped}, function (inherited) {
 		return {
 			
 			constructor: function (options) {
 				inherited.constructor.call(this);
-				this.__min_length = Types.is_defined(options.min_length) ? options.min_length : null;
-				this.__max_length = Types.is_defined(options.max_length) ? options.max_length : null;
-				this.__error_string = Types.is_defined(options.error_string) ? options.error_string : null;
+				options = Objs.extend({
+					min_length: null,
+					max_length: null,
+					error_string: null
+				}, options);
+				this.__min_length = options.min_length;
+				this.__max_length = options.max_length;
+				this.__error_string = options.error_string;
 				if (!this.__error_string) {
 					if (this.__min_length !== null) {
 						if (this.__max_length !== null)

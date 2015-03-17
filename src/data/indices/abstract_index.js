@@ -26,7 +26,7 @@ Scoped.define("module:Stores.AbstractIndex", [
   			},
 
   			destroy: function () {
-  				store.off(null, null, this);
+  				this._store.off(null, null, this);
   				inherited.destroy.call(this);
   			},
   			

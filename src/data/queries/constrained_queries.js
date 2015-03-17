@@ -82,14 +82,14 @@ Scoped.define("module:Queries.Constrained", [
 		},
 		
 		subsumizes: function (query, query2) {
-			qopt = query.options || {};
-			qopt2 = query2.options || {};
-			qskip = qopt.skip || 0;
-			qskip2 = qopt2.skip || 0;
-			qlimit = qopt.limit || null;
-			qlimit2 = qopt2.limit || null;
-			qsort = qopt.sort;
-			qsort2 = qopt2.sort;
+			var qopt = query.options || {};
+			var qopt2 = query2.options || {};
+			var qskip = qopt.skip || 0;
+			var qskip2 = qopt2.skip || 0;
+			var qlimit = qopt.limit || null;
+			var qlimit2 = qopt2.limit || null;
+			var qsort = qopt.sort;
+			var qsort2 = qopt2.sort;
 			if (qskip > qskip2)
 				return false;
 			if (qlimit) {
@@ -114,7 +114,7 @@ Scoped.define("module:Queries.Constrained", [
 		mergeable: function (query, query2) {
 			if (Queries.serialize(query.query) != Queries.serialize(query2.query))
 				return false;
-			var qots = query.options || {};
+			var qopts = query.options || {};
 			var qopts2 = query2.options || {};
 			if (JSON.stringify(qopts.sort || {}) != JSON.stringify(qopts2.sort || {}))
 				return false;
@@ -131,7 +131,7 @@ Scoped.define("module:Queries.Constrained", [
 		},
 		
 		merge: function (query, query2) {
-			var qots = query.options || {};
+			var qopts = query.options || {};
 			var qopts2 = query2.options || {};
 			return {
 				query: query.query,

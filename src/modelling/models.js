@@ -99,7 +99,7 @@ Scoped.define("module:Modelling.Model", [
 					if (this.isNew()) {
 						attrs = this.cls.filterPersistent(this.get_all_properties());
 						if (this.__options.type_column)
-							attrs[this.__options.type_column] = model.cls.classname;
+							attrs[this.__options.type_column] = this.cls.classname;
 					} else {
 						attrs = this.cls.filterPersistent(this.properties_changed());
 						if (Types.is_empty(attrs))

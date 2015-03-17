@@ -15,7 +15,7 @@ Scoped.define("module:Modelling.Associations.HasManyViaAssociation", [
 			findBy: function (query) {
 				var returnPromise = Promise.create();
 				var intermediateQuery = Objs.objectBy(this._intermediate_key, this._id());
-				this._intermediate_table.findBy(intermediateQuery).forwardError(return_promise).success(function (intermediate) {
+				this._intermediate_table.findBy(intermediateQuery).forwardError(returnPromise).success(function (intermediate) {
 					if (intermediate) {
 						var full_query = Objs.extend(
 							Objs.clone(query, 1),
@@ -30,7 +30,7 @@ Scoped.define("module:Modelling.Associations.HasManyViaAssociation", [
 			allBy: function (query, id) {
 				var returnPromise = Promise.create();
 				var intermediateQuery = Objs.objectBy(this._intermediate_key, id ? id : this._id());
-				this._intermediate_table.allBy(intermediateQuery).forwardError(return_promise).success(function (intermediates) {
+				this._intermediate_table.allBy(intermediateQuery).forwardError(returnPromise).success(function (intermediates) {
 					var promises = Promise.and();
 					while (intermediates.hasNext()) {
 						var intermediate = intermediates.next();

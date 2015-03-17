@@ -185,7 +185,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
 					Objs.iter(source.data(), function (value, key) {
 						this.setError(key, value);
 					}, this);
-					e = new ModelInvalidException(model);
+					e = new ModelInvalidException(this);
 				}
 				return e;		
 			}
@@ -273,7 +273,10 @@ Scoped.define("module:Modelling.AssociatedProperties", [
 			var s = {};
 			s[this.primary_key()] = {
 				type: "id",
-				tags: ["read"]
+				tags: ["read"],
+				
+				after_set: null,
+				persistent: true
 			};
 			return s;
 		}

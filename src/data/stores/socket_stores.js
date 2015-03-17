@@ -11,7 +11,8 @@ Scoped.define("module:Stores.SocketStore", [
 				this.__prefix = prefix;
 				this._supportsAsync = false;
 			},
-			
+
+			/** @suppress {missingProperties} */
 			__send: function (action, data) {
 				this.__socket.emit(this.__prefix + ":" + action, data);
 			},

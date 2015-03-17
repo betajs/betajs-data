@@ -66,7 +66,7 @@ Scoped.define("module:Stores.RemoteStore", [
 					if (parse_json && Types.is_string(result)) {
 						try {
 							result = JSON.parse(result);
-						} catch (e) {}
+						} catch (ex) {}
 					}
 					return result;
 				});

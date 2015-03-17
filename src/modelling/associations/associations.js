@@ -19,7 +19,7 @@ Scoped.define("module:Modelling.Associations.Association", [
 		  	
 		  	__delete_cascade: function () {
 		  		this.yield().success(function (iter) {
-					iter = Iterators.ensure(iter).toArray();
+					iter = Iterators.ensure(iter);
 					while (iter.hasNext())
 						iter.next().remove({});
 		  		}, this);

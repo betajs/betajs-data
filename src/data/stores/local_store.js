@@ -7,9 +7,10 @@ Scoped.define("module:Stores.LocalStore", [
   	return AssocDumbStore.extend({scoped: scoped}, function (inherited) {			
   		return {
 
-			constructor: function (options) {
+			constructor: function (options, localStorage) {
 				inherited.constructor.call(this, options);
 				this.__prefix = options.prefix;
+				this.__localStorage = localStorage;
 			},
 			
 			__key: function (key) {
@@ -18,15 +19,15 @@ Scoped.define("module:Stores.LocalStore", [
 			
 			_read_key: function (key) {
 				var prfkey = this.__key(key);
-				return prfkey in localStorage ? JSON.parse(localStorage[prfkey]) : null;
+				return prfkey in this.__localStorage ? JSON.parse(this.__localStorage[prfkey]) : null;
 			},
 			
 			_write_key: function (key, value) {
-				localStorage[this.__key(key)] = JSON.stringify(value);
+				this.__localStorage[this.__key(key)] = JSON.stringify(value);
 			},
 			
 			_remove_key: function (key) {
-				delete localStorage[this.__key(key)];
+				delete this.__localStorage[this.__key(key)];
 			}
 
   		};

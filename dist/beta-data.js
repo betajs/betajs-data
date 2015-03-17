@@ -1,10 +1,10 @@
 /*!
-betajs-data - v1.0.0 - 2015-03-16
+betajs-data - v1.0.0 - 2015-03-17
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
 /*!
-betajs-scoped - v0.0.1 - 2015-02-21
+betajs-scoped - v0.0.1 - 2015-03-17
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -12,30 +12,18 @@ var Scoped = (function () {
 var Globals = {
 
 	get : function(key) {
-		try {
-			if (window)
-				return window[key];
-		} catch (e) {
-		}
-		try {
-			if (global)
-				return global[key];
-		} catch (e) {
-		}
+		if (typeof window !== "undefined")
+			return window[key];
+		if (typeof global !== "undefined")
+			return global[key];
 		return null;
 	},
 
 	set : function(key, value) {
-		try {
-			if (window)
-				window[key] = value;
-		} catch (e) {
-		}
-		try {
-			if (global)
-				global[key] = value;
-		} catch (e) {
-		}
+		if (typeof window !== "undefined")
+			window[key] = value;
+		if (typeof global !== "undefined")
+			global[key] = value;
 		return value;
 	},
 	
@@ -288,10 +276,11 @@ function newNamespace (options) {
 				context: context
 			});
 			if (node.lazy.length > 0) {
-				var f = function () {
+				var f = function (node) {
 					if (node.lazy.length > 0) {
 						var lazy = node.lazy.shift();
 						lazy.callback.call(lazy.context || this, node.data);
+						f(node);
 					}
 				};
 				f(node);
@@ -451,6 +440,8 @@ function newScope (parent, parentNamespace, rootNamespace, globalNamespace) {
 				};
 			} else {
 				var binding = bindings[parts[0]];
+				if (!binding)
+					throw ("The namespace '" + parts[0] + "' has not been defined (yet).");
 				return {
 					namespace: binding.namespace,
 					path : binding.path && parts[1] ? binding.path + "." + parts[1] : (binding.path || parts[1])
@@ -531,7 +522,7 @@ var rootScope = newScope(null, rootNamespace, rootNamespace, globalNamespace);
 var Public = Helper.extend(rootScope, {
 		
 	guid: "4b6878ee-cb6a-46b3-94ac-27d91f58d666",
-	version: '5.1424568052349',
+	version: '8.1426613087189',
 		
 	upgrade: Attach.upgrade,
 	attach: Attach.attach,
@@ -545,7 +536,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.0 - 2015-03-16
+betajs-data - v1.0.0 - 2015-03-17
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -560,7 +551,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '16.1426549179204'
+		version: '17.1426632310626'
 	};
 });
 
@@ -648,14 +639,14 @@ Scoped.define("module:Queries.Constrained", [
 		},
 		
 		subsumizes: function (query, query2) {
-			qopt = query.options || {};
-			qopt2 = query2.options || {};
-			qskip = qopt.skip || 0;
-			qskip2 = qopt2.skip || 0;
-			qlimit = qopt.limit || null;
-			qlimit2 = qopt2.limit || null;
-			qsort = qopt.sort;
-			qsort2 = qopt2.sort;
+			var qopt = query.options || {};
+			var qopt2 = query2.options || {};
+			var qskip = qopt.skip || 0;
+			var qskip2 = qopt2.skip || 0;
+			var qlimit = qopt.limit || null;
+			var qlimit2 = qopt2.limit || null;
+			var qsort = qopt.sort;
+			var qsort2 = qopt2.sort;
 			if (qskip > qskip2)
 				return false;
 			if (qlimit) {
@@ -680,7 +671,7 @@ Scoped.define("module:Queries.Constrained", [
 		mergeable: function (query, query2) {
 			if (Queries.serialize(query.query) != Queries.serialize(query2.query))
 				return false;
-			var qots = query.options || {};
+			var qopts = query.options || {};
 			var qopts2 = query2.options || {};
 			if (JSON.stringify(qopts.sort || {}) != JSON.stringify(qopts2.sort || {}))
 				return false;
@@ -697,7 +688,7 @@ Scoped.define("module:Queries.Constrained", [
 		},
 		
 		merge: function (query, query2) {
-			var qots = query.options || {};
+			var qopts = query.options || {};
 			var qopts2 = query2.options || {};
 			return {
 				query: query.query,
@@ -773,7 +764,7 @@ Scoped.define("module:Queries", [
 		},
 		
 		__dependencies_query: function (query, dep) {
-			for (key in query)
+			for (var key in query)
 				dep = this.__dependencies_pair(key, query[key], dep);
 			return dep;
 		},
@@ -1754,9 +1745,10 @@ Scoped.define("module:Stores.LocalStore", [
   	return AssocDumbStore.extend({scoped: scoped}, function (inherited) {			
   		return {
 
-			constructor: function (options) {
+			constructor: function (options, localStorage) {
 				inherited.constructor.call(this, options);
 				this.__prefix = options.prefix;
+				this.__localStorage = localStorage;
 			},
 			
 			__key: function (key) {
@@ -1765,15 +1757,15 @@ Scoped.define("module:Stores.LocalStore", [
 			
 			_read_key: function (key) {
 				var prfkey = this.__key(key);
-				return prfkey in localStorage ? JSON.parse(localStorage[prfkey]) : null;
+				return prfkey in this.__localStorage ? JSON.parse(this.__localStorage[prfkey]) : null;
 			},
 			
 			_write_key: function (key, value) {
-				localStorage[this.__key(key)] = JSON.stringify(value);
+				this.__localStorage[this.__key(key)] = JSON.stringify(value);
 			},
 			
 			_remove_key: function (key) {
-				delete localStorage[this.__key(key)];
+				delete this.__localStorage[this.__key(key)];
 			}
 
   		};
@@ -1954,7 +1946,7 @@ Scoped.define("module:Stores.RemoteStore", [
 					if (parse_json && Types.is_string(result)) {
 						try {
 							result = JSON.parse(result);
-						} catch (e) {}
+						} catch (ex) {}
 					}
 					return result;
 				});
@@ -2061,7 +2053,8 @@ Scoped.define("module:Stores.SocketStore", [
 				this.__prefix = prefix;
 				this._supportsAsync = false;
 			},
-			
+
+			/** @suppress {missingProperties} */
 			__send: function (action, data) {
 				this.__socket.emit(this.__prefix + ":" + action, data);
 			},
@@ -2152,7 +2145,7 @@ Scoped.define("module:Stores.AbstractIndex", [
   			},
 
   			destroy: function () {
-  				store.off(null, null, this);
+  				this._store.off(null, null, this);
   				inherited.destroy.call(this);
   			},
   			
@@ -2848,7 +2841,7 @@ Scoped.define("module:Modelling.Model", [
 					if (this.isNew()) {
 						attrs = this.cls.filterPersistent(this.get_all_properties());
 						if (this.__options.type_column)
-							attrs[this.__options.type_column] = model.cls.classname;
+							attrs[this.__options.type_column] = this.cls.classname;
 					} else {
 						attrs = this.cls.filterPersistent(this.properties_changed());
 						if (Types.is_empty(attrs))
@@ -3073,7 +3066,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
 					Objs.iter(source.data(), function (value, key) {
 						this.setError(key, value);
 					}, this);
-					e = new ModelInvalidException(model);
+					e = new ModelInvalidException(this);
 				}
 				return e;		
 			}
@@ -3161,7 +3154,10 @@ Scoped.define("module:Modelling.AssociatedProperties", [
 			var s = {};
 			s[this.primary_key()] = {
 				type: "id",
-				tags: ["read"]
+				tags: ["read"],
+				
+				after_set: null,
+				persistent: true
 			};
 			return s;
 		}
@@ -3311,7 +3307,7 @@ Scoped.define("module:Modelling.Associations.Association", [
 		  	
 		  	__delete_cascade: function () {
 		  		this.yield().success(function (iter) {
-					iter = Iterators.ensure(iter).toArray();
+					iter = Iterators.ensure(iter);
 					while (iter.hasNext())
 						iter.next().remove({});
 		  		}, this);
@@ -3357,19 +3353,28 @@ Scoped.define("module:Modelling.Associations.BelongsToAssociation", [
     });
 });
 Scoped.define("module:Modelling.Associations.ConditionalAssociation", [
-        "module:Modelling.Associations.Associations"
-    ], function (Associations, scoped) {
-    return Associations.extend({scoped: scoped}, {
-	
-		_yield: function () {
-			var assoc = this.assoc();
-			return assoc.yield.apply(assoc, arguments);
-		},
+        "module:Modelling.Associations.Associations",
+        "base:Objs"
+    ], function (Associations, Objs, scoped) {
+    return Associations.extend({scoped: scoped}, function (inherited) {
+		return {
 		
-		assoc: function () {
-			return this._model.assocs[this._options.conditional(this._model)];
-		}
-
+		  	constructor: function (model, options) {
+		  		inherited.constructor.call(this, model, Objs.extend({
+		  			conditional: function () { return true; }
+		  		}, options));
+		  	},
+	
+			_yield: function () {
+				var assoc = this.assoc();
+				return assoc.yield.apply(assoc, arguments);
+			},
+			
+			assoc: function () {
+				return this._model.assocs[this._options.conditional(this._model)];
+			}
+		
+		};
     });
 });
 Scoped.define("module:Modelling.Associations.HasManyAssociation", [
@@ -3445,7 +3450,7 @@ Scoped.define("module:Modelling.Associations.HasManyViaAssociation", [
 			findBy: function (query) {
 				var returnPromise = Promise.create();
 				var intermediateQuery = Objs.objectBy(this._intermediate_key, this._id());
-				this._intermediate_table.findBy(intermediateQuery).forwardError(return_promise).success(function (intermediate) {
+				this._intermediate_table.findBy(intermediateQuery).forwardError(returnPromise).success(function (intermediate) {
 					if (intermediate) {
 						var full_query = Objs.extend(
 							Objs.clone(query, 1),
@@ -3460,7 +3465,7 @@ Scoped.define("module:Modelling.Associations.HasManyViaAssociation", [
 			allBy: function (query, id) {
 				var returnPromise = Promise.create();
 				var intermediateQuery = Objs.objectBy(this._intermediate_key, id ? id : this._id());
-				this._intermediate_table.allBy(intermediateQuery).forwardError(return_promise).success(function (intermediates) {
+				this._intermediate_table.allBy(intermediateQuery).forwardError(returnPromise).success(function (intermediates) {
 					var promises = Promise.and();
 					while (intermediates.hasNext()) {
 						var intermediate = intermediates.next();
@@ -3585,16 +3590,22 @@ Scoped.define("module:Modelling.Validators.EmailValidator", [
 });
 Scoped.define("module:Modelling.Validators.LengthValidator", [
         "module:Modelling.Validators.Validator",
-        "base:Types"
-    ], function (Validator, Types, scoped) {
+        "base:Types",
+        "base:Objs"
+    ], function (Validator, Types, Objs, scoped) {
     return Validator.extend({scoped: scoped}, function (inherited) {
 		return {
 			
 			constructor: function (options) {
 				inherited.constructor.call(this);
-				this.__min_length = Types.is_defined(options.min_length) ? options.min_length : null;
-				this.__max_length = Types.is_defined(options.max_length) ? options.max_length : null;
-				this.__error_string = Types.is_defined(options.error_string) ? options.error_string : null;
+				options = Objs.extend({
+					min_length: null,
+					max_length: null,
+					error_string: null
+				}, options);
+				this.__min_length = options.min_length;
+				this.__max_length = options.max_length;
+				this.__error_string = options.error_string;
 				if (!this.__error_string) {
 					if (this.__min_length !== null) {
 						if (this.__max_length !== null)
