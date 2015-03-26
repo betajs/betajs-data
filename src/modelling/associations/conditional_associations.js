@@ -11,9 +11,9 @@ Scoped.define("module:Modelling.Associations.ConditionalAssociation", [
 		  		}, options));
 		  	},
 	
-			_yield: function () {
+			_execute: function () {
 				var assoc = this.assoc();
-				return assoc.yield.apply(assoc, arguments);
+				return assoc.execute.apply(assoc, arguments);
 			},
 			
 			assoc: function () {

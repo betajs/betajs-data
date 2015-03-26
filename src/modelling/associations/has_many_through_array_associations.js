@@ -5,7 +5,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
     ], function (HasManyAssociation, Promise, Objs, scoped) {
     return HasManyAssociation.extend({scoped: scoped}, {
 		
-		_yield: function () {
+		_execute: function () {
 			var returnPromise = Promise.create();
 			var promises = Promise.and();
 			Objs.iter(this._model.get(this._foreign_key), function (id) {

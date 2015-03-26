@@ -2,7 +2,7 @@ test("test collection", function() {
 	var Model = BetaJS.Data.Modelling.Model.extend("Model", {}, {
 		_initializeScheme: function () {
 			var scheme = this._inherited(Model, "_initializeScheme");
-			scheme["test"] = {
+			scheme.test = {
 				type: "string",
 				index: true
 			};

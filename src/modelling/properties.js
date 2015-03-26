@@ -96,7 +96,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
 				delete this.__errors[attr];
 				var scheme = this.cls.scheme();
 				var entry = scheme[attr];
-				var validate = entry["validate"];
+				var validate = entry.validate;
 				if (!validate)
 					return Promise.value(true);
 				if (!Types.is_array(validate))
@@ -137,42 +137,44 @@ Scoped.define("module:Modelling.SchemedProperties", [
 				var scheme = this.cls.scheme();
 				var props = this.get_all_properties();
 				tags = tags || {};
-				for (var key in props) {
-					if (key in scheme) {
-						var target = scheme[key]["tags"] || [];
-						var tarobj = {};
-						Objs.iter(target, function (value) {
-							tarobj[value] = true;
-						});
-						var success = true;
-						Objs.iter(tags, function (x) {
-							success = success && x in tarobj;
-						}, this);
-						if (success)
-							rec[key] = props[key];
-					}
-				}
+				var asInner = function (key) {
+					var target = scheme[key].tags || [];
+					var tarobj = {};
+					Objs.iter(target, function (value) {
+						tarobj[value] = true;
+					});
+					var success = true;
+					Objs.iter(tags, function (x) {
+						success = success && x in tarobj;
+					}, this);
+					if (success)
+						rec[key] = props[key];
+				};
+				for (var key in props)
+					if (key in scheme)
+						asInner.call(this, key);
 				return rec;		
 			},
 			
 			setByTags: function (data, tags) {
 				var scheme = this.cls.scheme();
 				tags = tags || {};
-				for (var key in data)  {
-					if (key in scheme) {
-						var target = scheme[key]["tags"] || [];
-						var tarobj = {};
-						Objs.iter(target, function (value) {
-							tarobj[value] = true;
-						});
-						var success = true;
-						Objs.iter(tags, function (x) {
-							success = success && x in tarobj;
-						}, this);
-						if (success)
-							this.set(key, data[key]);
-					}
-				}
+				var setInner = function (key) {
+					var target = scheme[key].tags || [];
+					var tarobj = {};
+					Objs.iter(target, function (value) {
+						tarobj[value] = true;
+					});
+					var success = true;
+					Objs.iter(tags, function (x) {
+						success = success && x in tarobj;
+					}, this);
+					if (success)
+						this.set(key, data[key]);
+				};
+				for (var key in data)
+					if (key in scheme)
+						setInner.call(this, key);
 			},
 			
 			validation_exception_conversion: function (e) {
@@ -239,7 +241,7 @@ Scoped.define("module:Modelling.AssociatedProperties", [
 			
 			__addAssoc: function (key, obj) {
 				this[key] = function () {
-					return obj.yield.apply(obj, arguments);
+					return obj.execute.apply(obj, arguments);
 				};
 			},
 			

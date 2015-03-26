@@ -4,7 +4,7 @@ test("test tables findById", function() {
 	var table = new BetaJS.Data.Modelling.Table(store, Model, {});	
 	var model = table.newModel();
 	model.save();
-	ok(table.findById(model.id()).value() != null);
+	ok(table.findById(model.id()).value() !== null);
 	QUnit.equal(table.findById(model.id() + 1).value(), null);
 });
 

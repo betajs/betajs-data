@@ -12,11 +12,11 @@ Scoped.define("module:Stores.ConversionStore", [
 				options.id_key = store._id_key;
 				inherited.constructor.call(this, options);
 				this.__store = store;
-				this.__key_encoding = options["key_encoding"] || {};
-				this.__key_decoding = options["key_decoding"] || {};
-				this.__value_encoding = options["value_encoding"] || {};
-				this.__value_decoding = options["value_decoding"] || {};
-				this.__projection = options["projection"] || {};
+				this.__key_encoding = options.key_encoding || {};
+				this.__key_decoding = options.key_decoding || {};
+				this.__value_encoding = options.value_encoding || {};
+				this.__value_decoding = options.value_decoding || {};
+				this.__projection = options.projection || {};
 			},
 			
 			store: function () {

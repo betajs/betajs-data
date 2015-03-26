@@ -46,8 +46,8 @@ Scoped.define("module:Stores.RemoteStore", [
 			},
 			
 			prepare_uri: function (action, data) {
-				if (this.__options["uri_mappings"][action])
-					return this.__options["uri_mappings"][action](data);
+				if (this.__options.uri_mappings[action])
+					return this.__options.uri_mappings[action](data);
 				if (action == "remove" || action == "get" || action == "update")
 					return this.getUri() + "/" + data[this._id_key];
 				return this.getUri();
@@ -144,14 +144,14 @@ Scoped.define("module:Stores.QueryGetParamsRemoteStore", [
 			_encode_query: function (query, options) {
 				options = options || {};
 				var uri = this.getUri() + "?"; 
-				if (options["skip"] && "skip" in this.__capability_params)
-					uri += this.__capability_params["skip"] + "=" + options["skip"] + "&";
-				if (options["limit"] && "limit" in this.__capability_params)
-					uri += this.__capability_params["limit"] + "=" + options["limit"] + "&";
-				if (options["sort"] && "sort" in this.__capability_params)
-					uri += this.__capability_params["sort"] + "=" + JSON.stringify(options["sort"]) + "&";
+				if (options.skip && "skip" in this.__capability_params)
+					uri += this.__capability_params.skip + "=" + options.skip + "&";
+				if (options.limit && "limit" in this.__capability_params)
+					uri += this.__capability_params.limit + "=" + options.limit + "&";
+				if (options.sort && "sort" in this.__capability_params)
+					uri += this.__capability_params.sort + "=" + JSON.stringify(options.sort) + "&";
 				if ("query" in this.__capability_params)
-					uri += this.__capability_params["query"] + "=" + JSON.stringify(query) + "&";
+					uri += this.__capability_params.query + "=" + JSON.stringify(query) + "&";
 				return {
 					uri: uri
 				};		

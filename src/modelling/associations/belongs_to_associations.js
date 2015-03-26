@@ -6,7 +6,7 @@ Scoped.define("module:Modelling.Associations.BelongsToAssociation", [
     return TableAssociation.extend({scoped: scoped}, function (inherited) {
 		return {
 			
-			_yield: function () {
+			_execute: function () {
 				var value = this._model.get(this._foreign_key);
 				if (!value)
 					return Promise.value(null);

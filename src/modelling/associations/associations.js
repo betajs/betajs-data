@@ -10,7 +10,7 @@ Scoped.define("module:Modelling.Associations.Association", [
 		  		inherited.constructor.call(this);
 		  		this._model = model;
 		  		this._options = options || {};
-		  		if (options["delete_cascade"]) {
+		  		if (options.delete_cascade) {
 		  			model.on("remove", function () {
 		  				this.__delete_cascade();
 		  			}, this);
@@ -18,18 +18,18 @@ Scoped.define("module:Modelling.Associations.Association", [
 		  	},
 		  	
 		  	__delete_cascade: function () {
-		  		this.yield().success(function (iter) {
+		  		this.execute().success(function (iter) {
 					iter = Iterators.ensure(iter);
 					while (iter.hasNext())
 						iter.next().remove({});
 		  		}, this);
 		  	},
 		  	
-		  	yield: function () {
+		  	execute: function () {
 		  		if ("__cache" in this)
 		  			return Promise.create(this.__cache);
-		  		var promise = this._yield();
-		  		if (this._options["cached"]) {
+		  		var promise = this._execute();
+		  		if (this._options.cached) {
 		  			promise.callback(function (error, value) {
 		  				this.__cache = error ? null : value;
 		  			}, this);

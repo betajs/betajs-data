@@ -16,13 +16,13 @@ test("test indices query", function() {
 	});
 	QUnit.deepEqual(list, [louie, ludwig, scrooge]);
 	
-	var list = [];
+	list = [];
 	first.itemIterate("Louid", false, function (key, item) {
 		list.push(item);
 	});
 	QUnit.deepEqual(list, [huey, donald, dewey, daisy]);
 
-	var list = [];
+	list = [];
 	last.itemIterate("E", true, function (key, item) {
 		list.push(item);
 	});

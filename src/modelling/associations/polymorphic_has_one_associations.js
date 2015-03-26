@@ -9,11 +9,11 @@ Scoped.define("module:Modelling.Associations.PolymorphicHasOneAssociation", [
 				inherited.constructor.call(this, model, options);
 				this._foreign_table_key = foreign_table_key;
 				this._foreign_key = foreign_key;
-				if (options["primary_key"])
+				if (options.primary_key)
 					this._primary_key = options.primary_key;
 			},
 
-			_yield: function (id) {
+			_execute: function (id) {
 				var value = id ? id : (this._primary_key ? this._model.get(this._primary_key) : this._model.id());
 				var foreign_table = Scoped.getGlobal(this._model.get(this._foreign_table_key));
 				return foreign_table.findBy(Objs.objectBy(this._foreign_key, value));

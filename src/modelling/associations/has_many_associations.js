@@ -10,12 +10,12 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
 				return this._primary_key ? this._model.get(this._primary_key) : this._model.id();
 			},
 		
-			_yield: function () {
+			_execute: function () {
 				return this.allBy();
 			},
 		
-			yield: function () {
-				return inherited.yield.call(this).mapSuccess(function (items) {
+			execute: function () {
+				return inherited.execute.call(this).mapSuccess(function (items) {
 					return new ArrayIterator(items);
 				});
 			},

@@ -4,7 +4,7 @@ test("test belongs to all", function() {
 	var Model1 = BetaJS.Data.Modelling.Model.extend("Model1", {
 		_initializeAssociations: function () {
 			var assocs = this._inherited(Model1, "_initializeAssociations");
-			assocs["model2"] = new BetaJS.Data.Modelling.Associations.BelongsToAssociation(
+			assocs.model2 = new BetaJS.Data.Modelling.Associations.BelongsToAssociation(
 				this,
 				table2,
 				"model2id",
@@ -13,11 +13,11 @@ test("test belongs to all", function() {
 				}
 			);
 			return assocs;
-		},		
+		}		
 	}, {
 		_initializeScheme: function () {
 			var scheme = this._inherited(Model1, "_initializeScheme");
-			scheme["model2id"] = {
+			scheme.model2id = {
 				type: "id",
 				index: true
 			};

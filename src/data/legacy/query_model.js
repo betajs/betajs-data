@@ -54,18 +54,19 @@ Scoped.define("module:Queries.DefaultQueryModel", [
 			
 			register: function (query) {
 				var changed = true;
+				var check = function (query2) {
+					if (Constrained.subsumizes(query, query2)) {
+						this._remove(query2);
+						changed = true;
+					}/* else if (Constrained.mergable(query, query2)) {
+						this._remove(query2);
+						changed = true;
+						query = Constrained.merge(query, query2);
+					} */
+				};
 				while (changed) {
 					changed = false;
-					Objs.iter(this.__queries, function (query2) {
-						if (Constrained.subsumizes(query, query2)) {
-							this._remove(query2);
-							changed = true;
-						}/* else if (Constrained.mergable(query, query2)) {
-							this._remove(query2);
-							changed = true;
-							query = Constrained.merge(query, query2);
-						} */
-					}, this);
+					Objs.iter(this.__queries, check, this);
 				}
 				this._insert(query);
 			},
@@ -97,7 +98,7 @@ Scoped.define("module:Queries.StoreQueryModel", [
 				return this.__store.mapSuccess(function (result) {
 					while (result.hasNext()) {
 						var query = result.next();
-						delete query["id"];
+						delete query.id;
 		                this._insert(query);
 					}
 				}, this);

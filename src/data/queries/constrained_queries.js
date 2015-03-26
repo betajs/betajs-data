@@ -74,9 +74,9 @@ Scoped.define("module:Queries.Constrained", [
 				if ("sort" in options && !("sort" in execute_options))
 					iter = new SortedIterator(iter, Comparators.byObject(options.sort));
 				if ("skip" in options && !("skip" in execute_options))
-					iter = new SkipIterator(iter, options["skip"]);
+					iter = new SkipIterator(iter, options.skip);
 				if ("limit" in options && !("limit" in execute_options))
-					iter = new LimitIterator(iter, options["limit"]);
+					iter = new LimitIterator(iter, options.limit);
 				return iter;
 			});
 		},

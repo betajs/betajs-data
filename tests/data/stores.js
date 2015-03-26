@@ -83,7 +83,7 @@ test("test cached store with store as query model", function () {
     QUnit.equal(hit, 1);
     QUnit.equal(miss, 1);
     dual.destroy();
-    var dual = new BetaJS.Data.Stores.CachedStore(base, {
+    dual = new BetaJS.Data.Stores.CachedStore(base, {
         cache_store: cache_store,
         cache_query_model: new BetaJS.Data.Queries.StoreQueryModel(query_store)
     });
@@ -128,7 +128,7 @@ test("test cached store with store as query model and invalidation", function ()
     QUnit.equal(miss, 1);
     QUnit.equal(invalidate, 0);
     dual.destroy();
-    var dual = new BetaJS.Data.Stores.CachedStore(base, {
+    dual = new BetaJS.Data.Stores.CachedStore(base, {
         cache_store: cache_store,
         cache_query_model: new BetaJS.Data.Queries.StoreQueryModel(query_store),
         invalidation: {
