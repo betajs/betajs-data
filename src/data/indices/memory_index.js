@@ -31,7 +31,7 @@ Scoped.define("module:Stores.MemoryIndex", [
 					this._ignoreCaseMap = this.__insert(id, key, this._ignoreCaseMap);
   			},
   			
-  			__remove: function (key, map) {
+  			__remove: function (key, map, id) {
   				var value = TreeMap.find(key, map);
   				delete value[id];
   				if (Objs.is_empty(value))
@@ -43,9 +43,9 @@ Scoped.define("module:Stores.MemoryIndex", [
   				var key = this._idToKey[id];
   				delete this._idToKey[id];
   				if (this._options.exact)
-  					this._exactMap = this.__remove(key, this._exactMap);
+  					this._exactMap = this.__remove(key, this._exactMap, id);
   				if (this._options.ignoreCase)
-  					this._ignoreCaseMap = this.__remove(key, this._ignoreCaseMap);
+  					this._ignoreCaseMap = this.__remove(key, this._ignoreCaseMap, id);
   			},
   			
   			_update: function (id, key) {
