@@ -552,7 +552,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '19.1430619372427'
+		version: '20.1430620905157'
 	};
 });
 
@@ -1376,6 +1376,7 @@ Scoped.define("module:Queries.Engine", [
         "base:Types",
         "base:Objs",
         "base:Promise",
+        "base:Comparators",
         "base:Iterators.SkipIterator",
         "base:Iterators.LimitIterator",
         "base:Iterators.SortedIterator",
@@ -1384,7 +1385,7 @@ Scoped.define("module:Queries.Engine", [
         "base:Iterators.PartiallySortedIterator",
         "base:Iterators.ArrayIterator",
         "base:Iterators.LazyMultiArrayIterator"
-	], function (Queries, Constrained, Strings, Types, Objs, Promise, SkipIterator, LimitIterator, SortedIterator, FilteredIterator, SortedOrIterator, PartiallySortedIterator, ArrayIterator, LazyMultiArrayIterator) {
+	], function (Queries, Constrained, Strings, Types, Objs, Promise, Comparators, SkipIterator, LimitIterator, SortedIterator, FilteredIterator, SortedOrIterator, PartiallySortedIterator, ArrayIterator, LazyMultiArrayIterator) {
 	return {
 		
 		indexQueryConditionsSize: function (conds, index, ignoreCase) {
