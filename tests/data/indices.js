@@ -29,3 +29,23 @@ test("test indices query", function() {
 	QUnit.deepEqual(list, [scrooge, ludwig]);
 });
 
+
+test("test index performance", function () {
+	var store = new BetaJS.Data.Stores.MemoryStore();
+		
+	for (var i = 1; i <= 2000; ++i)
+		store.insert({data: i});
+	store.query({"data": 1000}).success(function (iter) {
+		QUnit.equal(iter.asArray().length, 1);
+	});
+	store.query({"data": {"$eq": 1000}}).success(function (iter) {
+		QUnit.equal(iter.asArray().length, 1);
+	});
+	
+	store.indices.data = new BetaJS.Data.Stores.MemoryIndex(store, "data");
+	
+	store.query({"data": {"$eq": 1000}}).success(function (iter) {
+		QUnit.equal(iter.asArray().length, 1);
+	});
+
+});

@@ -58,7 +58,7 @@ Scoped.define("module:Queries.DefaultQueryModel", [
 					if (Constrained.subsumizes(query, query2)) {
 						this._remove(query2);
 						changed = true;
-					}/* else if (Constrained.mergable(query, query2)) {
+					}/* else if (Constrained.mergeable(query, query2)) {
 						this._remove(query2);
 						changed = true;
 						query = Constrained.merge(query, query2);

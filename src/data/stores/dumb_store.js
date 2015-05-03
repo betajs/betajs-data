@@ -91,12 +91,6 @@ Scoped.define("module:Stores.DumbStore", [
 				}, this);
 			},
 			
-			_query_capabilities: function () {
-				return {
-					query: true
-				};
-			},
-		
 			_query: function (query, options) {
 				return Promise.tryCatch(function () {
 					var iter = new Iterator();
@@ -113,15 +107,7 @@ Scoped.define("module:Stores.DumbStore", [
 								return false;
 							while (this.__id < last_id && !this.__store._read_item(this.__id))
 								this.__id++;
-							while (this.__id <= last_id) {
-								if (this.__store._query_applies_to_id(query, this.__id))
-									return true;
-								if (this.__id < last_id)
-									this.__id = this.__store._read_next_id(this.__id);
-								else
-									this.__id++;
-							}
-							return false;
+							return this.__id <= last_id;
 						},
 						
 						next: function () {

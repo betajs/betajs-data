@@ -2,94 +2,114 @@ Scoped.define("module:Queries.Constrained", [
         "json:",
         "module:Queries",
         "base:Types",
-        "base:Comparators",
-        "base:Iterators.ArrayIterator",
-        "base:Iterators.FilteredIterator",
-        "base:Iterators.SortedIterator",
-        "base:Iterators.SkipIterator",
-        "base:Iterators.LimitIterator"
-	], function (JSON, Queries, Types, Comparators, ArrayIterator, FilteredIterator, SortedIterator, SkipIterator, LimitIterator) {
-	return {		
+        "base:Objs",
+        "base:Tokens",
+        "base:Comparators"
+	], function (JSON, Queries, Types, Objs, Tokens, Comparators) {
+	return {
 		
-		make: function (query, options) {
-			return {
-				query: query,
-				options: options || {}
-			};
+		/*
+		 * 
+		 * { query: query, options: options }
+		 * 
+		 * options:
+		 * 	skip: int || 0
+		 *  limit: int || null
+		 *  sort: {
+		 *    key1: 1 || -1,
+		 *    key2: 1 || -1
+		 *  }
+		 * 
+		 */
+		
+		rectify: function (constrainedQuery) {
+			var base = ("options" in constrainedQuery || "query" in constrainedQuery) ? constrainedQuery : { query: constrainedQuery};
+			return Objs.extend({
+				query: {},
+				options: {}
+			}, base);
 		},
 		
-		is_constrained: function (query) {
-			return query && (query.query || query.options);
+		skipValidate: function (options, capabilities) {
+			if ("skip" in options) {
+				if (capabilities)
+					return capabilities.skip;
+			}
+			return true;
 		},
 		
-		format: function (instance) {
-			var query = instance.query;
-			instance.query = Queries.format(query);
-			var result = JSON.stringify(instance);
-			instance.query = query;
-			return result;
+		limitValidate: function (options, capabilities) {
+			if ("limit" in options) {
+				if (capabilities)
+					return capabilities.limit;
+			}
+			return true;
 		},
-		
-		normalize: function (constrained_query) {
-			return {
-				query: "query" in constrained_query ? Queries.normalize(constrained_query.query) : {},
-				options: {
-					skip: "options" in constrained_query && "skip" in constrained_query.options ? constrained_query.options.skip : null,
-					limit: "limit" in constrained_query && "limit" in constrained_query.options ? constrained_query.options.limit : null,
-					sort: "sort" in constrained_query && "sort" in constrained_query.options ? constrained_query.options.sort : {}
-				}
-			};
-		},
-		
-		emulate: function (constrained_query, query_capabilities, query_function, query_context) {
-			var query = constrained_query.query || {};
-			var options = constrained_query.options || {};
-			var execute_query = {};
-			var execute_options = {};
-			if ("sort" in options && "sort" in query_capabilities)
-				execute_options.sort = options.sort;
-			execute_query = query;
-			if ("query" in query_capabilities || Types.is_empty(query)) {
-				execute_query = query;
-				if (!options.sort || ("sort" in query_capabilities)) {
-					if ("skip" in options && "skip" in query_capabilities)
-						execute_options.skip = options.skip;
-					if ("limit" in options && "limit" in query_capabilities) {
-						execute_options.limit = options.limit;
-						if ("skip" in options && !("skip" in query_capabilities))
-							execute_options.limit += options.skip;
-					}
-				}
-			}  
-			return query_function.call(query_context || this, execute_query, execute_options).mapSuccess(function (raw) {
-				var iter = raw;
-				if (raw === null)
-					iter = new ArrayIterator([]);
-				else if (Types.is_array(raw))
-					iter = new ArrayIterator(raw);		
-				if (!("query" in query_capabilities || Types.is_empty(query)))
-					iter = new FilteredIterator(iter, function(row) {
-						return Queries.evaluate(query, row);
+
+		sortValidate: function (options, capabilities) {
+			if ("sort" in options) {
+				if (capabilities && !capabilities.sort)
+					return false;
+				if (capabilities && Types.is_object(capabilities.sort)) {
+					var supported = Objs.all(options.sort, function (dummy, key) {
+						return key in capabilities.sort;
 					});
-				if ("sort" in options && !("sort" in execute_options))
-					iter = new SortedIterator(iter, Comparators.byObject(options.sort));
-				if ("skip" in options && !("skip" in execute_options))
-					iter = new SkipIterator(iter, options.skip);
-				if ("limit" in options && !("limit" in execute_options))
-					iter = new LimitIterator(iter, options.limit);
-				return iter;
-			});
+					if (!supported)
+						return false;
+				}
+			}
+			return true;
 		},
 		
-		subsumizes: function (query, query2) {
-			var qopt = query.options || {};
-			var qopt2 = query2.options || {};
-			var qskip = qopt.skip || 0;
-			var qskip2 = qopt2.skip || 0;
-			var qlimit = qopt.limit || null;
-			var qlimit2 = qopt2.limit || null;
-			var qsort = qopt.sort;
-			var qsort2 = qopt2.sort;
+		constraintsValidate: function (options, capabilities) {
+			return Objs.all(["skip", "limit", "sort"], function (prop) {
+				return this[prop + "Validate"].call(this, options, capabilities);
+			}, this);
+		},
+
+		validate: function (constrainedQuery, capabilities) {
+			constrainedQuery = this.rectify(constrainedQuery);
+			return this.constraintsValidate(constrainedQuery.options, capabilities) && Queries.validate(constrainedQuery.query, capabilities.query || {});
+		},
+		
+		fullConstrainedQueryCapabilities: function (queryCapabilties) {
+			return {
+				query: queryCapabilties,
+				skip: true,
+				limit: true,
+				sort: true // can also be false OR a non-empty object containing keys which can be ordered by
+			};
+		},
+		
+		normalize: function (constrainedQuery) {
+			constrainedQuery = this.rectify(constrainedQuery);
+			return {
+				query: Queries.normalize(constrainedQuery.query),
+				options: options
+			};
+		},
+
+		serialize: function (constrainedQuery) {
+			return JSON.stringify(this.rectify(constrainedQuery));
+		},
+		
+		unserialize: function (constrainedQuery) {
+			return JSON.parse(constrainedQuery);
+		},
+		
+		hash: function (constrainedQuery) {
+			return Tokens.simple_hash(this.serialize(constrainedQuery));
+		},
+		
+		subsumizes: function (constrainedQuery, constrainedQuery2) {
+			constrainedQuery = this.rectify(constrainedQuery);
+			constrainedQuery2 = this.rectify(constrainedQuery2);
+			var qskip = constrainedQuery.options.skip || 0;
+			var qskip2 = constrainedQuery2.options.skip || 0;
+			var qlimit = constrainedQuery.options.limit || null;
+			var qlimit2 = constrainedQuery2.options.limit || null;
+			var qsort = constrainedQuery.options.sort;
+			var qsort2 = constrainedQuery.options.sort;
 			if (qskip > qskip2)
 				return false;
 			if (qlimit) {
@@ -100,22 +120,16 @@ Scoped.define("module:Queries.Constrained", [
 			}
 			if ((qskip || qlimit) && (qsort || qsort2) && JSON.stringify(qsort) != JSON.stringify(qsort2))
 				return false;
-			return Queries.subsumizes(query.query, query2.query);
+			return Queries.subsumizes(constrainedQuery.query, constrainedQuery2.query);
 		},
 		
-		serialize: function (query) {
-			return JSON.stringify(this.normalize(query));
-		},
-		
-		unserialize: function (query) {
-			return JSON.parse(query);
-		},
-		
-		mergeable: function (query, query2) {
-			if (Queries.serialize(query.query) != Queries.serialize(query2.query))
+		mergeable: function (constrainedQuery, constrainedQuery2) {
+			constrainedQuery = this.rectify(constrainedQuery);
+			constrainedQuery2 = this.rectify(constrainedQuery2);
+			if (Queries.serialize(constrainedQuery.query) != Queries.serialize(constrainedQuery2.query))
 				return false;
-			var qopts = query.options || {};
-			var qopts2 = query2.options || {};
+			var qopts = constrainedQuery.options;
+			var qopts2 = constrainedQuery2.options;
 			if (JSON.stringify(qopts.sort || {}) != JSON.stringify(qopts2.sort || {}))
 				return false;
 			if ("skip" in qopts) {
@@ -130,9 +144,11 @@ Scoped.define("module:Queries.Constrained", [
 				return !("skip" in qopts2) || (!qopts.limit || (qopts.limit >= qopts2.skip));
 		},
 		
-		merge: function (query, query2) {
-			var qopts = query.options || {};
-			var qopts2 = query2.options || {};
+		merge: function (constrainedQuery, constrainedQuery2) {
+			constrainedQuery = this.rectify(constrainedQuery);
+			constrainedQuery2 = this.rectify(constrainedQuery2);
+			var qopts = constrainedQuery.options;
+			var qopts2 = constrainedQuery2.options;
 			return {
 				query: query.query,
 				options: {
@@ -142,6 +158,7 @@ Scoped.define("module:Queries.Constrained", [
 				}
 			};
 		}
-	
+		
+		
 	}; 
 });

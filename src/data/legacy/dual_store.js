@@ -1,9 +1,11 @@
 
 Scoped.define("module:Stores.DualStore", [
+          "module:Queries",
+          "module:Queries.Constrained",
           "module:Stores.BaseStore",
           "base:Objs",
           "base:Iterators.ArrayIterator"
-  	], function (BaseStore, Objs, ArrayIterator, scoped) {
+  	], function (Queries, Constrained, BaseStore, Objs, ArrayIterator, scoped) {
   	return BaseStore.extend({scoped: scoped}, function (inherited) {			
   		return {
 			
@@ -173,12 +175,7 @@ Scoped.define("module:Stores.DualStore", [
 			},
 		
 			_query_capabilities: function () {
-				return {
-					"query": true,
-					"sort": true,
-					"limit": true,
-					"skip": true
-				};
+				return Constrained.fullConstrainedQueryCapabilities(Queries.fullQueryCapabilities()); 
 			},
 		
 			_get: function (id) {

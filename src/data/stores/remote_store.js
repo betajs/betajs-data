@@ -117,9 +117,10 @@ Scoped.define("module:Stores.RemoteStore", [
 
 
 Scoped.define("module:Stores.QueryGetParamsRemoteStore", [
+        "module:Queries",
         "module:Stores.RemoteStore",
         "json:"
-	], function (RemoteStore, JSON, scoped) {
+	], function (Queries, RemoteStore, JSON, scoped) {
 	return RemoteStore.extend({scoped: scoped}, function (inherited) {			
 		return {
                                           			
@@ -135,7 +136,7 @@ Scoped.define("module:Stores.QueryGetParamsRemoteStore", [
 				if ("limit" in this.__capability_params)
 					caps.limit = true;
 				if ("query" in this.__capability_params)
-					caps.query = true;
+					caps.query = Queries.fullQueryCapabilities();
 				if ("sort" in this.__capability_params)
 					caps.sort = true;
 				return caps;

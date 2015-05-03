@@ -40,13 +40,13 @@ Scoped.define("module:Stores.ListenerStore", [
 Scoped.define("module:Stores.BaseStore", [
           "module:Stores.ListenerStore",
           "module:Stores.StoreException",
-          "module:Queries.Constrained",
+          "module:Queries.Engine",
           "module:Queries",
           "base:Classes.TimedIdGenerator",
           "base:Promise",
           "base:Types",
           "base:Objs"
-  	], function (ListenerStore, StoreException, Constrained, Queries, TimedIdGenerator, Promise, Types, Objs, scoped) {
+  	], function (ListenerStore, StoreException, QueryEngine, Queries, TimedIdGenerator, Promise, Types, Objs, scoped) {
   	return ListenerStore.extend({scoped: scoped}, function (inherited) {			
   		return {
 				
@@ -58,6 +58,7 @@ Scoped.define("module:Stores.BaseStore", [
 				if (this._create_ids)
 					this._id_generator = options.id_generator || this._auto_destroy(new TimedIdGenerator());
 				this._query_model = "query_model" in options ? options.query_model : null;
+				this.indices = {};
 			},
 			
 		    query_model: function () {
@@ -159,16 +160,14 @@ Scoped.define("module:Stores.BaseStore", [
 		    		}
 		    		this.trigger("query_hit", {query: query, options: options}, subsumizer);
 				}
-				return Constrained.emulate(
-						Constrained.make(query, options || {}),
+				return QueryEngine.compileIndexedQuery(
+						{query: query, options: options || {}},
 						this._query_capabilities(),
-						this._query,
-						this);
-			},
-			
-			_query_applies_to_id: function (query, id) {
-				var row = this.get(id);
-				return row && Queries.overloaded_evaluate(query, row);
+						function (constrainedQuery) {
+							return this._query(constrainedQuery.query, constrainedQuery.options);
+						},
+						this,
+						this.indices);
 			},
 			
 			_ensure_index: function (key) {
