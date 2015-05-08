@@ -85,7 +85,7 @@ Scoped.define("module:Queries.Constrained", [
 			constrainedQuery = this.rectify(constrainedQuery);
 			return {
 				query: Queries.normalize(constrainedQuery.query),
-				options: options
+				options: constrainedQuery.options
 			};
 		},
 
@@ -150,11 +150,11 @@ Scoped.define("module:Queries.Constrained", [
 			var qopts = constrainedQuery.options;
 			var qopts2 = constrainedQuery2.options;
 			return {
-				query: query.query,
+				query: constrainedQuery.query,
 				options: {
 					skip: "skip" in qopts ? ("skip" in qopts2 ? Math.min(qopts.skip, qopts2.skip): null) : null,
 					limit: "limit" in qopts ? ("limit" in qopts2 ? Math.max(qopts.limit, qopts2.limit): null) : null,
-					sort: query.sort
+					sort: constrainedQuery.sort
 				}
 			};
 		}

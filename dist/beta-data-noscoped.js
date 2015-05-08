@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-05-02
+betajs-data - v1.0.0 - 2015-05-03
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -14,7 +14,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '19.1430619372427'
+		version: '21.1430633248627'
 	};
 });
 
@@ -105,7 +105,7 @@ Scoped.define("module:Queries.Constrained", [
 			constrainedQuery = this.rectify(constrainedQuery);
 			return {
 				query: Queries.normalize(constrainedQuery.query),
-				options: options
+				options: constrainedQuery.options
 			};
 		},
 
@@ -170,11 +170,11 @@ Scoped.define("module:Queries.Constrained", [
 			var qopts = constrainedQuery.options;
 			var qopts2 = constrainedQuery2.options;
 			return {
-				query: query.query,
+				query: constrainedQuery.query,
 				options: {
 					skip: "skip" in qopts ? ("skip" in qopts2 ? Math.min(qopts.skip, qopts2.skip): null) : null,
 					limit: "limit" in qopts ? ("limit" in qopts2 ? Math.max(qopts.limit, qopts2.limit): null) : null,
-					sort: query.sort
+					sort: constrainedQuery.sort
 				}
 			};
 		}
@@ -838,6 +838,7 @@ Scoped.define("module:Queries.Engine", [
         "base:Types",
         "base:Objs",
         "base:Promise",
+        "base:Comparators",
         "base:Iterators.SkipIterator",
         "base:Iterators.LimitIterator",
         "base:Iterators.SortedIterator",
@@ -846,7 +847,7 @@ Scoped.define("module:Queries.Engine", [
         "base:Iterators.PartiallySortedIterator",
         "base:Iterators.ArrayIterator",
         "base:Iterators.LazyMultiArrayIterator"
-	], function (Queries, Constrained, Strings, Types, Objs, Promise, SkipIterator, LimitIterator, SortedIterator, FilteredIterator, SortedOrIterator, PartiallySortedIterator, ArrayIterator, LazyMultiArrayIterator) {
+	], function (Queries, Constrained, Strings, Types, Objs, Promise, Comparators, SkipIterator, LimitIterator, SortedIterator, FilteredIterator, SortedOrIterator, PartiallySortedIterator, ArrayIterator, LazyMultiArrayIterator) {
 	return {
 		
 		indexQueryConditionsSize: function (conds, index, ignoreCase) {
@@ -2207,7 +2208,7 @@ Scoped.define("module:Stores.MemoryIndex", [
 					this._ignoreCaseMap = this.__insert(id, key, this._ignoreCaseMap);
   			},
   			
-  			__remove: function (key, map) {
+  			__remove: function (key, map, id) {
   				var value = TreeMap.find(key, map);
   				delete value[id];
   				if (Objs.is_empty(value))
@@ -2219,9 +2220,9 @@ Scoped.define("module:Stores.MemoryIndex", [
   				var key = this._idToKey[id];
   				delete this._idToKey[id];
   				if (this._options.exact)
-  					this._exactMap = this.__remove(key, this._exactMap);
+  					this._exactMap = this.__remove(key, this._exactMap, id);
   				if (this._options.ignoreCase)
-  					this._ignoreCaseMap = this.__remove(key, this._ignoreCaseMap);
+  					this._ignoreCaseMap = this.__remove(key, this._ignoreCaseMap, id);
   			},
   			
   			_update: function (id, key) {
