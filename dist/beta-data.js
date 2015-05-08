@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-05-03
+betajs-data - v1.0.0 - 2015-05-07
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -537,7 +537,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.0 - 2015-05-03
+betajs-data - v1.0.0 - 2015-05-07
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -552,7 +552,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '21.1430633248627'
+		version: '24.1431044756981'
 	};
 });
 
@@ -823,11 +823,13 @@ Scoped.define("module:Queries", [
 		},
 		
 		validate_atoms: function (atoms, capabilities) {
-			return Types.is_array(atoms) && Objs.all(atoms, this.validate_atom, this);
+			return Types.is_array(atoms) && Objs.all(atoms, function (atom) {
+				return this.validate_atom(atom, capabilities);
+			}, this);
 		},
 		
-		validate_atom: function (atom) {
-			return true; 
+		validate_atom: function (atom, capabilities) {
+			return !capabilities || !!capabilities.atom; 
 		},
 		
 		validate_queries: function (queries, capabilities) {
@@ -853,12 +855,12 @@ Scoped.define("module:Queries", [
 		
 		is_query_atom: function (value) {
 			return value === null || !Types.is_object(value) || Objs.all(value, function (v, key) {
-				return key in this.SYNTAX_CONDITION_KEYS;
+				return !(key in this.SYNTAX_CONDITION_KEYS);
 			}, this);
 		},
 		
 		validate_value: function (value, capabilities) {
-			return this.is_query_atom(value) ? this.validate_conditions(value, capabilities) : this.validate_atom(value);
+			return !this.is_query_atom(value) ? this.validate_conditions(value, capabilities) : this.validate_atom(value, capabilities);
 		},
 		
 		validate_conditions: function (conditions, capabilities) {
@@ -937,7 +939,7 @@ Scoped.define("module:Queries", [
 		},
 		
 		evaluate_value: function (value, object_value) {
-			return Types.is_object(value) ? this.evaluate_conditions(value, object_value) : this.evaluate_atom(value, object_value);
+			return !this.is_query_atom(value) ? this.evaluate_conditions(value, object_value) : this.evaluate_atom(value, object_value);
 		},
 		
 		evaluate_atom: function (value, object_value) {
@@ -981,6 +983,7 @@ Scoped.define("module:Queries", [
 				conditions[key] = true;
 			});
 			return {
+				atom: true,
 				bool: bool,
 				conditions: conditions
 			};
@@ -1485,8 +1488,9 @@ Scoped.define("module:Queries.Engine", [
 				post_actions.filter = constrainedQuery.query;
 				constrainedQuery.query = {};
 			}
-			var query_result = this._queryResultRectify(constrainedQueryFunction.call(constrainedQueryContext, constrainedQuery), false);
+			var query_result = constrainedQueryFunction.call(constrainedQueryContext, constrainedQuery);
 			return query_result.mapSuccess(function (iter) {
+				iter = this._queryResultRectify(iter, false);
 				if (post_actions.filter)
 					iter = new FilteredIterator(iter, function(row) {
 						return Queries.evaluate(post_actions.filter, row);
