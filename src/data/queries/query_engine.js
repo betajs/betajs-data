@@ -113,8 +113,9 @@ Scoped.define("module:Queries.Engine", [
 				post_actions.filter = constrainedQuery.query;
 				constrainedQuery.query = {};
 			}
-			var query_result = this._queryResultRectify(constrainedQueryFunction.call(constrainedQueryContext, constrainedQuery), false);
+			var query_result = constrainedQueryFunction.call(constrainedQueryContext, constrainedQuery);
 			return query_result.mapSuccess(function (iter) {
+				iter = this._queryResultRectify(iter, false);
 				if (post_actions.filter)
 					iter = new FilteredIterator(iter, function(row) {
 						return Queries.evaluate(post_actions.filter, row);

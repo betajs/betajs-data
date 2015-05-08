@@ -136,7 +136,7 @@ Scoped.define("module:Queries", [
 		},
 		
 		validate_value: function (value, capabilities) {
-			return this.is_query_atom(value) ? this.validate_conditions(value, capabilities) : this.validate_atom(value);
+			return !this.is_query_atom(value) ? this.validate_conditions(value, capabilities) : this.validate_atom(value);
 		},
 		
 		validate_conditions: function (conditions, capabilities) {
