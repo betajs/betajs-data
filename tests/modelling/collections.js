@@ -10,7 +10,7 @@ test("test collection", function() {
 		}
 	});
 	var table = new BetaJS.Data.Modelling.Table(new BetaJS.Data.Stores.MemoryStore(), Model, {});
-	var coll = new BetaJS.Data.Collections.ActiveQueryCollection(table, {query: {test: "abc"}});
+	var coll = new BetaJS.Data.Collections.ActiveTableQueryCollection(table, {query: {test: "abc"}});
 	var adder = 0;
 	var remover = 0;
 	coll.on("add", function () {

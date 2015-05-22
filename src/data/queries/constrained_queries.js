@@ -74,7 +74,7 @@ Scoped.define("module:Queries.Constrained", [
 		
 		fullConstrainedQueryCapabilities: function (queryCapabilties) {
 			return {
-				query: queryCapabilties,
+				query: queryCapabilties || Queries.fullQueryCapabilities(),
 				skip: true,
 				limit: true,
 				sort: true // can also be false OR a non-empty object containing keys which can be ordered by

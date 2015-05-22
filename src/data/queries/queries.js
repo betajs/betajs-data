@@ -50,13 +50,13 @@ Scoped.define("module:Queries", [
 		}, "$sw": {
 			target: "atom",
 			evaluate_single: function (object_value, condition_value) {
-				return object_value.indexOf(condition_value) === 0;
+				return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) === 0);
 			}
 		}, "$ct": {
 			target: "atom",
 			no_index_support: true,
 			evaluate_single: function (object_value, condition_value) {
-				return object_value.indexOf(condition_value) >= 0;
+				return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) >= 0);
 			}
 		}, "$eq": {
 			target: "atom",

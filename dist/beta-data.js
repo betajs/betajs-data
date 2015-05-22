@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-05-07
+betajs-data - v1.0.0 - 2015-05-22
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -537,7 +537,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.0 - 2015-05-07
+betajs-data - v1.0.0 - 2015-05-22
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -552,7 +552,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '24.1431044756981'
+		version: '25.1432321451995'
 	};
 });
 
@@ -632,7 +632,7 @@ Scoped.define("module:Queries.Constrained", [
 		
 		fullConstrainedQueryCapabilities: function (queryCapabilties) {
 			return {
-				query: queryCapabilties,
+				query: queryCapabilties || Queries.fullQueryCapabilities(),
 				skip: true,
 				limit: true,
 				sort: true // can also be false OR a non-empty object containing keys which can be ordered by
@@ -772,13 +772,13 @@ Scoped.define("module:Queries", [
 		}, "$sw": {
 			target: "atom",
 			evaluate_single: function (object_value, condition_value) {
-				return object_value.indexOf(condition_value) === 0;
+				return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) === 0);
 			}
 		}, "$ct": {
 			target: "atom",
 			no_index_support: true,
 			evaluate_single: function (object_value, condition_value) {
-				return object_value.indexOf(condition_value) >= 0;
+				return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) >= 0);
 			}
 		}, "$eq": {
 			target: "atom",
@@ -1304,7 +1304,7 @@ Scoped.define("module:Collections.QueryCollection", [
 			
 			isComplete: function () {
 				return this._count !== null;
-			}
+			}			
 			
     	};
 	});
@@ -1318,38 +1318,25 @@ Scoped.define("module:Collections.ActiveQueryCollection", [
      ], function (QueryCollection, Queries, Objs, scoped) {
      return QueryCollection.extend({scoped: scoped}, function (inherited) {
  		return {
-                                             			
-			constructor: function (source, query, options) {
-				inherited.constructor.call(this, source, query, options);
-				source.on("create", this.__active_create, this);
-				source.on("remove", this.__active_remove, this);
-				source.on("update", this.__active_update, this);
-			},
-			
-			destroy: function () {
-				this._source.off(null, null, this);
-				inherited.destroy.call(this);
-			},
-			
-			get_ident: function (obj) {
-				return obj.id();
-			},
-			
-			is_valid: function (data) {
+ 			
+			isValid: function (data) {
 				return Queries.evaluate(this.query().query, data);
 			},
 			
-			__active_create: function (data, materialize) {
-				if (!this.is_valid(data))
+ 			_materialize: function (data) {
+ 				return data;
+ 			},
+			
+			_activeCreate: function (data) {
+				if (!this.isValid(data))
 					return;
-				var obj = materialize();
-				this.add(obj);
+				this.add(this._materialize(data));
 				this._count = this._count + 1;
 				if (this._query.options.limit !== null)
 					this._query.options.limit = this._query.options.limit + 1;
 			},
 			
-			__active_remove: function (id) {
+			_activeRemove: function (id) {
 				var object = this.getById(id);
 				if (!object)
 					return;
@@ -1359,18 +1346,80 @@ Scoped.define("module:Collections.ActiveQueryCollection", [
 					this._query.options.limit = this._query.options.limit - 1;
 			},
 			
-			__active_update: function (id, data, row) {
+			_activeUpdate: function (id, data, row) {
 				var object = this.getById(id);
 				var merged = Objs.extend(row, data);
 				if (!object)
-					this.__active_create(merged, this._source.materializer(merged));
-				else if (!this.is_valid(merged))
-					this.__active_remove(id);
+					this._activeCreate(merged, this._materialize(merged));
+				else if (!this.isValid(merged))
+					this._activeRemove(id);
+				else
+					object.setAll(data);
 			}
 
 		};
     });
 });
+
+
+Scoped.define("module:Collections.ActiveTableQueryCollection", [      
+       "module:Collections.ActiveQueryCollection"
+   ], function (ActiveQueryCollection, scoped) {
+   return ActiveQueryCollection.extend({scoped: scoped}, function (inherited) {
+		return {
+	                                           			
+			constructor: function (source, query, options) {
+				inherited.constructor.call(this, source, query, options);
+				source.on("create", this._activeCreate, this);
+				source.on("remove", this._activeRemove, this);
+				source.on("update", this._activeUpdate, this);
+	  		},
+	  			
+			destroy: function () {
+				this._source.off(null, null, this);
+				inherited.destroy.call(this);
+			},
+	  			
+			get_ident: function (obj) {
+				return obj.id();
+			},
+	  			
+			_materialize: function (data) {
+				return this._source.materialize(data);
+			}
+
+  		};
+      });
+  });
+
+
+Scoped.define("module:Collections.ActiveStoreQueryCollection", [      
+        "module:Collections.ActiveQueryCollection"
+    ], function (ActiveQueryCollection, scoped) {
+    return ActiveQueryCollection.extend({scoped: scoped}, function (inherited) {
+ 		return {
+ 	                                           			
+ 			constructor: function (source, query, options) {
+ 				inherited.constructor.call(this, source, query, options);
+ 				source.on("insert", this._activeCreate, this);
+ 				source.on("remove", this._activeRemove, this);
+ 				source.on("update", function (row, data) {
+ 					this._activeUpdate(source.id_of(row), data, row);
+ 				}, this);
+ 	  		},
+ 	  			
+ 			destroy: function () {
+ 				this._source.off(null, null, this);
+ 				inherited.destroy.call(this);
+ 			},
+ 	  			
+ 			get_ident: function (obj) {
+ 				return obj.get(this._source.id_key());
+ 			}
+
+   		};
+       });
+   });
 
 Scoped.define("module:Queries.Engine", [
         "module:Queries",
@@ -1785,176 +1834,20 @@ Scoped.define("module:Stores.AssocStore", [
   	});
 });
 
-Scoped.define("module:Stores.StoreException", ["base:Exceptions.Exception"], function (Exception, scoped) {
-	return Exception.extend({scoped: scoped}, {});
-});
-
-
-Scoped.define("module:Stores.ListenerStore", [
-         "base:Class",
-         "base:Events.EventsMixin"
- 	], function (Class, EventsMixin, scoped) {
- 	return Class.extend({scoped: scoped}, [EventsMixin, function (inherited) {			
- 		return {
- 			
-	 		constructor: function (options) {
-	 			inherited.constructor.call(this);
-				options = options || {};
-				this._id_key = options.id_key || "id";
-			},
-		
-			id_key: function () {
-				return this._id_key;
-			},
-			
-			_inserted: function (row, event_data) {
-				this.trigger("insert", row, event_data);		
-			},
-			
-			_removed: function (id, event_data) {
-				this.trigger("remove", id, event_data);		
-			},
-			
-			_updated: function (row, data, event_data) {
-				this.trigger("update", row, data, event_data);		
-			} 
-
- 		};
- 	}]);
-});
-
-
 Scoped.define("module:Stores.BaseStore", [
-          "module:Stores.ListenerStore",
-          "module:Stores.StoreException",
-          "module:Queries.Engine",
-          "module:Queries",
-          "base:Classes.TimedIdGenerator",
-          "base:Promise",
-          "base:Types",
-          "base:Objs"
-  	], function (ListenerStore, StoreException, QueryEngine, Queries, TimedIdGenerator, Promise, Types, Objs, scoped) {
-  	return ListenerStore.extend({scoped: scoped}, function (inherited) {			
+          "base:Class",
+          "base:Events.EventsMixin",
+          "module:Stores.ReadStoreMixin",
+          "module:Stores.WriteStoreMixin",
+          "base:Promise"
+  	], function (Class, EventsMixin, ReadStoreMixin, WriteStoreMixin, Promise, scoped) {
+  	return Class.extend({scoped: scoped}, [EventsMixin, ReadStoreMixin, WriteStoreMixin, function (inherited) {			
   		return {
 				
 			constructor: function (options) {
-				inherited.constructor.call(this, options);
-				options = options || {};
-				this._id_key = options.id_key || "id";
-				this._create_ids = options.create_ids || false;
-				if (this._create_ids)
-					this._id_generator = options.id_generator || this._auto_destroy(new TimedIdGenerator());
-				this._query_model = "query_model" in options ? options.query_model : null;
-				this.indices = {};
-			},
-			
-		    query_model: function () {
-		        if (arguments.length > 0)
-		            this._query_model = arguments[0];
-		        return this._query_model;
-		    },
-		    
-			_insert: function (data) {
-				return Promise.create(null, new StoreException("unsupported: insert"));
-			},
-			
-			_remove: function (id) {
-				return Promise.create(null, new StoreException("unsupported: remove"));
-			},
-			
-			_get: function (id) {
-				return Promise.create(null, new StoreException("unsupported: get"));
-			},
-			
-			_update: function (id, data) {
-				return Promise.create(null, new StoreException("unsupported: update"));
-			},
-			
-			_query_capabilities: function () {
-				return {};
-			},
-			
-			_query: function (query, options) {
-				return Promise.create(null, new StoreException("unsupported: query"));
-			},
-			
-			insert: function (data) {
-				var event_data = null;
-				if (Types.is_array(data)) {
-					event_data = data[1];
-					data = data[0];
-				}			
-				if (this._create_ids && !(this._id_key in data && data[this._id_key]))
-					data[this._id_key] = this._id_generator.generate();
-				return this._insert(data).success(function (row) {
-					this._inserted(row, event_data);
-				}, this);
-			},
-			
-			insert_all: function (data, query) {
-				var event_data = null;
-				if (arguments.length > 2)
-					event_data = arguments[2];
-				if (query && this._query_model) {
-					this.trigger("query_register", query);
-					this._query_model.register(query);
-				}
-				var promise = Promise.and();
-				for (var i = 0; i < data.length; ++i)
-					promise = promise.and(this.insert(event_data ? [data[i], event_data] : data[i]));
-				return promise.end();
-			},
-		
-			remove: function (id) {
-				var event_data = null;
-				if (Types.is_array(id)) {
-					event_data = id[1];
-					id = id[0];
-				}			
-				return this._remove(id).success(function () {
-					this._removed(id, event_data);
-				}, this);
-			},
-			
-			get: function (id) {
-				return this._get(id);
-			},
-			
-			update: function (id, data) {
-				var event_data = null;
-				if (Types.is_array(data)) {
-					event_data = data[1];
-					data = data[0];
-				}			
-				return this._update(id, data).success(function (row) {
-					this._updated(row, data, event_data);
-				}, this);
-			},
-			
-			query: function (query, options) {
-				query = Objs.clone(query, -1);
-				if (options) {
-					if (options.limit)
-						options.limit = parseInt(options.limit, 10);
-					if (options.skip)
-						options.skip = parseInt(options.skip, 10);
-				}
-				if (this._query_model) {
-				    var subsumizer = this._query_model.subsumizer_of({query: query, options: options});
-		    		if (!subsumizer) {
-		    			this.trigger("query_miss", {query: query, options: options});
-		    			return Promise.error(new StoreException("Cannot execute query"));
-		    		}
-		    		this.trigger("query_hit", {query: query, options: options}, subsumizer);
-				}
-				return QueryEngine.compileIndexedQuery(
-						{query: query, options: options || {}},
-						this._query_capabilities(),
-						function (constrainedQuery) {
-							return this._query(constrainedQuery.query, constrainedQuery.options);
-						},
-						this,
-						this.indices);
+				inherited.constructor.call(this);
+				this._initializeReadStore(options);
+				this._initializeWriteStore(options);
 			},
 			
 			_ensure_index: function (key) {
@@ -1973,23 +1866,10 @@ Scoped.define("module:Stores.BaseStore", [
 					}
 					return promise;
 				}, this);
-			},
-			
-			perform: function (commit) {
-				var action = Objs.keyByIndex(commit);
-				var data = Objs.valueByIndex(commit);
-				if (action == "insert")
-					return this.insert(data);
-				else if (action == "remove")
-					return this.remove(data);
-				else if (action == "update")
-					return this.update(Objs.keyByIndex(data), Objs.valueByIndex(data));
-				else
-					return Promise.error(new StoreException("unsupported: perform " + action));
 			}
 
   		};
-  	});
+  	}]);
 });
 
 
@@ -2295,6 +2175,393 @@ Scoped.define("module:Stores.MemoryStore", [
   	});
 });
 
+Scoped.define("module:Stores.PartialStore", [
+          "module:Stores.BaseStore",
+          "module:Stores.MemoryStore",
+          "module:Stores.PartialStoreWriteStrategies.PostWriteStrategy",
+          "module:Queries",
+          "module:Queries.Constrained",
+          "base:Promise",
+          "base:Objs",
+          "base:Time",
+          "base:Timers.Timer",
+          "base:Iterators.ArrayIterator",
+          "base:Iterators.MappedIterator"
+  	], function (Store, MemoryStore, PostWriteStrategy, Queries, Constrained, Promise, Objs, Time, Timer, ArrayIterator, MappedIterator, scoped) {
+  	return Store.extend({scoped: scoped}, function (inherited) {			
+  		return {
+
+			constructor: function (options, remoteStore, localItemStore, localQueryStore, writeStrategy) {
+				this._options = Objs.extend({
+					meta_key: "meta",
+					meta_query_key: "meta",
+					query_key: "query",
+					update_time: 10 * 60 * 1000,
+					remove_time: 24 * 60 * 60 * 1000,
+					query_update_time: 10 * 60 * 1000,
+					query_remove_time: 24 * 60 * 60 * 1000
+				}, options);
+				inherited.constructor.call(this, options);
+				this.remoteStore = remoteStore;
+				this.localItemStore = localItemStore || this.auto_destroy(new MemoryStore());
+				this.localQueryStore = localQueryStore || this.auto_destroy(new MemoryStore());
+				this.writeStrategy = writeStrategy || this.auto_destroy(new PostWriteStrategy());
+				this.auto_destroy(new Timer({
+					delay: Math.min(this._options.remove_time, this._options.query_remove_time),
+					context: this,
+					fire: this.cleanup
+				}));
+			},
+			
+			_addMeta: function (data, options) {
+  				var meta_key = this._options.meta_key;
+  				var now = Time.now();
+  				var copyData = Objs.clone(data, 1);
+  				copyData[meta_key] = Objs.extend({
+					update_time: now + this._options.update_time,
+					remove_time: now + this._options.remove_time,
+					locked: false
+  				}, options);
+  				return copyData;
+			},
+			
+			_removeMeta: function (data) {
+  				var meta_key = this._options.meta_key;
+  				var copyData = Objs.clone(data, 1);
+  				delete copyData[meta_key];
+  				return copyData;
+			},
+			
+			_inserted: function (row, event_data) {
+				var meta_key = this._options.meta_key;
+				row = Objs.clone(row, 1);
+				delete row[meta_key];
+				inherited._inserted.call(this, row, event_data);		
+			},
+			
+			_updated: function (row, data, event_data) {
+				var meta_key = this._options.meta_key;
+				row = Objs.clone(row, 1);
+				delete row[meta_key];
+				data = Objs.clone(data, 1);
+				delete data[meta_key];
+				inherited._updated.call(this, row, data, event_data);		
+			}, 
+
+			_insert: function (data) {
+				return this.writeStrategy.insert(this, data);
+			},
+			
+			_remove: function (id) {
+				return this.writeStrategy.remove(this, id);
+			},
+			
+			_update: function (id, data) {
+				return this.writeStrategy.update(this, id, data);
+			},
+
+			_get: function (id) {
+				var now = Time.now();
+				var meta_key = this._options.meta_key;
+				var localItem = Objs.clone(this.localItemStore.get(id).value(), 1);
+				if (localItem) {
+					var meta = localItem[meta_key];
+					delete localItem[meta_key];
+					if (meta.update_time > now || meta.locked) {
+						meta.remove_time = now + this._options.remove_time;
+						this.localItemStore.update(id, Objs.objectBy(meta_key, meta));
+						return Promise.value(localItem);
+					}
+				}
+				return this.remoteStore.get(id).mapSuccess(function (remoteItem) {
+					this.localItemStore.remove(id);
+					if (remoteItem) {
+						localItem = Objs.clone(remoteItem, 1);
+						localItem[meta_key] = {
+							update_time: now + this._options.update_time,
+							remove_time: now + this._options.remove_time
+						};
+						this.localItemStore.insert(localItem);
+					}
+					return remoteItem;
+				}, this).mapError(function (err) {
+					if (localItem)
+						return Promise.value(localItem);
+					return Promise.error(error);
+				}, this);
+			},
+			
+			_query: function (query, options) {
+				var now = Time.now();
+				var queryString = Constrained.serialize({
+					query: query,
+					options: options
+				});
+				var meta_key = this._options.meta_query_key;
+				var item_meta_key = this._options.meta_key;
+				var query_key = this._options.query_key;
+				var localQuery = this.localQueryStore.query({query: queryString}, {limit: 1}).value().asArray();
+				localQuery = localQuery.length > 0 ? Objs.clone(localQuery[0], 1) : null;
+				var query_id = null;
+				if (localQuery) {
+					query_id = localQuery[this.localQueryStore.id_key()];
+					var meta = localQuery[meta_key];
+					delete localQuery[meta_key];
+					if (meta.update_time > now) {
+						meta.remove_time = now + this._options.query_remove_time;
+						this.localQueryStore.update(query_id, Objs.objectBy(meta_key, meta));
+						return Promise.value(new MappedIterator(this.localItemStore.query(query, options).value(), function (item) {
+							var result = Objs.clone(item, 1);
+							delete result[item_meta_key];
+							return result;
+						}));
+					}
+				}
+				return this.remoteStore.query(query, options).mapSuccess(function (remoteQuery) {
+					if (localQuery)
+						this.localQueryStore.remove(query_id);
+					this.localQueryStore.insert(Objs.objectBy(meta_key, {
+						update_time: now + this._options.query_update_time,
+						remove_time: now + this._options.query_remove_time
+					}, query_key, queryString));
+					var arr = remoteQuery.asArray();
+					Objs.iter(arr, function (remoteItem, i) {
+						var id = this.remoteStore.id_of(remoteItem);
+						var localItem = this.localItemStore.get(id).value();
+						if (localItem) {
+							if (localItem[meta_key].locked)
+								return;
+							this.localItemStore.remove(id);
+						}
+						localItem = Objs.clone(remoteItem, 1);
+						localItem[meta_key] = {
+							update_time: now + this._options.update_time,
+							remove_time: now + this._options.remove_time
+						};
+						this.localItemStore.insert(localItem);
+					}, this);
+					return new ArrayIterator(arr);
+				}, this).mapError(function (err) {
+					return Promise.value(new MappedIterator(this.localItemStore.query(query, options).value(), function (item) {
+						var result = Objs.clone(item, 1);
+						delete result[item_meta_key];
+						return result;
+					}));
+				}, this);
+			},			
+			
+			_query_capabilities: function () {
+				return Constrained.fullConstrainedQueryCapabilities();
+			},
+			
+			cleanup: function () {
+				var now = Time.now();
+				var iter = this.localItemStore.query({}).value();
+				var meta_key = this._options.meta_key;
+				while (iter.hasNext()) {
+					var item = iter.next();
+					var meta = item[meta_key];
+					if (meta.remove_time < now && !meta.locked)
+						this.localItemStore.remove(item[this.localItemStore.id_key()]);
+				}
+				iter = this.localQueryStore.query({}).value();
+				meta_key = this._options.meta_query_key;
+				while (iter.hasNext()) {
+					var item2 = iter.next();
+					var meta2 = item2[meta_key];
+					if (meta2.remove_time < now)
+						this.localQueryStore.remove(item2[this.localQueryStore.id_key()]);
+				}
+			}  		
+  		
+		};
+	});
+});
+   
+Scoped.define("module:Stores.PartialStoreWriteStrategies.WriteStrategy", [
+    "base:Class"
+], function (Class, scoped) {
+	return Class.extend({scoped: scoped}, function (inherited) {
+		return {
+			
+			insert: function (partialStore, data) {},
+			
+			remove: function (partialStore, id) {},
+			
+			update: function (partialStore, data) {}
+			
+		};
+	});
+});
+
+Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
+  "module:Stores.PartialStoreWriteStrategies.WriteStrategy"
+  ], function (Class, scoped) {
+  	return Class.extend({scoped: scoped}, function (inherited) {
+  		return {
+  			
+  			insert: function (partialStore, data) {
+  				return partialStore.remoteStore.insert(data).mapSuccess(function (data) {
+  					return partialStore.localItemStore.insert(partialStore._addMeta(data));
+  				});
+  			},
+  			
+  			remove: function (partialStore, id) {
+  				return partialStore.remoteStore.remove(id).mapSuccess(function () {
+  					return partialStore.localItemStore.remove(id);
+  				});
+  			},
+  			
+  			update: function (partialStore, id, data) {
+  				return partialStore.remoteStore.update(id, data).mapSuccess(function () {
+  					return partialStore.localItemStore.update(id, partialStore._addMeta(data));
+  				});
+  			}
+  			
+  		};
+  	});
+  });
+
+
+Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
+  "module:Stores.PartialStoreWriteStrategies.WriteStrategy"
+], function (Class, scoped) {
+  	return Class.extend({scoped: scoped}, function (inherited) {
+  		return {
+
+  			insert: function (partialStore, data) {
+  				return partialStore.localItemStore.insert(partialStore._addMeta(data)).success(function (data) {
+  					partialStore.remoteStore.insert(partialStore._removeMeta(data)).error(function () {
+  						partialStore.localItemStore.remove(partialStore.localItemStore.id_of(data));
+  					});
+  				});
+  			},
+  			
+  			remove: function (partialStore, id) {
+  				return partialStore.localItemStore.get(id).mapSuccess(function (data) {
+  					return partialStore.localItemStore.remove(id).success(function () {
+  						partialStore.remoteStore.remove(id).error(function () {
+  							partialStore.localItemStore.insert(data);
+  						});
+  					});
+  				});
+  			},
+  			
+  			update: function (partialStore, id, data) {
+  				return partialStore.localItemStore.get(id).mapSuccess(function (data) {
+  					return partialStore.localItemStore.update(id, partialStore._addMeta(data)).success(function () {
+  						partialStore.remoteStore.update(id, partialStore._removeMeta(data)).error(function () {
+  							partialStore.localItemStore.update(id, data);
+  						});
+  					});
+  				});
+  			}
+  			
+  		};
+  	});
+  });
+
+
+Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
+     "module:Stores.PartialStoreWriteStrategies.WriteStrategy",
+     "module:Stores.StoreHistory",
+     "base:Objs"
+], function (Class, StoreHistory, Objs, scoped) {
+  	return Class.extend({scoped: scoped}, function (inherited) {
+  		return {
+  			
+  			constructor: function (historyStore, options) {
+  				inherited.constructor.call(this);
+  				options = options || {};
+  				this.storeHistory = this.auto_destroy(new StoreHistory(null, historyStore, {
+  					source_id_key: options.source_id_key || "id",
+  					row_data: {
+  						pushed: false,
+  						success: false
+  					},
+  					filter_data: {
+  						pushed: false
+  					}
+  				}));
+  			},
+
+  			insert: function (partialStore, data) {
+  				return partialStore.localItemStore.insert(partialStore._addMeta(data, {locked: true})).success(function (data) {
+  					this.storeHistory.sourceInsert(partialStore._removeMeta(data));
+  				}, this);
+  			},
+  			
+  			remove: function (partialStore, id) {
+				return partialStore.localItemStore.remove(id).success(function () {
+					this.storeHistory.sourceRemove(id);
+				}, this);
+  			},
+  			
+  			update: function (partialStore, id, data) {
+				return partialStore.localItemStore.update(id, partialStore._addMeta(data, {locked: true})).success(function () {
+					this.storeHistory.sourceUpdate(id, partialStore._removeMeta(data));
+				}, this);
+  			},
+  			
+  			push: function (partialStore) {
+  				if (partialStore.pushing)
+  					return;
+  				partialStore.pushing = true;
+  				var failedIds = {};
+  				var unlockIds = {};
+  				var hs = this.storeHistory.historyStore;
+  				var iter = hs.query({success: false}, {sort: {commit_id: 1}}).value();
+  				var next = function () {
+  					if (!iter.hasNext()) {
+  						partialStore.pushing = false;
+  						Objs.iter(unlockIds, function (value, id) {
+  							if (value) 
+  								partialStore.localItemStore.update(id, partialStore._addMeta({}, {locked: false}));
+  						}, this);
+  						return;
+  					}
+  					var commit = iter.next();
+  					var commit_id = hs.id_of(commit);
+  					if (commit_id in failedIds) {
+  						hs.update(commit_id, {
+  							pushed: true,
+  							success: false
+  						});
+  						next.apply(this);
+  					} else {
+	  					var promise = null;
+	  					if (commit.type === "insert")
+	  						promise = partialStore.remoteStore.insert(commit.row);
+	  					else if (commit.type === "update")
+	  						promise = partialStore.remoteStore.update(commit.row_id, commit.row);
+	  					else if (commit.type === "remove")
+	  						promise = partialStore.remoteStore.remove(commit.row_id);
+	  					promise.success(function () {
+	  						hs.update(commit_id, {
+	  							pushed: true,
+	  							success: true
+	  						});
+	  						if (!(commit.row_id in unlockIds))
+	  							unlockIds[commit.row_id] = true;
+	  						next.apply(this);
+	  					}, this).error(function () {
+	  						hs.update(commit_id, {
+	  							pushed: true,
+	  							success: false
+	  						});
+	  						failedIds[commit_id] = true;
+	  						unlockIds[commit.row_id] = false;
+	  						next.apply(this);
+	  					}, this);
+  					}
+  				};
+  				next.apply(this);
+  			}
+  			
+  		};
+  	});
+});
+
 
 Scoped.define("module:Stores.PassthroughStore", [
           "module:Stores.BaseStore",
@@ -2351,21 +2618,154 @@ Scoped.define("module:Stores.PassthroughStore", [
 
 
 
-Scoped.define("module:Stores.ActiveStore", [
-          "module:Stores.PassthroughStore"
-  	], function (PassthroughStore, scoped) {
-  	return PassthroughStore.extend({scoped: scoped}, function (inherited) {			
+
+Scoped.define("module:Stores.WriteDelegatorStore", [
+          "module:Stores.BaseStore"
+  	], function (BaseStore, scoped) {
+  	return BaseStore.extend({scoped: scoped}, function (inherited) {			
   		return {
 			
-			constructor: function (store, listener, options) {
-				inherited.constructor.call(this, store, options);
-				this.__listener = listener;
-				this.delegateEvents(null, listener);
+			constructor: function (writeStore, options) {
+				inherited.constructor.call(this, options);
+				this.writeStore = writeStore;
+			},
+			
+			destroy: function () {
+				this.writeStore.off(null, null, this);
+				inherited.destroy.call(this);
+			},
+			
+			_insert: function (data) {
+				return this.writeStore.insert(data);
+			},
+			
+			_remove: function (id) {
+				return this.writeStore.remove(id);
+			},
+			
+			_update: function (id, data) {
+				return this.writeStore.update(id, data);
+			},
+			
+			_ensure_index: function (key) {
+				return this.writeStore.ensure_index(key);
 			}
 
   		};
   	});
 });
+
+
+Scoped.define("module:Stores.ReadDelegatorStore", [
+            "module:Stores.BaseStore"
+    	], function (BaseStore, scoped) {
+    	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+    		return {
+  			
+  			constructor: function (readStore, options) {
+  				inherited.constructor.call(this, options);
+  				this.readStore = readStore;
+  			},
+  			
+			_query_capabilities: function () {
+				return this.readStore._query_capabilities();
+			},
+		
+			_get: function (id) {
+				return this.readStore.get(id);
+			},
+			
+			_query: function (query, options) {
+				return this.readStore.query(Objs.extend(query, this._projection), options);
+  			}
+
+    		};
+    	});
+  });
+
+
+Scoped.define("module:Stores.ReadStoreMixin", [
+   "module:Queries.Engine",
+   "module:Stores.StoreException",                                               
+   "base:Promise",
+   "base:Objs"
+], function (QueryEngine, StoreException, Promise, Objs) {
+	return {
+		
+		_initializeReadStore: function (options) {
+			options = options || {};
+			this._query_model = "query_model" in options ? options.query_model : null;
+			this.indices = {};
+		},
+		
+	    query_model: function () {
+	        if (arguments.length > 0)
+	            this._query_model = arguments[0];
+	        return this._query_model;
+	    },
+	    
+		_get: function (id) {
+			return Promise.create(null, new StoreException("unsupported: get"));
+		},
+		
+		_query_capabilities: function () {
+			return {};
+		},
+		
+		_query: function (query, options) {
+			return Promise.create(null, new StoreException("unsupported: query"));
+		},
+		
+		get: function (id) {
+			return this._get(id);
+		},
+		
+		query: function (query, options) {
+			query = Objs.clone(query, -1);
+			if (options) {
+				if (options.limit)
+					options.limit = parseInt(options.limit, 10);
+				if (options.skip)
+					options.skip = parseInt(options.skip, 10);
+			}
+			if (this._query_model) {
+			    var subsumizer = this._query_model.subsumizer_of({query: query, options: options});
+	    		if (!subsumizer) {
+	    			this.trigger("query_miss", {query: query, options: options});
+	    			return Promise.error(new StoreException("Cannot execute query"));
+	    		}
+	    		this.trigger("query_hit", {query: query, options: options}, subsumizer);
+			}
+			return QueryEngine.compileIndexedQuery(
+					{query: query, options: options || {}},
+					this._query_capabilities(),
+					function (constrainedQuery) {
+						return this._query(constrainedQuery.query, constrainedQuery.options);
+					},
+					this,
+					this.indices);
+		}
+		
+	};
+});
+
+
+Scoped.define("module:Stores.ReadStore", [
+          "base:Class",
+          "module:Stores.ReadStoreMixin"
+  	], function (Class, ReadStoreMixin, scoped) {
+  	return Class.extend({scoped: scoped}, [ReadStoreMixin, function (inherited) {			
+  		return {
+				
+			constructor: function (options) {
+				inherited.constructor.call(this);
+				this._initializeReadStore(options);
+			}
+
+  		};
+  	}]);
+});
+
 
 Scoped.define("module:Stores.RemoteStoreException", [
           "module:Stores.StoreException",
@@ -2566,47 +2966,253 @@ Scoped.define("module:Stores.SocketStore", [
 });
 
 
-Scoped.define("module:Stores.SocketListenerStore", [
-        "module:Stores.ListenerStore",
-        "module:Stores.StoreException",
-        "base:Objs"
-	], function (ListenerStore, StoreException, Objs, scoped) {
-	return ListenerStore.extend({scoped: scoped}, function (inherited) {			
+
+Scoped.define("module:Stores.StoreException", ["base:Exceptions.Exception"], function (Exception, scoped) {
+	return Exception.extend({scoped: scoped}, {});
+});
+
+Scoped.define("module:Stores.StoreHistory", [
+    "base:Class",
+    "base:Objs",
+    "base:Types",
+    "module:Stores.MemoryStore"
+], function (Class, Objs, Types, MemoryStore, scoped) {
+	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
-		
-			constructor: function (options, socket, prefix) {
-				inherited.constructor.call(this, options);
-				var self = this;
-				this.__prefix = prefix;
-				socket.on(this.__prefix + ":insert", function (data) {
-					self._perform("insert", data);
-				});
-				socket.on(this.__prefix + ":remove", function (id) {
-					self._perform("remove", id);
-				});
-				socket.on(this.__prefix + ":update", function (data) {
-					self._perform("update", data);
-				});
-				socket.on(this.__prefix + ":bulk", function (commits) {
-					for (var i = 0; i < commits.length; ++i)
-						self._perform(Objs.keyByIndex(commits[i]), Objs.valueByIndex(commits[i]));
-				});
+			
+			constructor: function (sourceStore, historyStore, options) {
+				inherited.constructor.call(this);
+				this._options = Objs.extend({
+					combine_update_update: false,
+					combine_insert_update: false,
+					combine_insert_remove: false,
+					combine_update_remove: false,
+					source_id_key: sourceStore ? sourceStore.id_key() : "id",
+					row_data: {},
+					filter_data: {}
+				}, options);
+				this.historyStore = historyStore || new MemoryStore();
+				this.commitId = 1;
+				if (sourceStore) {
+					sourceStore.on("insert", this.sourceInsert, this);
+					sourceStore.on("remove", this.sourceRemove, this);
+					sourceStore.on("update", this.sourceUpdate, this);
+				}
 			},
 			
-			_perform: function (action, data) {
-				if (action == "insert")
-					this._inserted(data);
-				else if (action == "remove")
-					this._removed(data);
-				else if (action == "update")
-					this._updated(Objs.objectBy(this.id_key(), Objs.keyByIndex(data)), Objs.valueByIndex(data));
-				else
-					throw new StoreException("unsupported: perform " + action);
+			sourceInsert: function (data) {
+				this.commitId++;
+				this.historyStore.insert(Objs.extend({
+					row: data,
+					type: "insert",
+					row_id: data[this._options.source_id_key],
+					commit_id: this.commitId
+				}, this._options.row_data));
+			},
+			
+			sourceUpdate: function (row, data) {
+				this.commitId++;
+				var row_id = Types.is_object(row) ? row[this._options.source_id_key] : row;
+				var target_type = "update";
+				if (this._options.combine_insert_update || this._options.combine_update_update) {
+					var types = [];
+					if (this._options.combine_insert_update)
+						types.push("insert");
+					if (this._options.combine_update_update)
+						types.push("update");
+					var combined_data = {};
+					var delete_ids = [];
+					var iter = this.historyStore.query(Objs.extend({
+						type: {"$or": types},
+						row_id: row_id
+					}, this._options.filter_data), {sort: {commit_id: 1}}).value();
+					while (iter.hasNext()) {
+						var itemData = iter.next();
+						if (itemData.type === "insert")
+							target_type = "insert";
+						combined_data = Objs.extend(combined_data, itemData.row);
+						delete_ids.push(this.historyStore.id_of(itemData));
+					}
+					data = Objs.extend(combined_data, data);
+					Objs.iter(delete_ids, this.historyStore.remove, this.historyStore);
+				}
+				this.historyStore.insert(Objs.extend({
+					row: data,
+					type: target_type,
+					row_id: row_id,
+					commit_id: this.commitId
+				}, this._options.row_data));
+			},
+			
+			sourceRemove: function (id) {
+				this.commitId++;
+				if (this._options.combine_insert_remove) {
+					if (this.historyStore.query(Objs.extend({
+						type: "insert",
+						row_id: id
+					}, this._options.filter_data)).value().hasNext()) {
+						var iter = this.historyStore.query(Objs.extend({
+							row_id: id
+						}, this._options.filter_data)).value();
+						while (iter.hasNext())
+							this.historyStore.remove(this.historyStore.id_of(iter.next()));
+						return;
+					}
+				}
+				if (this._options.combine_update_remove) {
+					var iter2 = this.historyStore.query(Objs.extend({
+						type: "update",
+						row_id: id
+					}, this._options.filter_data)).value();
+					while (iter2.hasNext())
+						this.historyStore.remove(this.historyStore.id_of(iter2.next()));
+				}
+				this.historyStore.insert(Objs.extend({
+					type: "remove",
+					row_id: id,
+					commit_id: this.commitId
+				}, this._options.row_data));
 			}
 
 		};
 	});
 });
+
+Scoped.define("module:Stores.WriteStoreMixin", [
+	"module:Stores.StoreException",                                               
+	"base:Promise",
+    "base:Classes.TimedIdGenerator",
+    "base:Types"
+], function (StoreException, Promise, TimedIdGenerator, Types) {
+	return {
+		
+		_initializeWriteStore: function (options) {
+			options = options || {};
+			this._id_key = options.id_key || "id";
+			this._create_ids = options.create_ids || false;
+			if (this._create_ids)
+				this._id_generator = options.id_generator || this._auto_destroy(new TimedIdGenerator());
+			this._query_model = "query_model" in options ? options.query_model : null;
+		},
+                                            		
+	    query_model: function () {
+	        if (arguments.length > 0)
+	            this._query_model = arguments[0];
+	        return this._query_model;
+	    },
+	    
+		id_key: function () {
+			return this._id_key;
+		},
+		
+		id_of: function (row) {
+			return row[this.id_key()];
+		},
+		
+		_inserted: function (row, event_data) {
+			this.trigger("insert", row, event_data);		
+			this.trigger("write", "insert", row, event_data);
+		},
+		
+		_removed: function (id, event_data) {
+			this.trigger("remove", id, event_data);
+			this.trigger("write", "remove", id, event_data);
+		},
+		
+		_updated: function (row, data, event_data) {
+			this.trigger("update", row, data, event_data);	
+			this.trigger("write", "update", row, data, event_data);
+		}, 
+		
+		insert_all: function (data, query) {
+			var event_data = null;
+			if (arguments.length > 2)
+				event_data = arguments[2];
+			if (query && this._query_model) {
+				this.trigger("query_register", query);
+				this._query_model.register(query);
+			}
+			var promise = Promise.and();
+			for (var i = 0; i < data.length; ++i)
+				promise = promise.and(this.insert(event_data ? [data[i], event_data] : data[i]));
+			return promise.end();
+		},
+	
+		_insert: function (data) {
+			return Promise.create(null, new StoreException("unsupported: insert"));
+		},
+		
+		_remove: function (id) {
+			return Promise.create(null, new StoreException("unsupported: remove"));
+		},
+		
+		_update: function (id, data) {
+			return Promise.create(null, new StoreException("unsupported: update"));
+		},
+		
+		insert: function (data) {
+			var event_data = null;
+			if (Types.is_array(data)) {
+				event_data = data[1];
+				data = data[0];
+			}			
+			if (this._create_ids && !(this._id_key in data && data[this._id_key]))
+				data[this._id_key] = this._id_generator.generate();
+			return this._insert(data).success(function (row) {
+				this._inserted(row, event_data);
+			}, this);
+		},
+		
+		remove: function (id) {
+			var event_data = null;
+			if (Types.is_array(id)) {
+				event_data = id[1];
+				id = id[0];
+			}			
+			return this._remove(id).success(function () {
+				this._removed(id, event_data);
+			}, this);
+		},
+		
+		update: function (id, data) {
+			var event_data = null;
+			if (Types.is_array(data)) {
+				event_data = data[1];
+				data = data[0];
+			}			
+			return this._update(id, data).success(function (row) {
+				this._updated(row, data, event_data);
+			}, this);
+		}
+		
+	};
+});
+
+
+Scoped.define("module:Stores.WriteStore", [
+          "base:Class",
+          "base:Events.EventsMixin",
+          "module:Stores.WriteStoreMixin"
+  	], function (Class, EventsMixin, WriteStoreMixin, scoped) {
+  	return Class.extend({scoped: scoped}, [EventsMixin, WriteStoreMixin, function (inherited) {			
+  		return {
+				
+			constructor: function (options) {
+				inherited.constructor.call(this);
+				this._initializeWriteStore(options);
+			},
+			
+			_ensure_index: function (key) {
+			},
+			
+			ensure_index: function (key) {
+				return this._ensure_index(key);
+			}
+
+  		};
+  	}]);
+});
+
 Scoped.define("module:Stores.AbstractIndex", [
 	"base:Class",
 	"base:Comparators",
@@ -3168,6 +3774,105 @@ Scoped.define("module:Stores.DualStore", [
 
   		};
   	});
+});
+
+Scoped.define("module:Stores.ListenerStore", [
+         "base:Class",
+         "base:Events.EventsMixin"
+ 	], function (Class, EventsMixin, scoped) {
+ 	return Class.extend({scoped: scoped}, [EventsMixin, function (inherited) {			
+ 		return {
+ 			
+	 		constructor: function (options) {
+	 			inherited.constructor.call(this);
+				options = options || {};
+				this._id_key = options.id_key || "id";
+			},
+		
+			id_key: function () {
+				return this._id_key;
+			},
+			
+			id_of: function (row) {
+				return row[this.id_key()];
+			},
+			
+			_inserted: function (row, event_data) {
+				this.trigger("insert", row, event_data);		
+			},
+			
+			_removed: function (id, event_data) {
+				this.trigger("remove", id, event_data);		
+			},
+			
+			_updated: function (row, data, event_data) {
+				this.trigger("update", row, data, event_data);		
+			} 
+
+ 		};
+ 	}]);
+});
+
+
+
+Scoped.define("module:Stores.ActiveStore", [
+          "module:Stores.PassthroughStore"
+  	], function (PassthroughStore, scoped) {
+  	return PassthroughStore.extend({scoped: scoped}, function (inherited) {			
+  		return {
+			
+			constructor: function (store, listener, options) {
+				inherited.constructor.call(this, store, options);
+				this.__listener = listener;
+				this.delegateEvents(null, listener);
+			}
+
+  		};
+  	});
+});
+
+
+
+Scoped.define("module:Stores.SocketListenerStore", [
+        "module:Stores.ListenerStore",
+        "module:Stores.StoreException",
+        "base:Objs"
+	], function (ListenerStore, StoreException, Objs, scoped) {
+	return ListenerStore.extend({scoped: scoped}, function (inherited) {			
+		return {
+		
+			constructor: function (options, socket, prefix) {
+				inherited.constructor.call(this, options);
+				var self = this;
+				this.__prefix = prefix;
+				socket.on(this.__prefix + ":insert", function (data) {
+					self._perform("insert", data);
+				});
+				socket.on(this.__prefix + ":remove", function (id) {
+					self._perform("remove", id);
+				});
+				socket.on(this.__prefix + ":update", function (data) {
+					self._perform("update", data);
+				});
+				socket.on(this.__prefix + ":bulk", function (commits) {
+					for (var i = 0; i < commits.length; ++i)
+						self._perform(Objs.keyByIndex(commits[i]), Objs.valueByIndex(commits[i]));
+				});
+			},
+			
+			_perform: function (action, data) {
+				if (action == "insert")
+					this._inserted(data);
+				else if (action == "remove")
+					this._removed(data);
+				else if (action == "update")
+					this._updated(Objs.objectBy(this.id_key(), Objs.keyByIndex(data)), Objs.valueByIndex(data));
+				else
+					throw new StoreException("unsupported: perform " + action);
+			}
+
+		};
+	});
 });
 
 Scoped.define("module:Queries.AbstractQueryModel", [
@@ -3795,7 +4500,7 @@ Scoped.define("module:Modelling.Table", [
 					save_invalid: false
 				}, options || {});
 				this.__store.on("insert", function (obj) {
-					this.trigger("create", obj, this.materializer(obj));
+					this.trigger("create", obj);
 				}, this);
 				this.__store.on("update", function (row, data) {
 					var id = row[this.primary_key()];
@@ -3880,13 +4585,6 @@ Scoped.define("module:Modelling.Table", [
 						this.__store.ensure_index(key);
 				}
 				return true;
-			},
-			
-			materializer: function (obj) {
-				var self = this;
-				return function () {
-					return self.materialize(obj);
-				};
 			}
 			
   		};

@@ -54,18 +54,68 @@ Scoped.define("module:Stores.PassthroughStore", [
 
 
 
-Scoped.define("module:Stores.ActiveStore", [
-          "module:Stores.PassthroughStore"
-  	], function (PassthroughStore, scoped) {
-  	return PassthroughStore.extend({scoped: scoped}, function (inherited) {			
+
+Scoped.define("module:Stores.WriteDelegatorStore", [
+          "module:Stores.BaseStore"
+  	], function (BaseStore, scoped) {
+  	return BaseStore.extend({scoped: scoped}, function (inherited) {			
   		return {
 			
-			constructor: function (store, listener, options) {
-				inherited.constructor.call(this, store, options);
-				this.__listener = listener;
-				this.delegateEvents(null, listener);
+			constructor: function (writeStore, options) {
+				inherited.constructor.call(this, options);
+				this.writeStore = writeStore;
+			},
+			
+			destroy: function () {
+				this.writeStore.off(null, null, this);
+				inherited.destroy.call(this);
+			},
+			
+			_insert: function (data) {
+				return this.writeStore.insert(data);
+			},
+			
+			_remove: function (id) {
+				return this.writeStore.remove(id);
+			},
+			
+			_update: function (id, data) {
+				return this.writeStore.update(id, data);
+			},
+			
+			_ensure_index: function (key) {
+				return this.writeStore.ensure_index(key);
 			}
 
   		};
   	});
 });
+
+
+Scoped.define("module:Stores.ReadDelegatorStore", [
+            "module:Stores.BaseStore"
+    	], function (BaseStore, scoped) {
+    	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+    		return {
+  			
+  			constructor: function (readStore, options) {
+  				inherited.constructor.call(this, options);
+  				this.readStore = readStore;
+  			},
+  			
+			_query_capabilities: function () {
+				return this.readStore._query_capabilities();
+			},
+		
+			_get: function (id) {
+				return this.readStore.get(id);
+			},
+			
+			_query: function (query, options) {
+				return this.readStore.query(Objs.extend(query, this._projection), options);
+  			}
+
+    		};
+    	});
+  });
+

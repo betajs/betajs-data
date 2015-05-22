@@ -23,7 +23,7 @@ Scoped.define("module:Modelling.Table", [
 					save_invalid: false
 				}, options || {});
 				this.__store.on("insert", function (obj) {
-					this.trigger("create", obj, this.materializer(obj));
+					this.trigger("create", obj);
 				}, this);
 				this.__store.on("update", function (row, data) {
 					var id = row[this.primary_key()];
@@ -108,13 +108,6 @@ Scoped.define("module:Modelling.Table", [
 						this.__store.ensure_index(key);
 				}
 				return true;
-			},
-			
-			materializer: function (obj) {
-				var self = this;
-				return function () {
-					return self.materialize(obj);
-				};
 			}
 			
   		};

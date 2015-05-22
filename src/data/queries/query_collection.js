@@ -140,7 +140,7 @@ Scoped.define("module:Collections.QueryCollection", [
 			
 			isComplete: function () {
 				return this._count !== null;
-			}
+			}			
 			
     	};
 	});
@@ -154,38 +154,25 @@ Scoped.define("module:Collections.ActiveQueryCollection", [
      ], function (QueryCollection, Queries, Objs, scoped) {
      return QueryCollection.extend({scoped: scoped}, function (inherited) {
  		return {
-                                             			
-			constructor: function (source, query, options) {
-				inherited.constructor.call(this, source, query, options);
-				source.on("create", this.__active_create, this);
-				source.on("remove", this.__active_remove, this);
-				source.on("update", this.__active_update, this);
-			},
-			
-			destroy: function () {
-				this._source.off(null, null, this);
-				inherited.destroy.call(this);
-			},
-			
-			get_ident: function (obj) {
-				return obj.id();
-			},
-			
-			is_valid: function (data) {
+ 			
+			isValid: function (data) {
 				return Queries.evaluate(this.query().query, data);
 			},
 			
-			__active_create: function (data, materialize) {
-				if (!this.is_valid(data))
+ 			_materialize: function (data) {
+ 				return data;
+ 			},
+			
+			_activeCreate: function (data) {
+				if (!this.isValid(data))
 					return;
-				var obj = materialize();
-				this.add(obj);
+				this.add(this._materialize(data));
 				this._count = this._count + 1;
 				if (this._query.options.limit !== null)
 					this._query.options.limit = this._query.options.limit + 1;
 			},
 			
-			__active_remove: function (id) {
+			_activeRemove: function (id) {
 				var object = this.getById(id);
 				if (!object)
 					return;
@@ -195,15 +182,77 @@ Scoped.define("module:Collections.ActiveQueryCollection", [
 					this._query.options.limit = this._query.options.limit - 1;
 			},
 			
-			__active_update: function (id, data, row) {
+			_activeUpdate: function (id, data, row) {
 				var object = this.getById(id);
 				var merged = Objs.extend(row, data);
 				if (!object)
-					this.__active_create(merged, this._source.materializer(merged));
-				else if (!this.is_valid(merged))
-					this.__active_remove(id);
+					this._activeCreate(merged, this._materialize(merged));
+				else if (!this.isValid(merged))
+					this._activeRemove(id);
+				else
+					object.setAll(data);
 			}
 
 		};
     });
 });
+
+
+Scoped.define("module:Collections.ActiveTableQueryCollection", [      
+       "module:Collections.ActiveQueryCollection"
+   ], function (ActiveQueryCollection, scoped) {
+   return ActiveQueryCollection.extend({scoped: scoped}, function (inherited) {
+		return {
+	                                           			
+			constructor: function (source, query, options) {
+				inherited.constructor.call(this, source, query, options);
+				source.on("create", this._activeCreate, this);
+				source.on("remove", this._activeRemove, this);
+				source.on("update", this._activeUpdate, this);
+	  		},
+	  			
+			destroy: function () {
+				this._source.off(null, null, this);
+				inherited.destroy.call(this);
+			},
+	  			
+			get_ident: function (obj) {
+				return obj.id();
+			},
+	  			
+			_materialize: function (data) {
+				return this._source.materialize(data);
+			}
+
+  		};
+      });
+  });
+
+
+Scoped.define("module:Collections.ActiveStoreQueryCollection", [      
+        "module:Collections.ActiveQueryCollection"
+    ], function (ActiveQueryCollection, scoped) {
+    return ActiveQueryCollection.extend({scoped: scoped}, function (inherited) {
+ 		return {
+ 	                                           			
+ 			constructor: function (source, query, options) {
+ 				inherited.constructor.call(this, source, query, options);
+ 				source.on("insert", this._activeCreate, this);
+ 				source.on("remove", this._activeRemove, this);
+ 				source.on("update", function (row, data) {
+ 					this._activeUpdate(source.id_of(row), data, row);
+ 				}, this);
+ 	  		},
+ 	  			
+ 			destroy: function () {
+ 				this._source.off(null, null, this);
+ 				inherited.destroy.call(this);
+ 			},
+ 	  			
+ 			get_ident: function (obj) {
+ 				return obj.get(this._source.id_key());
+ 			}
+
+   		};
+       });
+   });
