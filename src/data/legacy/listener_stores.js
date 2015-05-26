@@ -68,29 +68,14 @@ Scoped.define("module:Stores.SocketListenerStore", [
 				var self = this;
 				this.__prefix = prefix;
 				socket.on(this.__prefix + ":insert", function (data) {
-					self._perform("insert", data);
+					self._inserted(data);
 				});
 				socket.on(this.__prefix + ":remove", function (id) {
-					self._perform("remove", id);
+					self._removed(id);
 				});
 				socket.on(this.__prefix + ":update", function (data) {
-					self._perform("update", data);
+					self._updated(Objs.objectBy(self.id_key(), Objs.keyByIndex(data)), Objs.valueByIndex(data));
 				});
-				socket.on(this.__prefix + ":bulk", function (commits) {
-					for (var i = 0; i < commits.length; ++i)
-						self._perform(Objs.keyByIndex(commits[i]), Objs.valueByIndex(commits[i]));
-				});
-			},
-			
-			_perform: function (action, data) {
-				if (action == "insert")
-					this._inserted(data);
-				else if (action == "remove")
-					this._removed(data);
-				else if (action == "update")
-					this._updated(Objs.objectBy(this.id_key(), Objs.keyByIndex(data)), Objs.valueByIndex(data));
-				else
-					throw new StoreException("unsupported: perform " + action);
 			}
 
 		};

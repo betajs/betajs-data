@@ -94,6 +94,16 @@ Scoped.define("module:Modelling.Table", [
 				// Alias
 				return this.allBy.apply(this, arguments);
 			},
+			
+			registerQuery: function (constrainedQuery, ctx) {
+				if ("registerQuery" in this.__store)
+					this.__store.registerQuery(constrainedQuery, ctx || this);
+			},
+			
+			unregisterQuery: function (constrainedQuery, ctx) {
+				if ("unregisterQuery" in this.__store)
+					this.__store.unregisterQuery(constrainedQuery, ctx || this);
+			},
 		
 			scheme: function () {
 				return this.__model_type.scheme();

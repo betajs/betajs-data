@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-05-22
+betajs-data - v1.0.0 - 2015-05-26
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -14,7 +14,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '25.1432321451995'
+		version: '26.1432658856712'
 	};
 });
 
@@ -645,11 +645,17 @@ Scoped.define("module:Collections.QueryCollection", [
 					this.set_query(query);
 			},
 			
+			destroy: function () {
+				this._clear_query();
+				inherited.destroy.call(this);
+			},
+			
 			query: function () {
 				return this._query;
 			},
 			
 			set_query: function (query) {
+				this._clear_query();
 				this._query = Objs.extend({
 					query: {},
 					options: {}
@@ -661,8 +667,10 @@ Scoped.define("module:Collections.QueryCollection", [
 				return this.__execute_query(this._query.options.skip, this._query.options.limit, true);
 			},
 			
-			__sub_query: function (options) {
-				return this._source.query(this._query.query, options);
+			_clear_query: function () {},
+			
+			_sub_query: function (query, options) {
+				return this._source.query(query, options);
 			},
 			
 			__execute_query: function (skip, limit, clear_before) {
@@ -675,7 +683,7 @@ Scoped.define("module:Collections.QueryCollection", [
 						q.skip = skip;
 					if (limit !== null)
 						q.limit = limit;
-					return this.__sub_query(q).mapSuccess(function (iter) {
+					return this._sub_query(this._query.query, q).mapSuccess(function (iter) {
 						var objs = iter.asArray();
 						this._query.options.skip = skip;
 						this._query.options.limit = limit;
@@ -689,7 +697,7 @@ Scoped.define("module:Collections.QueryCollection", [
 					if (skip > 0)
 						q.skip = skip;
 					q.limit = limit;
-					return this.__sub_query(q).mapSuccess(function (iter) {
+					return this._sub_query(this._query.query, q).mapSuccess(function (iter) {
 						var objs = iter.asArray();
 						this._query.options.skip = skip;
 						var added = this.add_objects(objs);
@@ -704,7 +712,7 @@ Scoped.define("module:Collections.QueryCollection", [
 							q.skip = skip;
 						if (limit)
 							q.limit = limit;
-						return this.__sub_query(q).mapSuccess(function (iter) {
+						return this._sub_query(this._query.query, q).mapSuccess(function (iter) {
 							var objs = iter.asArray();
 							var added = this.add_objects(objs);
 							this._query.options.limit = this._query.options.limit + added;
@@ -781,6 +789,17 @@ Scoped.define("module:Collections.ActiveQueryCollection", [
      return QueryCollection.extend({scoped: scoped}, function (inherited) {
  		return {
  			
+			_clear_query: function () {
+				if ("unregisterQuery" in this._source)
+					this._source.unregisterQuery(null, this);
+			},
+			
+			_sub_query: function (query, options) {
+				if ("registerQuery" in this._source)
+					this._source.registerQuery({query: query, options: options}, this);
+				return this._source.query(query, options);
+			},
+			
 			isValid: function (data) {
 				return Queries.evaluate(this.query().query, data);
 			},
@@ -1154,6 +1173,155 @@ Scoped.define("module:Queries.Engine", [
 
 
 
+Scoped.define("module:Stores.ActiveReadStoreMixin", [
+], function () {
+	return {
+		
+		registerQuery: function (constrainedQuery, context) {},
+		
+		unregisterQuery: function (constrainedQuery, context) {}
+		
+	};
+});
+
+
+
+Scoped.define("module:Stores.ActiveReadStore", [
+    "base:Class",
+    "base:Objs",
+    "base:Types",
+    "base:Ids",
+    "module:Stores.ActiveReadStoreMixin",
+    "module:Queries.Constrained"
+], function (Class, Objs, Types, Ids, ActiveReadStoreMixin, Constrained, scoped) {
+	return Class.extend({scoped: scoped}, [ActiveReadStoreMixin, function (inherited) {
+		return {
+			
+			constructor: function () {
+				inherited.constructor.call(this);
+				this._queries = {};
+				this.__contexts = {};
+			},
+			
+			destroy: function () {
+				Objs.iter(this._queries, function (value) {
+					this._unregisterQuery(value.query);
+				}, this);
+				inherited.destroy.call(this);
+			},
+			
+			registerQuery: function (constrainedQuery, context) {
+				var serializedQuery = Constrained.serialize(constrainedQuery);
+				var serializedCtx = context ? Ids.objectId(context) : null;
+				if (!(serializedQuery in this._queries)) {
+					this._queries[serializedQuery] = {
+						constrainedQuery: constrainedQuery,
+						contexts: {}
+					};
+				}
+				this._queries[serializedQuery].contexts[serializedCtx] = true;
+				if (!(serializedCtx in this.__contexts))
+					this.__contexts[serializedCtx] = {};
+				this.__contexts[serializedCtx][serializedQuery] = true;
+				this._registerQuery(constrainedQuery);				
+			},
+			
+			unregisterQuery: function (constrainedQuery, context) {
+				var serializedCtx = context ? Ids.objectId(context) : null;
+				if (constrainedQuery) {
+					var serializedQuery = Constrained.serialize(constrainedQuery);
+					Objs.iter(this._queries[serializedQuery].contexts, function (ctx) {
+						delete this.__contexts[ctx][serializedQuery];
+						if (Types.is_empty(this.__contexts[ctx]))
+							delete this.__contexts[ctx];
+					}, this);
+					this._unregisterQuery(constrainedQuery);
+				} else {
+					Objs.iter(this.__contexts[serializedCtx], function (serializedQuery) {
+						delete this._queries[serializedQuery].contexts[serializedCtx];
+						if (Types.is_empty(this._queries[serializedQuery].contexts)) {
+							this._unregisterQuery(this._queries[serializedQuery].constrainedQuery);
+							delete this._queries[serializedQuery];
+						}
+					}, this);
+					delete this.__contexts[serializedCtx];
+				}
+			},
+			
+			_registerQuery: function (constrainedQuery) {},
+			_unregisterQuery: function (constrainedQuery) {}
+			
+		};		
+	}]);
+});
+
+
+Scoped.define("module:Stores.CombinedActiveReadStore", [
+    "module:Stores.ActiveReadStore",
+    "base:Objs"
+], function (ActiveReadStore, Objs, scoped) {
+	return ActiveReadStore.extend({scoped: scoped}, function (inherited) {
+		return {
+			
+			constructor: function (delegatees) {
+				inherited.constructor.call(this);
+				this.__delegatees = delegatees;
+			},
+			
+			_registerQuery: function (constrainedQuery) {
+				Objs.iter(this.__delegatees, function (delegatee) {
+					delegatee.registerQuery(constrainedQuery, this);
+				}, this);
+			},
+			
+			_unregisterQuery: function (constrainedQuery) {
+				Objs.iter(this.__delegatees, function (delegatee) {
+					delegatee.unregisterQuery(constrainedQuery, this);
+				}, this);
+			}
+			
+		};
+	});
+});
+
+
+Scoped.define("module:Stores.PollActiveReadStore", [
+    "module:Stores.ActiveReadStore",
+    "base:Timers.Timer",
+    "base:Objs"
+], function (ActiveReadStore, Timer, Objs, scoped) {
+	return ActiveReadStore.extend({scoped: scoped}, function (inherited) {
+		return {
+			
+			constructor: function (options) {
+				inherited.constructor.call(this);
+				this._options = Objs.extend({
+					timer: 10 * 1000
+				}, options);
+				this._timer = new Timer({
+					delay: this._options.timer,
+					context: this,
+					fire: this.poll
+				});
+			},
+			
+			poll: function () {
+				Objs.iter(this._queries, function (value) {
+					this._pollQuery(value.constrainedQuery);
+				}, this);
+			},
+			
+			_pollQuery: function (constrainedQuery) {
+			},
+			
+			destroy: function () {
+				this._timer.destroy();
+				inherited.destroy.call(this);
+			}
+
+		};
+	});
+});
 Scoped.define("module:Stores.AssocDumbStore", ["module:Stores.DumbStore"], function (DumbStore, scoped) {
   	return DumbStore.extend({scoped: scoped}, {
 		
@@ -1643,14 +1811,15 @@ Scoped.define("module:Stores.PartialStore", [
           "module:Stores.PartialStoreWriteStrategies.PostWriteStrategy",
           "module:Queries",
           "module:Queries.Constrained",
+          "module:Stores.ActiveReadStoreMixin",
           "base:Promise",
           "base:Objs",
           "base:Time",
           "base:Timers.Timer",
           "base:Iterators.ArrayIterator",
           "base:Iterators.MappedIterator"
-  	], function (Store, MemoryStore, PostWriteStrategy, Queries, Constrained, Promise, Objs, Time, Timer, ArrayIterator, MappedIterator, scoped) {
-  	return Store.extend({scoped: scoped}, function (inherited) {			
+  	], function (Store, MemoryStore, PostWriteStrategy, Queries, Constrained, ActiveReadStoreMixin, Promise, Objs, Time, Timer, ArrayIterator, MappedIterator, scoped) {
+  	return Store.extend({scoped: scoped}, [ActiveReadStoreMixin, function (inherited) {			
   		return {
 
 			constructor: function (options, remoteStore, localItemStore, localQueryStore, writeStrategy) {
@@ -1708,8 +1877,8 @@ Scoped.define("module:Stores.PartialStore", [
 				data = Objs.clone(data, 1);
 				delete data[meta_key];
 				inherited._updated.call(this, row, data, event_data);		
-			}, 
-
+			},
+			
 			_insert: function (data) {
 				return this.writeStrategy.insert(this, data);
 			},
@@ -1801,6 +1970,7 @@ Scoped.define("module:Stores.PartialStore", [
 							remove_time: now + this._options.remove_time
 						};
 						this.localItemStore.insert(localItem);
+						this._inserted(localItem);
 					}, this);
 					return new ArrayIterator(arr);
 				}, this).mapError(function (err) {
@@ -1814,6 +1984,13 @@ Scoped.define("module:Stores.PartialStore", [
 			
 			_query_capabilities: function () {
 				return Constrained.fullConstrainedQueryCapabilities();
+			},
+			
+			invalidateQuery: function (constrainedQuery) {
+				var queryString = Constrained.serialize(constrainedQuery);
+				var localQuery = this.localQueryStore.query({query: queryString}, {limit: 1}).value().asArray();
+				if (localQuery.length > 0)
+					this.localQueryStore.remove(this.localQueryStore.id_of(localQuery));
 			},
 			
 			cleanup: function () {
@@ -1834,12 +2011,43 @@ Scoped.define("module:Stores.PartialStore", [
 					if (meta2.remove_time < now)
 						this.localQueryStore.remove(item2[this.localQueryStore.id_key()]);
 				}
-			}  		
+			},
+			
+			registerQuery: function (constrainedQuery, context) {
+				if (this.activeReadStrategy)
+					this.activeReadStrategy.registerQuery(constrainedQuery, context);
+			},
+			
+			unregisterQuery: function (constrainedQuery, context) {
+				if (this.activeReadStrategy)
+					this.activeReadStrategy.unregisterQuery(constrainedQuery, context);
+			}
+			
   		
+		};
+	}]);
+});
+   
+Scoped.define("module:Stores.PartialStoreActiveReadStrategies.PartialPollActiveReadStore", [
+    "module:Stores.PollActiveReadStore"
+], function (Class, scoped) {
+	return Class.extend({scoped: scoped}, function (inherited) {
+		return {
+			
+			constructor: function (partialStore, options) {
+				inherited.constructor.call(this, options);
+				this.partialStore = partialStore;
+			},
+			
+			_pollQuery: function (constrainedQuery) {
+				this.partialStore.invalidateQuery(constrainedQuery);
+				this.partialStore.query(constrainedQuery.query, constrainedQuery.options);
+			}
+			
 		};
 	});
 });
-   
+
 Scoped.define("module:Stores.PartialStoreWriteStrategies.WriteStrategy", [
     "base:Class"
 ], function (Class, scoped) {
@@ -3308,29 +3516,14 @@ Scoped.define("module:Stores.SocketListenerStore", [
 				var self = this;
 				this.__prefix = prefix;
 				socket.on(this.__prefix + ":insert", function (data) {
-					self._perform("insert", data);
+					self._inserted(data);
 				});
 				socket.on(this.__prefix + ":remove", function (id) {
-					self._perform("remove", id);
+					self._removed(id);
 				});
 				socket.on(this.__prefix + ":update", function (data) {
-					self._perform("update", data);
+					self._updated(Objs.objectBy(self.id_key(), Objs.keyByIndex(data)), Objs.valueByIndex(data));
 				});
-				socket.on(this.__prefix + ":bulk", function (commits) {
-					for (var i = 0; i < commits.length; ++i)
-						self._perform(Objs.keyByIndex(commits[i]), Objs.valueByIndex(commits[i]));
-				});
-			},
-			
-			_perform: function (action, data) {
-				if (action == "insert")
-					this._inserted(data);
-				else if (action == "remove")
-					this._removed(data);
-				else if (action == "update")
-					this._updated(Objs.objectBy(this.id_key(), Objs.keyByIndex(data)), Objs.valueByIndex(data));
-				else
-					throw new StoreException("unsupported: perform " + action);
 			}
 
 		};
@@ -4032,6 +4225,16 @@ Scoped.define("module:Modelling.Table", [
 			query: function () {
 				// Alias
 				return this.allBy.apply(this, arguments);
+			},
+			
+			registerQuery: function (constrainedQuery, ctx) {
+				if ("registerQuery" in this.__store)
+					this.__store.registerQuery(constrainedQuery, ctx || this);
+			},
+			
+			unregisterQuery: function (constrainedQuery, ctx) {
+				if ("unregisterQuery" in this.__store)
+					this.__store.unregisterQuery(constrainedQuery, ctx || this);
 			},
 		
 			scheme: function () {

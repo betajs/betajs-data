@@ -4,14 +4,15 @@ Scoped.define("module:Stores.PartialStore", [
           "module:Stores.PartialStoreWriteStrategies.PostWriteStrategy",
           "module:Queries",
           "module:Queries.Constrained",
+          "module:Stores.ActiveReadStoreMixin",
           "base:Promise",
           "base:Objs",
           "base:Time",
           "base:Timers.Timer",
           "base:Iterators.ArrayIterator",
           "base:Iterators.MappedIterator"
-  	], function (Store, MemoryStore, PostWriteStrategy, Queries, Constrained, Promise, Objs, Time, Timer, ArrayIterator, MappedIterator, scoped) {
-  	return Store.extend({scoped: scoped}, function (inherited) {			
+  	], function (Store, MemoryStore, PostWriteStrategy, Queries, Constrained, ActiveReadStoreMixin, Promise, Objs, Time, Timer, ArrayIterator, MappedIterator, scoped) {
+  	return Store.extend({scoped: scoped}, [ActiveReadStoreMixin, function (inherited) {			
   		return {
 
 			constructor: function (options, remoteStore, localItemStore, localQueryStore, writeStrategy) {
@@ -69,8 +70,8 @@ Scoped.define("module:Stores.PartialStore", [
 				data = Objs.clone(data, 1);
 				delete data[meta_key];
 				inherited._updated.call(this, row, data, event_data);		
-			}, 
-
+			},
+			
 			_insert: function (data) {
 				return this.writeStrategy.insert(this, data);
 			},
@@ -162,6 +163,7 @@ Scoped.define("module:Stores.PartialStore", [
 							remove_time: now + this._options.remove_time
 						};
 						this.localItemStore.insert(localItem);
+						this._inserted(localItem);
 					}, this);
 					return new ArrayIterator(arr);
 				}, this).mapError(function (err) {
@@ -175,6 +177,13 @@ Scoped.define("module:Stores.PartialStore", [
 			
 			_query_capabilities: function () {
 				return Constrained.fullConstrainedQueryCapabilities();
+			},
+			
+			invalidateQuery: function (constrainedQuery) {
+				var queryString = Constrained.serialize(constrainedQuery);
+				var localQuery = this.localQueryStore.query({query: queryString}, {limit: 1}).value().asArray();
+				if (localQuery.length > 0)
+					this.localQueryStore.remove(this.localQueryStore.id_of(localQuery));
 			},
 			
 			cleanup: function () {
@@ -195,9 +204,20 @@ Scoped.define("module:Stores.PartialStore", [
 					if (meta2.remove_time < now)
 						this.localQueryStore.remove(item2[this.localQueryStore.id_key()]);
 				}
-			}  		
+			},
+			
+			registerQuery: function (constrainedQuery, context) {
+				if (this.activeReadStrategy)
+					this.activeReadStrategy.registerQuery(constrainedQuery, context);
+			},
+			
+			unregisterQuery: function (constrainedQuery, context) {
+				if (this.activeReadStrategy)
+					this.activeReadStrategy.unregisterQuery(constrainedQuery, context);
+			}
+			
   		
 		};
-	});
+	}]);
 });
    

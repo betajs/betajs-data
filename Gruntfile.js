@@ -21,7 +21,8 @@ module.exports = function(grunt) {
 								'src/data/queries/*.js',
 								'src/data/stores/*.js',
 								'src/data/indices/*.js',
-								'src/data/legacy/*.js', 'src/modelling/*.js',
+								'src/data/legacy/*.js',
+								'src/modelling/*.js',
 								'src/modelling/associations/*.js',
 								'src/modelling/validations/*.js',
 								'src/fragments/end.js-fragment' ]

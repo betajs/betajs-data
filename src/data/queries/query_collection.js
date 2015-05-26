@@ -19,11 +19,17 @@ Scoped.define("module:Collections.QueryCollection", [
 					this.set_query(query);
 			},
 			
+			destroy: function () {
+				this._clear_query();
+				inherited.destroy.call(this);
+			},
+			
 			query: function () {
 				return this._query;
 			},
 			
 			set_query: function (query) {
+				this._clear_query();
 				this._query = Objs.extend({
 					query: {},
 					options: {}
@@ -35,8 +41,10 @@ Scoped.define("module:Collections.QueryCollection", [
 				return this.__execute_query(this._query.options.skip, this._query.options.limit, true);
 			},
 			
-			__sub_query: function (options) {
-				return this._source.query(this._query.query, options);
+			_clear_query: function () {},
+			
+			_sub_query: function (query, options) {
+				return this._source.query(query, options);
 			},
 			
 			__execute_query: function (skip, limit, clear_before) {
@@ -49,7 +57,7 @@ Scoped.define("module:Collections.QueryCollection", [
 						q.skip = skip;
 					if (limit !== null)
 						q.limit = limit;
-					return this.__sub_query(q).mapSuccess(function (iter) {
+					return this._sub_query(this._query.query, q).mapSuccess(function (iter) {
 						var objs = iter.asArray();
 						this._query.options.skip = skip;
 						this._query.options.limit = limit;
@@ -63,7 +71,7 @@ Scoped.define("module:Collections.QueryCollection", [
 					if (skip > 0)
 						q.skip = skip;
 					q.limit = limit;
-					return this.__sub_query(q).mapSuccess(function (iter) {
+					return this._sub_query(this._query.query, q).mapSuccess(function (iter) {
 						var objs = iter.asArray();
 						this._query.options.skip = skip;
 						var added = this.add_objects(objs);
@@ -78,7 +86,7 @@ Scoped.define("module:Collections.QueryCollection", [
 							q.skip = skip;
 						if (limit)
 							q.limit = limit;
-						return this.__sub_query(q).mapSuccess(function (iter) {
+						return this._sub_query(this._query.query, q).mapSuccess(function (iter) {
 							var objs = iter.asArray();
 							var added = this.add_objects(objs);
 							this._query.options.limit = this._query.options.limit + added;
@@ -155,6 +163,17 @@ Scoped.define("module:Collections.ActiveQueryCollection", [
      return QueryCollection.extend({scoped: scoped}, function (inherited) {
  		return {
  			
+			_clear_query: function () {
+				if ("unregisterQuery" in this._source)
+					this._source.unregisterQuery(null, this);
+			},
+			
+			_sub_query: function (query, options) {
+				if ("registerQuery" in this._source)
+					this._source.registerQuery({query: query, options: options}, this);
+				return this._source.query(query, options);
+			},
+			
 			isValid: function (data) {
 				return Queries.evaluate(this.query().query, data);
 			},
