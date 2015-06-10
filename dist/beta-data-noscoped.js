@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-05-22
+betajs-data - v1.0.0 - 2015-06-10
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -14,7 +14,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '25.1432321451995'
+		version: '26.1433952772824'
 	};
 });
 
@@ -624,6 +624,12 @@ Scoped.define("module:Queries", [
 		
 	}; 
 });
+/**
+ * @class QueryCollection
+ *
+ * A base class for querying collections. Subclasses specify the expected type
+ * of data store and specify whether the query collection is active.
+ */
 Scoped.define("module:Collections.QueryCollection", [      
         "base:Collections.Collection",
         "base:Objs",
@@ -633,7 +639,26 @@ Scoped.define("module:Collections.QueryCollection", [
     return Collection.extend({scoped: scoped}, function (inherited) {
 		return {
 			
-			constructor: function (source, query, options) {
+			/**
+       * @method constructor
+       *
+       * @param {object} source The source object
+       * can either be an instance of a Table
+       * or a Store. A Table should be used if validations and other data
+       * processing methods are desired. A Store is sufficient if just
+       * performing simple queries and returning the results with little
+       * manipulation.
+       *
+       * @param {object} query The query object contains keys specifying query
+       * parameters and values specifying their respective values. This query
+       * object can be updated later with the `set_query` method.
+       *
+       * @param {object} options The options object contains keys specifying
+       * option parameters and values specifying their respective values.
+       *
+       * @return {QueryCollection} A new instance of QueryCollection.
+       */
+      constructor: function (source, query, options) {
 				this._source = source;
 				inherited.constructor.call(this, options);
 				this._options = Objs.extend({
@@ -645,10 +670,30 @@ Scoped.define("module:Collections.QueryCollection", [
 					this.set_query(query);
 			},
 			
+      /**
+       * @method query
+       *
+       * Getter method to access the query method.
+       *
+       * @return {object} The query object.
+       */
 			query: function () {
 				return this._query;
 			},
 			
+      /**
+       * @method set_query
+       *
+       * Update the collection with a new query. Setting the query not only
+       * updates the query field, but also updates the data with the results of
+       * the new query.
+       *
+       * @param {object} query The new query for this collection.
+       *
+       * @example
+       * // Updates the query dictating the collection contents.
+       * collectionQuery.set_query('queryField': 'queryValue');
+       */
 			set_query: function (query) {
 				this._query = Objs.extend({
 					query: {},
@@ -661,10 +706,35 @@ Scoped.define("module:Collections.QueryCollection", [
 				return this.__execute_query(this._query.options.skip, this._query.options.limit, true);
 			},
 			
+      /**
+       * @method __sub_query
+       *
+       * Run the specified query on the data source.
+       *
+       * @private
+       *
+       * @param {object} options The options for the subquery.
+       *
+       * @return {object} Iteratable object containing query results.
+       */
 			__sub_query: function (options) {
 				return this._source.query(this._query.query, options);
 			},
 			
+      /**
+       * @method __execute_query
+       *
+       * Execute a query. This method is called whenever a new query is set.
+       *
+       * @private
+       *
+       * @param {int} skip The number data entires to skip.
+       * @param {int} limit The maximum number of data entries to return.
+       * @param {boolean} clear_before Flag indicating if results from the
+       * previous query should be cleared before adding the new results.
+       *
+       * @return {Promise} Promise from executing query.
+       */
 			__execute_query: function (skip, limit, clear_before) {
 				skip = Math.max(skip, 0);
 				var q = {};
@@ -733,18 +803,45 @@ Scoped.define("module:Collections.QueryCollection", [
 					return Promise.create(true);
 			},
 			
+      /**
+       * @method paginate
+       *
+       * Paginate to a specific page.
+       *
+       * @param {int} index The page to paginate to.
+       *
+       * @return {Promise} Promise from query execution.
+       */
 			paginate: function (index) {
 				return this.__execute_query(this._options.range * index, this._options.range, true);
 			},
 			
+      /**
+       * @method paginate_index
+       *
+       * @return {int} Current pagination page.
+       */
 			paginate_index: function () {
 				return !this._options.range ? null : Math.floor(this._query.options.skip / this._options.range);
 			},
 			
+      /**
+       * @method paginate_count
+       *
+       * @return {int} The total number of possible pages given the data
+       * contained in the current query.
+       */
 			paginate_count: function () {
 				return !this._count || !this._options.range ? null : Math.ceil(this._count / this._options.range);
 			},
 			
+      /**
+       * @method next
+       *
+       * Update the query to paginate to the next page.
+       *
+       * @return {Promise} Promise of the query.
+       */
 			next: function () {
 				var paginate_index = this.paginate_index();
 				if (!paginate_index)
@@ -755,6 +852,13 @@ Scoped.define("module:Collections.QueryCollection", [
 				return Promise.create(true);
 			},
 			
+      /**
+       * @method prev
+       *
+       * Update the query to paginate to the previous page.
+       *
+       * @return {Promise} Promise of the query.
+       */
 			prev: function () {
 				var paginate_index = this.paginate_index();
 				if (!paginate_index)
@@ -764,6 +868,12 @@ Scoped.define("module:Collections.QueryCollection", [
 				return Promise.create(true);
 			},
 			
+      /**
+       * @method isComplete
+       *
+       * @return {boolean} Return value indicates if the query has finished/if
+       * data has been returned.
+       */
 			isComplete: function () {
 				return this._count !== null;
 			}			
@@ -855,12 +965,20 @@ Scoped.define("module:Collections.ActiveTableQueryCollection", [
   });
 
 
+/**
+ * @class ActiveStoreQueryCollection
+ *
+ * @augments QueryCollection
+ */
 Scoped.define("module:Collections.ActiveStoreQueryCollection", [      
         "module:Collections.ActiveQueryCollection"
     ], function (ActiveQueryCollection, scoped) {
     return ActiveQueryCollection.extend({scoped: scoped}, function (inherited) {
  		return {
  	                                           			
+      /**
+       * @inheritdoc
+       */
  			constructor: function (source, query, options) {
  				inherited.constructor.call(this, source, query, options);
  				source.on("insert", this._activeCreate, this);
@@ -2251,7 +2369,12 @@ Scoped.define("module:Stores.RemoteStoreException", [
 });
 
 
-
+/**
+ * @class RemoteStore
+ *
+ * RemoteStore is a store designed to be used with remote data. It is also
+ * extended to create a queriable remote store.
+ */
 Scoped.define("module:Stores.RemoteStore", [
          "module:Stores.BaseStore",
          "module:Stores.RemoteStoreException",
@@ -2261,7 +2384,21 @@ Scoped.define("module:Stores.RemoteStore", [
  	], function (BaseStore, RemoteStoreException, Objs, Types, JSON, scoped) {
  	return BaseStore.extend({scoped: scoped}, function (inherited) {			
  		return {
-                                           			
+
+     /**
+       * @method constructor
+       *
+       * @param {string} uri The remote endpoint where the queriable data is accessible.
+       * @param {object} ajax An instance of an concrete implementation of
+       * BetaJS.Net.AbstractAjax. Whether BetaJS.Data is being used in
+       * the client or server dictates which implementation of Ajax to use.
+       * @param {object} options The options for the RemoteStore. Currently the
+       * supported options are "update_method" and "uri_mappings".
+       *
+       * @example
+       * // Returns new instance of RemoteStore
+       * new RemoteStore('/api/v1/people', new BetaJS.Browser.JQueryAjax(), {})
+       */
 			constructor : function(uri, ajax, options) {
 				inherited.constructor.call(this, options);
 				this._uri = uri;
@@ -2272,10 +2409,26 @@ Scoped.define("module:Stores.RemoteStore", [
 				}, options || {});
 			},
 			
+      /**
+       * @method getUri
+       *
+       * @return {string} The uri instance variable.
+       */
 			getUri: function () {
 				return this._uri;
 			},
 			
+      /**
+       * @method prepare_uri
+       *
+       * @param {string} action The action to be performed on the remote data
+       * store. For example, remove, get...
+       * @param {object} data The data on which the action will be performed.
+       * For example, the object being updated.
+       *
+       * @return {string} The uri to be used to perform the specified action on
+       * the specified data.
+       */
 			prepare_uri: function (action, data) {
 				if (this.__options.uri_mappings[action])
 					return this.__options.uri_mappings[action](data);
@@ -2284,12 +2437,37 @@ Scoped.define("module:Stores.RemoteStore", [
 				return this.getUri();
 			},
 			
+      /**
+       * @method _encode_query
+       *
+       * @param {object} query The query object.
+       * @param {object} options Options for the specified query.
+       *
+       * @protected
+       *
+       * @return {string} A uri to perform the specified query.
+       */
 			_encode_query: function (query, options) {
 				return {
 					uri: this.prepare_uri("query")
 				};		
 			},
 			
+      /**
+       * @method __invoke
+       *
+       * Invoke the specified operation on the remote data store.
+       *
+       * @param {object} options The options for the ajax.asyncCall. Specifies
+       * the method, uri, and data. See "_insert" for an example.
+       * @param {boolean} parse_json Boolean flag indicating if the response
+       * should be parsed as json.
+       *
+       * @private
+       *
+       * @return {object} The remote response from invoking the specified
+       * operation.
+       */
 			__invoke: function (options, parse_json) {
 				return this.__ajax.asyncCall(options).mapCallback(function (e, result) {
 					if (e)
@@ -2303,6 +2481,17 @@ Scoped.define("module:Stores.RemoteStore", [
 				});
 			},
 			
+      /**
+       * @method _insert
+       *
+       * Insert the given data into the remote store.
+       *
+       * @param {object} data The data to be inserted.
+       *
+       * @protected
+       *
+       * @return {object} The result of invoking insert.
+       */
 			_insert : function(data) {
 				return this.__invoke({
 					method: "POST",
@@ -2311,6 +2500,17 @@ Scoped.define("module:Stores.RemoteStore", [
 				}, true);
 			},
 		
+      /**
+       * @method _get
+       *
+       * Get the data specified by the id parameter from the remote store.
+       *
+       * @param {int} id The id of the data to be retrieved.
+       *
+       * @protected
+       *
+       * @return {object} The desired data.
+       */
 			_get : function(id) {
 				var data = {};
 				data[this._id_key] = id;
@@ -2319,6 +2519,19 @@ Scoped.define("module:Stores.RemoteStore", [
 				});
 			},
 		
+      /**
+       * @method _update
+       *
+       * Update data.
+       *
+       * @param {int} id The id of the data to be updated.
+       * @param {object} data The new data to be used for the update.
+       *
+       * @protected
+       *
+       * @return {object} The result of invoking the update operation on the
+       * remote store.
+       */
 			_update : function(id, data) {
 				var copy = Objs.clone(data, 1);
 				copy[this._id_key] = id;
@@ -2329,6 +2542,18 @@ Scoped.define("module:Stores.RemoteStore", [
 				});
 			},
 			
+      /**
+       * @method _remove
+       *
+       * Remove data.
+       *
+       * @param {int} id The id of the data to be removed.
+       *
+       * @protected
+       *
+       * @return {object} The result of invoking the remove operation on the
+       * remote store.
+       */
 			_remove : function(id) {
 				var data = {};
 				data[this._id_key] = id;
@@ -2338,6 +2563,21 @@ Scoped.define("module:Stores.RemoteStore", [
 				});
 			},
 		
+      /**
+       * @method _query
+       *
+       * Query the remote store.
+       *
+       * @param {object} query The query object specifying the query fields and
+       * their respective values.
+       * @param {object} options The options object specifying which options are
+       * set, and what the respective values are.
+       *
+       * @protected
+       *
+       * @return {object} The result of invoking the query operation on the
+       * remote store.
+       */
 			_query : function(query, options) {
 				return this.__invoke(this._encode_query(query, options), true);
 			}	
@@ -2347,6 +2587,16 @@ Scoped.define("module:Stores.RemoteStore", [
 });
 
 
+/**
+ * @class QueryGetParamsRemoteStore
+ *
+ * QueryGetParamsRemoteStore should be used if the following conditions are met.
+ * - Data is remotely accessible. For example, accessible through REST ajax
+ *   calls.
+ * - Data is quierable and will be queried. 
+ *
+ * @augments RemoteStore
+ */
 Scoped.define("module:Stores.QueryGetParamsRemoteStore", [
         "module:Queries",
         "module:Stores.RemoteStore",
@@ -2354,12 +2604,44 @@ Scoped.define("module:Stores.QueryGetParamsRemoteStore", [
 	], function (Queries, RemoteStore, JSON, scoped) {
 	return RemoteStore.extend({scoped: scoped}, function (inherited) {			
 		return {
-                                          			
+
+      /**
+       * @inheritdoc
+       *
+       * @param {Object} capability_params An object representing the remote
+       * endpoints querying capabilities. The keys are
+       * query aspects the remote data source can handle. The values are the
+       * identifiers for these capabilites in the uri. For example, if a server
+       * can process the skip field in a query, and expects the skip fields to
+       * be called "jump" in the Uri, the capability_param object would be
+       * `{"skip": "jump"}`.
+       * @param {Object} options
+       *
+       * @example <caption>Creation of client side QueryGetParamsRemoteStore</caption>
+       * // returns new QueryGetParamsRemoteStore
+       * new QueryGetParamsRemoteStore('api/v1/people',
+       *                                new BetaJS.Browser.JQueryAjax(),
+       *                                {"skip": "skip", "query": "query"});
+       *
+       * @return {QueryGetParamsRemoteStore} The newly constructed instance of
+       * QueryGetParamsRemoteStore.
+       */
 			constructor : function(uri, ajax, capability_params, options) {
 				inherited.constructor.call(this, uri, ajax, options);
 				this.__capability_params = capability_params;
 			},
-			
+
+      /**
+       * @method _query_capabilities
+       *
+       * Helper method for dealing with capability_params.
+       *
+       * @protected
+       *
+       * @return {object} Key/value object where key is possible capability
+       * parameter and value is if that capability_parameter is included for
+       * this instance.
+       */
 			_query_capabilities: function () {
 				var caps = {};
 				if ("skip" in this.__capability_params)
@@ -2372,7 +2654,30 @@ Scoped.define("module:Stores.QueryGetParamsRemoteStore", [
 					caps.sort = true;
 				return caps;
 			},
-		
+
+      /**
+       * @method _encode_query
+       *
+       * Helper method that encodes the query and the options into a uri to send
+       * to the remote data source.
+       *
+       * @param {object} query A query to be encoded into uri form. The query
+       * will only be included in the uri if "query" was included in the
+       * capability_params during this instances construction.
+       * @param {object} options A set of options to be encoded into uri form.
+       *
+       * @protected
+       *
+       * @TODO Include the option of including the query param in the uri as a
+       * simple list of keys and values. For example, if the query param is
+       * `{'test': 'hi'}`, the uri becomes 'BASE_URL?test=hi&MORE_PARAMS'
+       * instead of 'BASE_URL?query={"test":"hi"}&MORE_PARAMS'. This change
+       * would increase the number of server/api configurations that could use
+       * this method of encoding queries.
+       *
+       * @return {object} The only key is the uri, and the associated value is
+       * the uri representing the query and the options.
+       */
 			_encode_query: function (query, options) {
 				options = options || {};
 				var uri = this.getUri() + "?"; 
@@ -2388,10 +2693,10 @@ Scoped.define("module:Stores.QueryGetParamsRemoteStore", [
 					uri: uri
 				};		
 			}
-
 		};
 	});
 });
+
 Scoped.define("module:Stores.SocketStore", [
           "module:Stores.BaseStore",
           "base:Objs"
