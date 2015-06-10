@@ -1,13 +1,13 @@
 Scoped.define("module:Modelling.Table", [
-          "base:Class",
-          "base:Events.EventsMixin",
-          "base:Objs",
-          "base:Types",
-          "base:Iterators.MappedIterator"
-  	], function (Class, EventsMixin, Objs, Types, MappedIterator, scoped) {
-  	return Class.extend({scoped: scoped}, [EventsMixin, function (inherited) {			
-  		return {
-		
+                                         "base:Class",
+                                         "base:Events.EventsMixin",
+                                         "base:Objs",
+                                         "base:Types",
+                                         "base:Iterators.MappedIterator"
+                                         ], function (Class, EventsMixin, Objs, Types, MappedIterator, scoped) {
+	return Class.extend({scoped: scoped}, [EventsMixin, function (inherited) {			
+		return {
+
 			constructor: function (store, model_type, options) {
 				inherited.constructor.call(this);
 				this.__store = store;
@@ -34,13 +34,23 @@ Scoped.define("module:Modelling.Table", [
 					this.trigger("remove", id);
 					this.trigger("remove:" + id);
 				}, this);
+				if ("activeQuery" in this.__store) {
+					this.activeQuery = function (constrainedQuery, ctx) {
+						return this.__store.activeQuery(constrainedQuery, ctx || this);
+					};
+				}
+				if ("unregisterQuery" in this.__store) {
+					this.unregisterQuery = function (constrainedQuery, ctx) {
+						return this.__store.unregisterQuery(constrainedQuery, ctx || this);
+					};
+				}
 			},
-			
+
 			modelClass: function (cls) {
 				cls = cls || this.__model_type;
 				return Types.is_string(cls) ? Scoped.getGlobal(cls) : cls;
 			},
-			
+
 			newModel: function (attributes, cls) {
 				cls = this.modelClass(cls);
 				var model = new cls(attributes, this);
@@ -48,32 +58,32 @@ Scoped.define("module:Modelling.Table", [
 					model.save();
 				return model;
 			},
-			
+
 			materialize: function (obj) {
 				if (!obj)
 					return null;
 				var cls = this.modelClass(this.__options.type_column && obj[this.__options.type_column] ? this.__options.type_column : null);
 				return new cls(obj, this, {newModel: false});
 			},
-			
+
 			options: function () {
 				return this.__options;
 			},
-			
+
 			store: function () {
 				return this.__store;
 			},
-			
+
 			findById: function (id) {
 				return this.__store.get(id).mapSuccess(this.materialize, this);
 			},
-		
+
 			findBy: function (query) {
 				return this.allBy(query, {limit: 1}).mapSuccess(function (iter) {
 					return iter.next();
 				});
 			},
-		
+
 			allBy: function (query, options) {
 				return this.__store.query(query, options).mapSuccess(function (iterator) {
 					return new MappedIterator(iterator, function (obj) {
@@ -81,34 +91,24 @@ Scoped.define("module:Modelling.Table", [
 					}, this);
 				}, this);
 			},
-			
+
 			primary_key: function () {
 				return (Types.is_string(this.__model_type) ? Scoped.getGlobal(this.__model_type) : this.__model_type).primary_key();
 			},
-			
+
 			all: function (options) {
 				return this.allBy({}, options);
 			},
-			
+
 			query: function () {
 				// Alias
 				return this.allBy.apply(this, arguments);
 			},
-			
-			registerQuery: function (constrainedQuery, ctx) {
-				if ("registerQuery" in this.__store)
-					this.__store.registerQuery(constrainedQuery, ctx || this);
-			},
-			
-			unregisterQuery: function (constrainedQuery, ctx) {
-				if ("unregisterQuery" in this.__store)
-					this.__store.unregisterQuery(constrainedQuery, ctx || this);
-			},
-		
+
 			scheme: function () {
 				return this.__model_type.scheme();
 			},
-			
+
 			ensure_indices: function () {
 				if (!("ensure_index" in this.__store))
 					return false;
@@ -119,7 +119,7 @@ Scoped.define("module:Modelling.Table", [
 				}
 				return true;
 			}
-			
-  		};
-  	}]);
+
+		};
+	}]);
 });

@@ -1,22 +1,22 @@
 Scoped.define("module:Queries.Engine", [
-        "module:Queries",
-        "module:Queries.Constrained",
-        "base:Strings",
-        "base:Types",
-        "base:Objs",
-        "base:Promise",
-        "base:Comparators",
-        "base:Iterators.SkipIterator",
-        "base:Iterators.LimitIterator",
-        "base:Iterators.SortedIterator",
-        "base:Iterators.FilteredIterator",
-        "base:Iterators.SortedOrIterator",
-        "base:Iterators.PartiallySortedIterator",
-        "base:Iterators.ArrayIterator",
-        "base:Iterators.LazyMultiArrayIterator"
-	], function (Queries, Constrained, Strings, Types, Objs, Promise, Comparators, SkipIterator, LimitIterator, SortedIterator, FilteredIterator, SortedOrIterator, PartiallySortedIterator, ArrayIterator, LazyMultiArrayIterator) {
+                                        "module:Queries",
+                                        "module:Queries.Constrained",
+                                        "base:Strings",
+                                        "base:Types",
+                                        "base:Objs",
+                                        "base:Promise",
+                                        "base:Comparators",
+                                        "base:Iterators.SkipIterator",
+                                        "base:Iterators.LimitIterator",
+                                        "base:Iterators.SortedIterator",
+                                        "base:Iterators.FilteredIterator",
+                                        "base:Iterators.SortedOrIterator",
+                                        "base:Iterators.PartiallySortedIterator",
+                                        "base:Iterators.ArrayIterator",
+                                        "base:Iterators.LazyMultiArrayIterator"
+                                        ], function (Queries, Constrained, Strings, Types, Objs, Promise, Comparators, SkipIterator, LimitIterator, SortedIterator, FilteredIterator, SortedOrIterator, PartiallySortedIterator, ArrayIterator, LazyMultiArrayIterator) {
 	return {
-		
+
 		indexQueryConditionsSize: function (conds, index, ignoreCase) {
 			var add = ignoreCase ? "ic" : "";
 			var postfix = ignoreCase ? "_ic" : "";
@@ -51,7 +51,7 @@ Scoped.define("module:Queries.Engine", [
 			}
 			return subSize;
 		},
-		
+
 		indexQuerySize: function (queryDNF, key, index) {
 			var acc = 0;
 			var info = index.info();
@@ -70,11 +70,11 @@ Scoped.define("module:Queries.Engine", [
 			}, this);
 			return acc;
 		},
-		
+
 		queryPartially: function (constrainedQuery, constrainedQueryCapabilities) {
 			var simplified = {
-				query: constrainedQuery.query,
-				options: {}
+					query: constrainedQuery.query,
+					options: {}
 			};
 			if (constrainedQuery.options.sort) {
 				var first = Objs.ithKey(constrainedQuery.options.sort, 0);
@@ -83,7 +83,7 @@ Scoped.define("module:Queries.Engine", [
 			}
 			return Constrained.validate(simplified, constrainedQueryCapabilities);
 		},
-		
+
 		compileQuery: function (constrainedQuery, constrainedQueryCapabilities, constrainedQueryFunction, constrainedQueryContext) {
 			constrainedQuery = Constrained.rectify(constrainedQuery);
 			var sorting_supported = Constrained.sortValidate(constrainedQuery.options, constrainedQueryCapabilities);
@@ -91,10 +91,10 @@ Scoped.define("module:Queries.Engine", [
 			var skip_supported = Constrained.skipValidate(constrainedQuery.options, constrainedQueryCapabilities);
 			var limit_supported = Constrained.limitValidate(constrainedQuery.options, constrainedQueryCapabilities);
 			var post_actions = {
-				skip: null,
-				limit: null,
-				filter: null,
-				sort: null
+					skip: null,
+					limit: null,
+					filter: null,
+					sort: null
 			};
 			if (!query_supported || !sorting_supported || !skip_supported) {
 				post_actions.skip = constrainedQuery.options.skip;
@@ -130,7 +130,7 @@ Scoped.define("module:Queries.Engine", [
 				return iter;
 			}, this);
 		},
-		
+
 		compileIndexQuery: function (constrainedDNFQuery, key, index) {
 			var fullQuery = Objs.exists(constrainedDNFQuery.query.$or, function (query) {
 				return !(key in query);
@@ -225,7 +225,7 @@ Scoped.define("module:Queries.Engine", [
 				iter = new LimitIterator(iter, constrainedDNFQuery.options.limit);
 			return Promise.value(iter);
 		},
-		
+
 		compileIndexedQuery: function (constrainedQuery, constrainedQueryCapabilities, constrainedQueryFunction, constrainedQueryContext, indices) {
 			constrainedQuery = Constrained.rectify(constrainedQuery);
 			indices = indices || {};
@@ -258,7 +258,7 @@ Scoped.define("module:Queries.Engine", [
 			else
 				return this.compileQuery(constrainedQuery, constrainedQueryCapabilities, constrainedQueryFunction, constrainedQueryContext);
 		},
-		
+
 		_queryResultRectify: function (result, materialize) {
 			result = result || [];
 			return Types.is_array(result) == materialize ? result : (materialize ? result.asArray() : new ArrayIterator(result)); 

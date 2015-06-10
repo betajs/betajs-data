@@ -1,27 +1,27 @@
 Scoped.define("module:Queries.Constrained", [
-        "json:",
-        "module:Queries",
-        "base:Types",
-        "base:Objs",
-        "base:Tokens",
-        "base:Comparators"
-	], function (JSON, Queries, Types, Objs, Tokens, Comparators) {
+                                             "json:",
+                                             "module:Queries",
+                                             "base:Types",
+                                             "base:Objs",
+                                             "base:Tokens",
+                                             "base:Comparators"
+                                             ], function (JSON, Queries, Types, Objs, Tokens, Comparators) {
 	return {
-		
+
 		/*
 		 * 
 		 * { query: query, options: options }
 		 * 
 		 * options:
-		 * 	skip: int || 0
 		 *  limit: int || null
+		 *  skip: int || 0
 		 *  sort: {
 		 *    key1: 1 || -1,
 		 *    key2: 1 || -1
 		 *  }
 		 * 
 		 */
-		
+
 		rectify: function (constrainedQuery) {
 			var base = ("options" in constrainedQuery || "query" in constrainedQuery) ? constrainedQuery : { query: constrainedQuery};
 			return Objs.extend({
@@ -29,7 +29,7 @@ Scoped.define("module:Queries.Constrained", [
 				options: {}
 			}, base);
 		},
-		
+
 		skipValidate: function (options, capabilities) {
 			if ("skip" in options) {
 				if (capabilities)
@@ -37,7 +37,7 @@ Scoped.define("module:Queries.Constrained", [
 			}
 			return true;
 		},
-		
+
 		limitValidate: function (options, capabilities) {
 			if ("limit" in options) {
 				if (capabilities)
@@ -60,7 +60,7 @@ Scoped.define("module:Queries.Constrained", [
 			}
 			return true;
 		},
-		
+
 		constraintsValidate: function (options, capabilities) {
 			return Objs.all(["skip", "limit", "sort"], function (prop) {
 				return this[prop + "Validate"].call(this, options, capabilities);
@@ -71,7 +71,7 @@ Scoped.define("module:Queries.Constrained", [
 			constrainedQuery = this.rectify(constrainedQuery);
 			return this.constraintsValidate(constrainedQuery.options, capabilities) && Queries.validate(constrainedQuery.query, capabilities.query || {});
 		},
-		
+
 		fullConstrainedQueryCapabilities: function (queryCapabilties) {
 			return {
 				query: queryCapabilties || Queries.fullQueryCapabilities(),
@@ -80,7 +80,7 @@ Scoped.define("module:Queries.Constrained", [
 				sort: true // can also be false OR a non-empty object containing keys which can be ordered by
 			};
 		},
-		
+
 		normalize: function (constrainedQuery) {
 			constrainedQuery = this.rectify(constrainedQuery);
 			return {
@@ -92,15 +92,15 @@ Scoped.define("module:Queries.Constrained", [
 		serialize: function (constrainedQuery) {
 			return JSON.stringify(this.rectify(constrainedQuery));
 		},
-		
+
 		unserialize: function (constrainedQuery) {
 			return JSON.parse(constrainedQuery);
 		},
-		
+
 		hash: function (constrainedQuery) {
 			return Tokens.simple_hash(this.serialize(constrainedQuery));
 		},
-		
+
 		subsumizes: function (constrainedQuery, constrainedQuery2) {
 			constrainedQuery = this.rectify(constrainedQuery);
 			constrainedQuery2 = this.rectify(constrainedQuery2);
@@ -122,7 +122,7 @@ Scoped.define("module:Queries.Constrained", [
 				return false;
 			return Queries.subsumizes(constrainedQuery.query, constrainedQuery2.query);
 		},
-		
+
 		mergeable: function (constrainedQuery, constrainedQuery2) {
 			constrainedQuery = this.rectify(constrainedQuery);
 			constrainedQuery2 = this.rectify(constrainedQuery2);
@@ -143,7 +143,7 @@ Scoped.define("module:Queries.Constrained", [
 			} else 
 				return !("skip" in qopts2) || (!qopts.limit || (qopts.limit >= qopts2.skip));
 		},
-		
+
 		merge: function (constrainedQuery, constrainedQuery2) {
 			constrainedQuery = this.rectify(constrainedQuery);
 			constrainedQuery2 = this.rectify(constrainedQuery2);
@@ -153,12 +153,12 @@ Scoped.define("module:Queries.Constrained", [
 				query: constrainedQuery.query,
 				options: {
 					skip: "skip" in qopts ? ("skip" in qopts2 ? Math.min(qopts.skip, qopts2.skip): null) : null,
-					limit: "limit" in qopts ? ("limit" in qopts2 ? Math.max(qopts.limit, qopts2.limit): null) : null,
-					sort: constrainedQuery.sort
+							limit: "limit" in qopts ? ("limit" in qopts2 ? Math.max(qopts.limit, qopts2.limit): null) : null,
+									sort: constrainedQuery.sort
 				}
 			};
 		}
-		
-		
+
+
 	}; 
 });

@@ -1,12 +1,12 @@
 Scoped.define("module:Stores.StoreHistory", [
-    "base:Class",
-    "base:Objs",
-    "base:Types",
-    "module:Stores.MemoryStore"
-], function (Class, Objs, Types, MemoryStore, scoped) {
+                                             "base:Class",
+                                             "base:Objs",
+                                             "base:Types",
+                                             "module:Stores.MemoryStore"
+                                             ], function (Class, Objs, Types, MemoryStore, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
-			
+
 			constructor: function (sourceStore, historyStore, options) {
 				inherited.constructor.call(this);
 				this._options = Objs.extend({
@@ -15,8 +15,8 @@ Scoped.define("module:Stores.StoreHistory", [
 					combine_insert_remove: false,
 					combine_update_remove: false,
 					source_id_key: sourceStore ? sourceStore.id_key() : "id",
-					row_data: {},
-					filter_data: {}
+							row_data: {},
+							filter_data: {}
 				}, options);
 				this.historyStore = historyStore || new MemoryStore();
 				this.commitId = 1;
@@ -26,7 +26,7 @@ Scoped.define("module:Stores.StoreHistory", [
 					sourceStore.on("update", this.sourceUpdate, this);
 				}
 			},
-			
+
 			sourceInsert: function (data) {
 				this.commitId++;
 				this.historyStore.insert(Objs.extend({
@@ -36,7 +36,7 @@ Scoped.define("module:Stores.StoreHistory", [
 					commit_id: this.commitId
 				}, this._options.row_data));
 			},
-			
+
 			sourceUpdate: function (row, data) {
 				this.commitId++;
 				var row_id = Types.is_object(row) ? row[this._options.source_id_key] : row;
@@ -70,7 +70,7 @@ Scoped.define("module:Stores.StoreHistory", [
 					commit_id: this.commitId
 				}, this._options.row_data));
 			},
-			
+
 			sourceRemove: function (id) {
 				this.commitId++;
 				if (this._options.combine_insert_remove) {

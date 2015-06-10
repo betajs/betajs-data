@@ -19,9 +19,10 @@ module.exports = function(grunt) {
 						dest : 'dist/beta-data-raw.js',
 						src : [ 'src/fragments/begin.js-fragment',
 								'src/data/queries/*.js',
-								'src/data/stores/*.js',
+								'src/data/stores/**/*.js',
 								'src/data/indices/*.js',
 								'src/data/legacy/*.js',
+								'src/collections/*.js',
 								'src/modelling/*.js',
 								'src/modelling/associations/*.js',
 								'src/modelling/validations/*.js',
@@ -78,7 +79,8 @@ module.exports = function(grunt) {
 				jshint : {
 					options: {
 						es5: false,
-						es3: true
+						es3: true,
+						smarttabs: true
 					},
 					source : [ "./src/**/*.js" ],
 					dist : [ "./dist/beta-data-noscoped.js", "./dist/beta-data.js" ],
@@ -135,7 +137,7 @@ module.exports = function(grunt) {
 									"test_framework" : "qunit",
 									"timeout": 10 * 60,
 									"browsers": [
-						              	'firefox_latest',
+									    'firefox_latest',
 									    'firefox_4',
 						                'chrome_latest',
 							            'chrome_14',

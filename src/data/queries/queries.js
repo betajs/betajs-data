@@ -1,71 +1,71 @@
 Scoped.define("module:Queries", [
-        "json:",
-	    "base:Types",
-	    "base:Sort",
-	    "base:Objs",
-	    "base:Class",
-	    "base:Tokens",
-	    "base:Iterators.ArrayIterator",
-	    "base:Iterators.FilteredIterator",
-	    "base:Strings",
-	    "base:Comparators"
-	], function (JSON, Types, Sort, Objs, Class, Tokens, ArrayIterator, FilteredIterator, Strings, Comparators) {
-	
+                                 "json:",
+                                 "base:Types",
+                                 "base:Sort",
+                                 "base:Objs",
+                                 "base:Class",
+                                 "base:Tokens",
+                                 "base:Iterators.ArrayIterator",
+                                 "base:Iterators.FilteredIterator",
+                                 "base:Strings",
+                                 "base:Comparators"
+                                 ], function (JSON, Types, Sort, Objs, Class, Tokens, ArrayIterator, FilteredIterator, Strings, Comparators) {
+
 	var SYNTAX_PAIR_KEYS = {
-		"$or": {
-			evaluate_combine: Objs.exists
-		},
-		"$and": {
-			evaluate_combine: Objs.all
-		}
+			"$or": {
+				evaluate_combine: Objs.exists
+			},
+			"$and": {
+				evaluate_combine: Objs.all
+			}
 	};
-	
+
 	var SYNTAX_CONDITION_KEYS = {
-		"$in": {
-			target: "atoms",
-			evaluate_combine: Objs.exists,
-			evaluate_single: function (object_value, condition_value) {
-				return object_value === condition_value;
+			"$in": {
+				target: "atoms",
+				evaluate_combine: Objs.exists,
+				evaluate_single: function (object_value, condition_value) {
+					return object_value === condition_value;
+				}
+			}, "$gt": {
+				target: "atom",
+				evaluate_single: function (object_value, condition_value) {
+					return object_value > condition_value;
+				}
+			}, "$lt": {
+				target: "atom",
+				evaluate_single: function (object_value, condition_value) {
+					return object_value < condition_value;
+				}
+			}, "$gte": {
+				target: "atom",
+				evaluate_single: function (object_value, condition_value) {
+					return object_value >= condition_value;
+				}
+			}, "$le": {
+				target: "atom",
+				evaluate_single: function (object_value, condition_value) {
+					return object_value <= condition_value;
+				}
+			}, "$sw": {
+				target: "atom",
+				evaluate_single: function (object_value, condition_value) {
+					return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) === 0);
+				}
+			}, "$ct": {
+				target: "atom",
+				no_index_support: true,
+				evaluate_single: function (object_value, condition_value) {
+					return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) >= 0);
+				}
+			}, "$eq": {
+				target: "atom",
+				evaluate_single: function (object_value, condition_value) {
+					return object_value === condition_value;
+				}
 			}
-		}, "$gt": {
-			target: "atom",
-			evaluate_single: function (object_value, condition_value) {
-				return object_value > condition_value;
-			}
-		}, "$lt": {
-			target: "atom",
-			evaluate_single: function (object_value, condition_value) {
-				return object_value < condition_value;
-			}
-		}, "$gte": {
-			target: "atom",
-			evaluate_single: function (object_value, condition_value) {
-				return object_value >= condition_value;
-			}
-		}, "$le": {
-			target: "atom",
-			evaluate_single: function (object_value, condition_value) {
-				return object_value <= condition_value;
-			}
-		}, "$sw": {
-			target: "atom",
-			evaluate_single: function (object_value, condition_value) {
-				return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) === 0);
-			}
-		}, "$ct": {
-			target: "atom",
-			no_index_support: true,
-			evaluate_single: function (object_value, condition_value) {
-				return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) >= 0);
-			}
-		}, "$eq": {
-			target: "atom",
-			evaluate_single: function (object_value, condition_value) {
-				return object_value === condition_value;
-			}
-		}
 	};
-	
+
 	Objs.iter(Objs.clone(SYNTAX_CONDITION_KEYS, 1), function (value, key) {
 		var valueic = Objs.clone(value, 1);
 		valueic.evaluate_single = function (object_value, condition_value) {
@@ -74,10 +74,10 @@ Scoped.define("module:Queries", [
 		valueic.ignore_case = true;
 		SYNTAX_CONDITION_KEYS[key + "ic"] = valueic;
 	});
-	
-	
+
+
 	return {		
-		
+
 		/*
 		 * Syntax:
 		 *
@@ -91,37 +91,37 @@ Scoped.define("module:Queries", [
 		 * condition :== $in: atoms | $gt: atom | $lt: atom | $gte: atom | $le: atom | $sw: atom | $ct: atom | all with ic
 		 *
 		 */
-		
+
 		SYNTAX_PAIR_KEYS: SYNTAX_PAIR_KEYS,
 
 		SYNTAX_CONDITION_KEYS: SYNTAX_CONDITION_KEYS,
-		
+
 		validate: function (query, capabilities) {
 			return this.validate_query(query, capabilities);
 		},
-		
+
 		validate_atoms: function (atoms, capabilities) {
 			return Types.is_array(atoms) && Objs.all(atoms, function (atom) {
 				return this.validate_atom(atom, capabilities);
 			}, this);
 		},
-		
+
 		validate_atom: function (atom, capabilities) {
 			return !capabilities || !!capabilities.atom; 
 		},
-		
+
 		validate_queries: function (queries, capabilities) {
 			return Types.is_array(queries) && Objs.all(queries, function (query) {
 				return this.validate_query(query, capabilities);
 			}, this);
 		},
-		
+
 		validate_query: function (query, capabilities) {
 			return Types.is_object(query) && Objs.all(query, function (value, key) {
 				return this.validate_pair(value, key, capabilities);
 			}, this);
 		},
-		
+
 		validate_pair: function (value, key, capabilities) {
 			if (key in this.SYNTAX_PAIR_KEYS) {
 				if (capabilities && (!capabilities.bool || !(key in capabilities.bool)))
@@ -130,73 +130,73 @@ Scoped.define("module:Queries", [
 			}
 			return this.validate_value(value, capabilities);
 		},
-		
+
 		is_query_atom: function (value) {
 			return value === null || !Types.is_object(value) || Objs.all(value, function (v, key) {
 				return !(key in this.SYNTAX_CONDITION_KEYS);
 			}, this);
 		},
-		
+
 		validate_value: function (value, capabilities) {
 			return !this.is_query_atom(value) ? this.validate_conditions(value, capabilities) : this.validate_atom(value, capabilities);
 		},
-		
+
 		validate_conditions: function (conditions, capabilities) {
 			return Types.is_object(conditions) && Objs.all(conditions, function (value, key) {
 				return this.validate_condition(value, key, capabilities);
 			}, this);
 		},
-		
+
 		validate_condition: function (value, key, capabilities) {
 			if (capabilities && (!capabilities.conditions || !(key in capabilities.conditions)))
 				return false;
 			var meta = this.SYNTAX_CONDITION_KEYS[key];
 			return meta && (meta.target === "atoms" ? this.validate_atoms(value) : this.validate_atom(value));
 		},
-		
+
 		normalize: function (query) {
 			return Sort.deep_sort(query);
 		},
-		
+
 		serialize: function (query) {
 			return JSON.stringify(query);
 		},
-		
+
 		unserialize: function (query) {
 			return JSON.parse(query);
 		},
-		
+
 		hash: function (query) {
 			return Tokens.simple_hash(this.serialize(query));
 		},
-		
+
 		dependencies: function (query) {
 			return Objs.keys(this.dependencies_query(query, {}));
 		},
-		
+
 		dependencies_queries: function (queries, dep) {
 			Objs.iter(queries, function (query) {
 				dep = this.dependencies_query(query, dep);
 			}, this);
 			return dep;
 		},
-		
+
 		dependencies_query: function (query, dep) {
 			Objs.iter(query, function (value, key) {
 				dep = this.dependencies_pair(value, key, dep);
 			}, this);
 			return dep;
 		},
-		
+
 		dependencies_pair: function (value, key, dep) {
 			return key in this.SYNTAX_PAIR_KEYS ? this.dependencies_queries(value, dep) : this.dependencies_key(key, dep);
 		},
-		
+
 		dependencies_key: function (key, dep) {
 			dep[key] = (dep[key] || 0) + 1;
 			return dep;
 		},
-		
+
 		evaluate : function(query, object) {
 			return this.evaluate_query(query, object);
 		},
@@ -206,7 +206,7 @@ Scoped.define("module:Queries", [
 				return this.evaluate_pair(value, key, object);
 			}, this);
 		},
-		
+
 		evaluate_pair: function (value, key, object) {
 			if (key in this.SYNTAX_PAIR_KEYS) {
 				return this.SYNTAX_PAIR_KEYS[key].evaluate_combine.call(Objs, value, function (query) {
@@ -215,21 +215,21 @@ Scoped.define("module:Queries", [
 			} else
 				return this.evaluate_value(value, object[key]);
 		},
-		
+
 		evaluate_value: function (value, object_value) {
 			return !this.is_query_atom(value) ? this.evaluate_conditions(value, object_value) : this.evaluate_atom(value, object_value);
 		},
-		
+
 		evaluate_atom: function (value, object_value) {
 			return value === object_value;
 		},
-		
+
 		evaluate_conditions: function (value, object_value) {
 			return Objs.all(value, function (condition_value, condition_key) {
 				return this.evaluate_condition(condition_value, condition_key, object_value);
 			}, this);
 		},
-		
+
 		evaluate_condition: function (condition_value, condition_key, object_value) {
 			var rec = this.SYNTAX_CONDITION_KEYS[condition_key];
 			if (rec.target === "atoms") {
@@ -239,7 +239,7 @@ Scoped.define("module:Queries", [
 			}
 			return rec.evaluate_single.call(this, object_value, condition_value);
 		},
-		
+
 		subsumizes: function (query, query2) {
 			// This is very simple at this point
 			if (!Types.is_object(query) || !Types.is_object)
@@ -250,7 +250,7 @@ Scoped.define("module:Queries", [
 			}
 			return true;
 		},
-		
+
 		fullQueryCapabilities: function () {
 			var bool = {};
 			Objs.iter(this.SYNTAX_PAIR_KEYS, function (dummy, key) {
@@ -266,7 +266,7 @@ Scoped.define("module:Queries", [
 				conditions: conditions
 			};
 		},
-		
+
 		mergeConditions: function (conditions1, conditions2) {
 			if (!Types.is_object(conditions1))
 				conditions1 = {"$eq": conditions1 };
@@ -311,7 +311,7 @@ Scoped.define("module:Queries", [
 				obj = {"$in": []};
 			return obj;
 		},
-		
+
 		disjunctiveNormalForm: function (query, mergeKeys) {
 			query = Objs.clone(query, 1);
 			var factors = [];
@@ -360,7 +360,7 @@ Scoped.define("module:Queries", [
 			helper(query, 0);
 			return {"$or": result};
 		},
-		
+
 		simplifyQuery: function (query) {
 			var result = {};
 			Objs.iter(query, function (value, key) {
@@ -384,7 +384,7 @@ Scoped.define("module:Queries", [
 			}, this);
 			return result;
 		},
-		
+
 		simplifyConditions: function (conditions) {
 			var result = {};
 			Objs.iter(["", "ic"], function (add) {
@@ -437,6 +437,6 @@ Scoped.define("module:Queries", [
 			}, this);
 			return result;
 		}
-		
+
 	}; 
 });

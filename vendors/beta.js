@@ -1,5 +1,5 @@
 /*!
-betajs - v1.0.0 - 2015-05-07
+betajs - v1.0.0 - 2015-06-08
 Copyright (c) Oliver Friedmann,Victor Lingenthal
 MIT Software License.
 */
@@ -537,7 +537,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs - v1.0.0 - 2015-05-07
+betajs - v1.0.0 - 2015-06-08
 Copyright (c) Oliver Friedmann,Victor Lingenthal
 MIT Software License.
 */
@@ -550,7 +550,7 @@ Scoped.binding("module", "global:BetaJS");
 Scoped.define("module:", function () {
 	return {
 		guid: "71366f7a-7da3-4e55-9a0b-ea0e4e2a9e79",
-		version: '368.1431027951109'
+		version: '386.1433797332111'
 	};
 });
 
@@ -1470,6 +1470,12 @@ Scoped.define("module:Strings", ["module:Objs"], function (Objs) {
 				tail: i >= 0 ? s.substring(i + delimiter.length) : s
 			};
 		},
+		
+		replaceAll: function (s, sub, wth) {
+			while (s.indexOf(sub) >= 0)
+				s = s.replace(sub, wth);
+			return s;
+		},
 	
 		/** Trims all trailing and leading whitespace and removes block indentations
 		 *
@@ -2211,6 +2217,8 @@ Scoped.define("module:Promise", ["module:Types", "module:Functions", "module:Asy
 				return this;
 			};
 			promise.end = function () {
+				if (this.__ended)
+					return this;
 				this.__ended = true;
 				this.results();
 				return this;
@@ -2292,6 +2300,8 @@ Scoped.extend("module:Promise.Promise.prototype", ["module:Promise", "module:Fun
 		},
 		
 		callback: function (f, context, options, type) {
+			if ("end" in this)
+				this.end();
 			var record = {
 				type: type || "callback",
 				func: f,
@@ -2509,7 +2519,11 @@ Scoped.define("module:Class", ["module:Types", "module:Objs", "module:Functions"
 	
 		// Add External Statics
 		Objs.iter(statics, function (stat) {
-			Objs.extend(result, Types.is_function(stat) ? stat(parent) : stat);
+			stat = Types.is_function(stat) ? stat(parent) : stat;
+			var extender = result._extender;
+			Objs.extend(result, stat);
+			if (stat._extender)
+				result._extender = Objs.extend(Objs.clone(extender, 1), stat._extender);
 		});
 		
 		
@@ -2564,7 +2578,9 @@ Scoped.define("module:Class", ["module:Types", "module:Objs", "module:Functions"
 			Objs.extend(result.__notifications, parent.__notifications, 1);		
 	
 		Objs.iter(objects, function (object) {
-			Objs.extend(result.prototype, object);
+			for (var objkey in object)
+				result.prototype[objkey] = result._extender && objkey in result._extender ? result._extender[objkey](result.prototype[objkey], object[objkey]) : object[objkey]; 
+			//Objs.extend(result.prototype, object);
 	
 			// Note: Required for Internet Explorer
 			if ("constructor" in object)
@@ -2617,6 +2633,21 @@ Scoped.define("module:Class", ["module:Types", "module:Objs", "module:Functions"
 			return obj && this.is_class_instance(obj) && obj.instance_of(this);
 		},
 		
+		define: function (parent, current) {
+			var args = Functions.getArguments(arguments, 2);
+			if (Types.is_object(parent)) {
+				return Scoped.define(current, [], function (scoped) {
+					args.unshift({scoped: scoped});
+					return parent.extend.apply(parent, args);
+				});
+			} else {
+				return Scoped.define(current, [parent], function (parent, scoped) {
+					args.unshift({scoped: scoped});
+					return parent.extend.apply(parent, args);
+				});
+			}
+		},
+		
 		// Legacy Methods
 	
 		_inherited: function (cls, func) {
@@ -2661,6 +2692,11 @@ Scoped.define("module:Class", ["module:Types", "module:Objs", "module:Functions"
 		return this.destroy === this.__destroyedDestroy;
 	};
 	
+	Class.prototype.weakDestroy = function () {
+		if (!this.destroyed())
+			this.destroy();
+	};
+
 	Class.prototype.__destroyedDestroy = function () {
 		throw ("Trying to destroy destroyed object " + this.cid() + ": " + this.cls.classname + ".");
 	};
@@ -2984,7 +3020,11 @@ Scoped.define("module:Parser.Lexer", ["module:Class", "module:Types", "module:Ob
 });
 
 
-Scoped.define("module:Timers.Timer", ["module:Class", "module:Objs"], function (Class, Objs, scoped) {
+Scoped.define("module:Timers.Timer", [
+    "module:Class",
+    "module:Objs",
+    "module:Time"
+], function (Class, Objs, Time, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 			
@@ -2994,6 +3034,7 @@ Scoped.define("module:Timers.Timer", ["module:Class", "module:Objs"], function (
 			 * func fire (optional): will be fired
 			 * object context (optional): for fire
 			 * bool start (optional, default true): should it start immediately
+			 * bool real_time (default false)
 			 * 
 			 */
 			constructor: function (options) {
@@ -3003,7 +3044,8 @@ Scoped.define("module:Timers.Timer", ["module:Class", "module:Objs"], function (
 					start: true,
 					fire: null,
 					context: this,
-					destroy_on_fire: false
+					destroy_on_fire: false,
+					real_time: false
 				}, options);
 				this.__delay = options.delay;
 				this.__destroy_on_fire = options.destroy_on_fire;
@@ -3011,6 +3053,7 @@ Scoped.define("module:Timers.Timer", ["module:Class", "module:Objs"], function (
 				this.__fire = options.fire;
 				this.__context = options.context;
 				this.__started = false;
+				this.__real_time = options.real_time;
 				if (options.start)
 					this.start();
 			},
@@ -3023,8 +3066,16 @@ Scoped.define("module:Timers.Timer", ["module:Class", "module:Objs"], function (
 			fire: function () {
 				if (this.__once)
 					this.__started = false;
-				if (this.__fire)
-					this.__fire.apply(this.__context, [this]);
+				if (this.__fire) {
+					this.__fire.call(this.__context, this);
+					this.__fire_count++;
+					if (this.__real_time && !this.__destroy_on_fire && !this.__once) {
+						while ((this.__fire_count + 1) * this.__delay <= Time.now() - this.__start_time) {
+							this.__fire.call(this.__context, this);
+							this.__fire_count++;
+						}
+					}
+				}
 				if (this.__destroy_on_fire)
 					this.destroy();
 			},
@@ -3043,6 +3094,9 @@ Scoped.define("module:Timers.Timer", ["module:Class", "module:Objs"], function (
 				if (this.__started)
 					return;
 				var self = this;
+				if (this.__real_time)
+					this.__start_time = Time.now();
+				this.__fire_count = 0;
 				if (this.__once)
 					this.__timer = setTimeout(function () {
 						self.fire();
@@ -4051,6 +4105,9 @@ Scoped.define("module:Properties.PropertiesMixin", [
 					// flat organization
 					bindings: {}
 				};
+				Objs.iter(this.materializes, function (key) {
+					this.materializeAttr(key);
+				}, this);
 			},
 			"destroy": function () {
 				Objs.iter(this.__properties.bindings, function (value, key) {
@@ -4071,6 +4128,8 @@ Scoped.define("module:Properties.PropertiesMixin", [
 				}, this);
 			}
 		},
+		
+		materializes: [],
 		
 		get: function (key) {
 			return Scopes.get(key, this.__properties.data);
@@ -4106,6 +4165,14 @@ Scoped.define("module:Properties.PropertiesMixin", [
 		
 		getAll: function () {
 			return Objs.clone(this.__properties.data, 1);
+		},
+		
+		materializeAttr: function (attr) {
+			this[attr] = function (value) {
+				if (arguments.length === 0)
+					return this.get(attr);
+				this.set(attr, value);
+			};
 		},
 		
 		__registerWatcher: function (key, event) {
@@ -4397,15 +4464,21 @@ Scoped.define("module:Properties.PropertiesMixin", [
 
 Scoped.define("module:Properties.Properties", [
 	    "module:Class",
+	    "module:Objs",
 	    "module:Events.EventsMixin",
 	    "module:Properties.PropertiesMixin"
-	], function (Class, EventsMixin, PropertiesMixin, scoped) {
+	], function (Class, Objs, EventsMixin, PropertiesMixin, scoped) {
 	return Class.extend({scoped: scoped}, [EventsMixin, PropertiesMixin, function (inherited) {
 		return {
-			constructor: function (obj) {
+			constructor: function (obj, materializes) {
 				inherited.constructor.call(this);
 				if (obj)
 					this.setAll(obj);
+				if (materializes) {
+					Objs.iter(materializes, function (key) {
+						this.materializeAttr(key);
+					}, this);
+				}
 			}
 		};
 	}]);
@@ -5183,6 +5256,88 @@ Scoped.define("module:Classes.ObjectIdMixin", ["module:Classes.ObjectIdScope", "
 	
 	};
 });
+
+
+
+Scoped.define("module:Classes.ContextRegistry", [
+    "module:Class",
+    "module:Ids",
+    "module:Types",
+    "module:Iterators.MappedIterator",
+    "module:Iterators.ObjectValuesIterator"
+], function (Class, Ids, Types, MappedIterator, ObjectValuesIterator, scoped) {
+	return Class.extend({scoped: scoped}, function (inherited) {
+		return {
+			
+			constructor: function (serializer, serializerContext) {
+				inherited.constructor.apply(this);
+				this.__data = {};
+				this.__contexts = {};
+				this.__serializer = serializer || this.__defaultSerializer;
+				this.__serializerContext = serializerContext || this;
+			},
+			
+			__defaultSerializer: function (data) {
+				return Types.is_object(data) ? Ids.objectId(data) : data;
+			},
+			
+			_serializeContext: function (ctx) {
+				return ctx ? Ids.objectId(ctx) : null;
+			},
+			
+			_serializeData: function (data) {
+				return this.__serializer.call(this.__serializerContext, data);
+			},
+			
+			get: function (data) {
+				var serializedData = this._serializeData(data);
+				return this.__data[serializedData];
+			},
+			
+			register: function (data, context) {
+				var serializedData = this._serializeData(data);
+				var serializedCtx = this._serializeContext(context);
+				var result = false;
+				if (!(serializedData in this.__data)) {
+					this.__data[serializedData] = {
+						data: data,
+						contexts: {}
+					};
+					result = true;
+				}
+				this.__data[serializedData].contexts[serializedCtx] = true;
+				return result ? this.__data[serializedData] : null;
+			},
+			
+			unregister: function (data, context) {
+				var serializedData = this.__serializer.call(this.__serializerContext, data);
+				if (!this.__data[serializedData])
+					return null;
+				if (context) {
+					var serializedCtx = this._serializeContext(context);
+					delete this.__data[serializedData].contexts[serializedCtx];
+				}
+				if (!context || Types.is_empty(this.__data[serializedData].contexts)) {
+					var oldData = this.__data[serializedData];
+					return oldData;
+				}
+				return null;
+			},
+			
+			customIterator: function () {
+				return new ObjectValuesIterator(this.__data);
+			},
+			
+			iterator: function () {
+				return new MappedIterator(this.customIterator(), function (item) {
+					return item.data;
+				});
+			}
+
+		};
+	});
+});
+
 Scoped.define("module:Collections.Collection", [
 	    "module:Class",
 	    "module:Events.EventsMixin",
@@ -5297,6 +5452,32 @@ Scoped.define("module:Collections.Collection", [
 				return ident;
 			},
 			
+			replace_objects: function (objects) {
+				var ids = {};
+				Objs.iter(objects, function (oriObject) {
+					var is_prop = Class.is_class_instance(oriObject);
+					var object = is_prop ? new Properties(oriObject) : oriObject;
+					ids[this.get_ident(object)] = true;
+					if (this.exists(object)) {
+						var existing = this.getById(this.get_ident(object));
+						if (is_prop) {
+							this.remove(existing);
+							this.add(object);
+						} else
+							existing.setAll(oriObject);
+					} else
+						this.add(object);
+				}, this);
+				var iterator = this.iterator();
+				while (iterator.hasNext()) {
+					var object = iterator.next();
+					var ident = this.get_ident(object);
+					if (!(ident in ids))
+						this.remove(object);
+				}
+				iterator.destroy();
+			},
+			
 			add_objects: function (objects) {
 				var count = 0;
 				Objs.iter(objects, function (object) {
@@ -5367,18 +5548,27 @@ Scoped.define("module:Collections.FilteredCollection", [
 				delete options.objects;
 				options.compare = options.compare || parent.get_compare();
 				inherited.constructor.call(this, options);
-				if ("filter" in options)
-					this.filter = options.filter;
-				this.__parent.iterate(function (object) {
-					this.add(object);
-					return true;
-				}, this);
 				this.__parent.on("add", this.add, this);
-				this.__parent.on("remove", this.remove, this);
+				this.__parent.on("remove", this.__selfRemove, this);
+				this.setFilter(options.filter, options.context);
 			},
 			
 			filter: function (object) {
-				return true;
+				return !this.__filter || this.__filter.call(this.__filterContext || this, object);
+			},
+			
+			setFilter: function (filterFunction, filterContext) {
+				this.__filterContext = filterContext;
+				this.__filter = filterFunction;
+				this.iterate(function (obj) {
+					if (!this.filter(obj))
+						inherited.remove.call(this, obj);
+				}, this);
+				this.__parent.iterate(function (object) {
+					if (!this.exists(object) && this.filter(object))
+					this.add(object);
+					return true;
+				}, this);
 			},
 			
 			_object_changed: function (object, key, value) {
@@ -5885,6 +6075,8 @@ Scoped.define("module:States.State", [
                              		    	
 		    _locals: [],
 		    _persistents: [],
+		    _globals: [],
+		    _defaults: {},
 		    
 		    _white_list: null,
 		
@@ -5898,13 +6090,15 @@ Scoped.define("module:States.State", [
 		        this._transitioning = false;
 		        this.__next_state = null;
 		        this.__suspended = 0;
-		        args = args || {};
+		        args = Objs.extend(Objs.clone(this._defaults || {}, 1), args);
 		        this._locals = Types.is_function(this._locals) ? this._locals() : this._locals;
 		        for (var i = 0; i < this._locals.length; ++i)
 		            this["_" + this._locals[i]] = args[this._locals[i]];
 		        this._persistents = Types.is_function(this._persistents) ? this._persistents() : this._persistents;
 		        for (i = 0; i < this._persistents.length; ++i)
 		            this["_" + this._persistents[i]] = args[this._persistents[i]];
+		        for (i = 0; i < this._globals.length; ++i)
+		        	host.set(this._globals[i], args[this._globals[i]]);
 		    },
 		
 		    state_name: function () {
@@ -6006,6 +6200,17 @@ Scoped.define("module:States.State", [
 		    }
 		    
  		};
+ 	}, {
+ 		
+ 		_extender: {
+ 			_defaults: function (base, overwrite) {
+ 				return Objs.extend(Objs.clone(base, 1), overwrite);
+ 			},
+ 			_globals: function (base, overwrite) {
+ 				return (base || []).concat(overwrite || []);
+ 			}
+ 		}
+ 		
  	});
 });
 
@@ -6337,7 +6542,7 @@ Scoped.define("module:RMI.Server", [
 			
 			unregisterInstance: function (instance) {
 				delete this.__instances[Ids.objectId(instance)];
-				instance.destroy();
+				instance.weakDestroy();
 			},
 			
 			registerClient: function (channel) {
@@ -6475,6 +6680,8 @@ Scoped.define("module:RMI.Client", [
 				this.__instances[Ids.objectId(instance, instance_name)] = instance;
 				var self = this;
 				instance.__send = function (message, data) {
+					if (!self.__channel)
+						return;
 					data = Objs.map(data, self._serializeValue, self);
 					return self.__channel.send(instance_name + ":" + message, data).mapSuccess(function (result) {
 						return this._unserializeValue(result);
@@ -6487,8 +6694,7 @@ Scoped.define("module:RMI.Client", [
 				var instance_name = Ids.objectId(instance);
 				if (!this.__instances[instance_name])
 					return;
-				instance.off(null, null, this);
-				instance.destroy();
+				instance.weakDestroy();
 				delete this.__instances[instance_name];
 			}
 			

@@ -1,14 +1,14 @@
 Scoped.define("module:Modelling.SchemedProperties", [
-          "base:Properties.Properties",
-          "base:Types",
-          "base:Promise",
-          "base:Objs",
-          "module:Stores.RemoteStoreException",
-          "base:Net.HttpHeader",
-          "module:Modelling.ModelInvalidException"
-  	], function (Properties, Types, Promise, Objs, RemoteStoreException, HttpHeader, ModelInvalidException, scoped) {
-  	return Properties.extend({scoped: scoped}, function (inherited) {			
-  		return {
+                                                     "base:Properties.Properties",
+                                                     "base:Types",
+                                                     "base:Promise",
+                                                     "base:Objs",
+                                                     "module:Stores.RemoteStoreException",
+                                                     "base:Net.HttpHeader",
+                                                     "module:Modelling.ModelInvalidException"
+                                                     ], function (Properties, Types, Promise, Objs, RemoteStoreException, HttpHeader, ModelInvalidException, scoped) {
+	return Properties.extend({scoped: scoped}, function (inherited) {			
+		return {
 
 			constructor: function (attributes) {
 				inherited.constructor.call(this);
@@ -28,11 +28,11 @@ Scoped.define("module:Modelling.SchemedProperties", [
 				for (key in attributes)
 					this.set(key, attributes[key]);
 			},
-			
+
 			_unsetChanged: function (key) {
 				delete this._properties_changed[key];
 			},
-			
+
 			_beforeSet: function (key, value) {
 				var scheme = this.cls.scheme();
 				if (!(key in scheme))
@@ -44,7 +44,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
 					value = sch.transform.apply(this, [value]);
 				return value;
 			},
-			
+
 			_afterSet: function (key, value) {
 				var scheme = this.cls.scheme();
 				if (!(key in scheme))
@@ -56,15 +56,15 @@ Scoped.define("module:Modelling.SchemedProperties", [
 					f.apply(this, [value]);
 				}
 			},
-			
+
 			isChanged: function () {
 				return !Types.is_empty(this._properties_changed);
 			},
-		
+
 			properties_changed: function () {
 				return this._properties_changed;
 			},
-			
+
 			get_all_properties: function () {
 				var result = {};
 				var scheme = this.cls.scheme();
@@ -72,7 +72,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
 					result[key] = this.get(key);
 				return result;
 			},
-			
+
 			validate: function () {
 				this.trigger("validate");
 				var promises = [];
@@ -87,11 +87,11 @@ Scoped.define("module:Modelling.SchemedProperties", [
 					return valid;
 				});
 			},
-			
+
 			_customValidate: function () {
 				return true;
 			},
-			
+
 			_validateAttr: function (attr) {
 				delete this.__errors[attr];
 				var scheme = this.cls.scheme();
@@ -118,20 +118,20 @@ Scoped.define("module:Modelling.SchemedProperties", [
 					return valid;
 				}, this);
 			},
-			
+
 			setError: function (attr, error) {
 				this.__errors[attr] = error;
 				this.trigger("validate:" + attr, !(attr in this.__errors), this.__errors[attr]);
 			},
-			
+
 			errors: function () {
 				return this.__errors;
 			},
-			
+
 			getError: function (attr) {
 				return this.__errors[attr];
 			},
-			
+
 			asRecord: function (tags) {
 				var rec = {};
 				var scheme = this.cls.scheme();
@@ -155,7 +155,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
 						asInner.call(this, key);
 				return rec;		
 			},
-			
+
 			setByTags: function (data, tags) {
 				var scheme = this.cls.scheme();
 				tags = tags || {};
@@ -176,7 +176,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
 					if (key in scheme)
 						setInner.call(this, key);
 			},
-			
+
 			validation_exception_conversion: function (e) {
 				var source = e;
 				if ("instance_of" in e && e.instance_of(RemoteStoreException))
@@ -191,20 +191,20 @@ Scoped.define("module:Modelling.SchemedProperties", [
 				}
 				return e;		
 			}
-			
-  		};
+
+		};
 	}, {
-	
+
 		_initializeScheme: function () {
 			return {};
 		},
-		
+
 		asRecords: function (arr, tags) {
 			return arr.map(function (item) {
 				return item.asRecord(tags);
 			});
 		},
-		
+
 		filterPersistent: function (obj) {
 			var result = {};
 			var scheme = this.scheme();
@@ -214,74 +214,74 @@ Scoped.define("module:Modelling.SchemedProperties", [
 			}
 			return result;
 		}
-		
+
 	}, {
-		
+
 		scheme: function () {
 			this.__scheme = this.__scheme || this._initializeScheme();
 			return this.__scheme;
 		}
-		
+
 	});
 });
 
 
 Scoped.define("module:Modelling.AssociatedProperties", [
-         "module:Modelling.SchemedProperties"
- 	], function (SchemedProperties, scoped) {
- 	return SchemedProperties.extend({scoped: scoped}, function (inherited) {			
- 		return {
-			
+                                                        "module:Modelling.SchemedProperties"
+                                                        ], function (SchemedProperties, scoped) {
+	return SchemedProperties.extend({scoped: scoped}, function (inherited) {			
+		return {
+
 			constructor: function (attributes) {
 				inherited.constructor.call(this, attributes);
 				this.assocs = this._initializeAssociations();
 				for (var key in this.assocs)
 					this.__addAssoc(key, this.assocs[key]);
 			},
-			
+
 			__addAssoc: function (key, obj) {
 				this[key] = function () {
 					return obj.execute.apply(obj, arguments);
 				};
 			},
-			
+
 			_initializeAssociations: function () {
 				return {};
 			},
-			
+
 			destroy: function () {
 				for (var key in this.assocs)
 					this.assocs[key].destroy();
 				inherited.destroy.call(this);
 			},
-		
+
 			id: function () {
 				return this.get(this.cls.primary_key());
 			},
-			
+
 			hasId: function () {
 				return this.has(this.cls.primary_key());
 			}
-			
+
 		};
-		
- 	}, {
-	
+
+	}, {
+
 		primary_key: function () {
 			return "id";
 		},
-		
+
 		_initializeScheme: function () {
 			var s = {};
 			s[this.primary_key()] = {
-				type: "id",
-				tags: ["read"],
-				
-				after_set: null,
-				persistent: true
+					type: "id",
+					tags: ["read"],
+
+					after_set: null,
+					persistent: true
 			};
 			return s;
 		}
-		
- 	});
+
+	});
 });

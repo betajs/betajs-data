@@ -1,14 +1,14 @@
 
 Scoped.define("module:Stores.DualStore", [
-          "module:Queries",
-          "module:Queries.Constrained",
-          "module:Stores.BaseStore",
-          "base:Objs",
-          "base:Iterators.ArrayIterator"
-  	], function (Queries, Constrained, BaseStore, Objs, ArrayIterator, scoped) {
-  	return BaseStore.extend({scoped: scoped}, function (inherited) {			
-  		return {
-			
+                                          "module:Queries",
+                                          "module:Queries.Constrained",
+                                          "module:Stores.BaseStore",
+                                          "base:Objs",
+                                          "base:Iterators.ArrayIterator"
+                                          ], function (Queries, Constrained, BaseStore, Objs, ArrayIterator, scoped) {
+	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+		return {
+
 			constructor: function (first, second, options) {
 				options = Objs.extend({
 					create_options: {},
@@ -57,7 +57,7 @@ Scoped.define("module:Stores.DualStore", [
 				this.__first.on("remove", this.__removed_first, this);
 				this.__second.on("remove", this.__removed_second, this);
 			},
-			
+
 			__inserted_first: function (row, event_data) {
 				if (event_data && event_data.dual_insert)
 					return;
@@ -65,7 +65,7 @@ Scoped.define("module:Stores.DualStore", [
 					this.__second.insert([row, {dual_insert: true}]);
 				this._inserted(row);
 			},
-			
+
 			__inserted_second: function (row, event_data) {
 				if (event_data && event_data.dual_insert)
 					return;
@@ -73,7 +73,7 @@ Scoped.define("module:Stores.DualStore", [
 					this.__first.insert([row, {dual_insert: true}]);
 				this._inserted(row);
 			},
-		
+
 			__updated_first: function (row, update, event_data) {
 				if (event_data && event_data.dual_update)
 					return;
@@ -81,7 +81,7 @@ Scoped.define("module:Stores.DualStore", [
 					this.__second.update(row[this.id_key()], [update, {dual_update: true}]);
 				this._updated(row, update);
 			},
-			
+
 			__updated_second: function (row, update, event_data) {
 				if (event_data && event_data.dual_update)
 					return;
@@ -89,7 +89,7 @@ Scoped.define("module:Stores.DualStore", [
 					this.__first.update(row[this.id_key()], [update, {dual_update: true}]);
 				this._updated(row, update);
 			},
-		
+
 			__removed_first: function (id, event_data) {
 				if (event_data && event_data.dual_remove)
 					return;
@@ -97,7 +97,7 @@ Scoped.define("module:Stores.DualStore", [
 					this.__second.remove([id, {dual_remove: true}]);
 				this._removed(id);
 			},
-			
+
 			__removed_second: function (id, event_data) {
 				if (event_data && event_data.dual_remove)
 					return;
@@ -105,15 +105,15 @@ Scoped.define("module:Stores.DualStore", [
 					this.__first.remove([id, {dual_remove: true}]);
 				this._removed(id);
 			},
-		
+
 			first: function () {
 				return this.__first;
 			},
-			
+
 			second: function () {
 				return this.__second;
 			},
-		
+
 			_insert: function (data) {
 				var first = this.__first;
 				var second = this.__second;
@@ -133,7 +133,7 @@ Scoped.define("module:Stores.DualStore", [
 				else
 					return first.insert([data, {dual_insert: true}]);
 			},
-		
+
 			_update: function (id, data) {
 				var first = this.__first;
 				var second = this.__second;
@@ -153,7 +153,7 @@ Scoped.define("module:Stores.DualStore", [
 				else
 					return first.update(id, [data, {dual_update: true}]);
 			},
-		
+
 			_remove: function (id) {
 				var first = this.__first;
 				var second = this.__second;
@@ -173,11 +173,11 @@ Scoped.define("module:Stores.DualStore", [
 				else
 					return first.remove(id);
 			},
-		
+
 			_query_capabilities: function () {
 				return Constrained.fullConstrainedQueryCapabilities(Queries.fullQueryCapabilities()); 
 			},
-		
+
 			_get: function (id) {
 				var first = this.__first;
 				var second = this.__second;
@@ -207,7 +207,7 @@ Scoped.define("module:Stores.DualStore", [
 				} else
 					return first.get(id);
 			},
-		
+
 			_query: function (query, options) {
 				var first = this.__first;
 				var second = this.__second;
@@ -254,6 +254,6 @@ Scoped.define("module:Stores.DualStore", [
 				}
 			}
 
-  		};
-  	});
+		};
+	});
 });

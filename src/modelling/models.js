@@ -1,13 +1,13 @@
 Scoped.define("module:Modelling.Model", [
-          "module:Modelling.AssociatedProperties",
-          "module:Modelling.ModelInvalidException",
-          "base:Objs",
-          "base:Promise",
-          "base:Types",
-          "base:Exceptions"
-  	], function (AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Exceptions, scoped) {
-  	return AssociatedProperties.extend({scoped: scoped}, function (inherited) {			
-  		return {
+                                         "module:Modelling.AssociatedProperties",
+                                         "module:Modelling.ModelInvalidException",
+                                         "base:Objs",
+                                         "base:Promise",
+                                         "base:Types",
+                                         "base:Exceptions"
+                                         ], function (AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Exceptions, scoped) {
+	return AssociatedProperties.extend({scoped: scoped}, function (inherited) {			
+		return {
 
 			constructor: function (attributes, table, options) {
 				this.__table = table;
@@ -25,34 +25,34 @@ Scoped.define("module:Modelling.Model", [
 				if (this.option("auto_create") && this.isNew())
 					this.save();
 			},
-			
+
 			destroy: function () {
 				this.__table.off(null, null, this);
 				this.trigger("destroy");
 				inherited.destroy.call(this);
 			},
-			
+
 			option: function (key) {
 				var opts = key in this.__options ? this.__options : this.table().options();
 				return opts[key];
 			},
-			
+
 			table: function () {
 				return this.__table;
 			},
-			
+
 			isSaved: function () {
 				return this.isRemoved() || (!this.isNew() && !this.isChanged());
 			},
-			
+
 			isNew: function () {
 				return this.option("newModel");
 			},
-			
+
 			isRemoved: function () {
 				return this.option("removed");
 			},
-		
+
 			_registerEvents: function () {
 				this.__table.on("update:" + this.id(), function (data) {
 					if (this.isRemoved())
@@ -71,14 +71,14 @@ Scoped.define("module:Modelling.Model", [
 					this.__options.removed = true;
 				}, this);
 			},
-			
+
 			update: function (data) {
 				this.__silent++;
 				this.setAll(data);
 				this.__silent--;
 				return this.isNew() ? Promise.create(true) : this.save();
 			},
-		
+
 			_afterSet: function (key, value, old_value, options) {
 				inherited._afterSet.call(this, key, value, old_value, options);
 				var scheme = this.cls.scheme();
@@ -87,7 +87,7 @@ Scoped.define("module:Modelling.Model", [
 				if (this.option("auto_update") && !this.isNew())
 					this.save();
 			},
-			
+
 			save: function () {
 				if (this.isRemoved())
 					return Promise.create({});
@@ -123,7 +123,7 @@ Scoped.define("module:Modelling.Model", [
 					}, this);
 				}, this);
 			},
-			
+
 			remove: function () {
 				if (this.isNew() || this.isRemoved())
 					return Promise.create(true);
@@ -133,7 +133,7 @@ Scoped.define("module:Modelling.Model", [
 					return result;
 				}, this);
 			}	
-	
-  		};
-  	});
+
+		};
+	});
 });
