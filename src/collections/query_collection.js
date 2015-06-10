@@ -1,3 +1,9 @@
+/**
+ * @class QueryCollection
+ *
+ * A base class for querying collections. Subclasses specify the expected type
+ * of data store and specify whether the query collection is active.
+ */
 Scoped.define("module:Collections.QueryCollection", [      
                                                      "base:Collections.Collection",
                                                      "base:Objs",
@@ -11,6 +17,25 @@ Scoped.define("module:Collections.QueryCollection", [
 	return Collection.extend({scoped: scoped}, function (inherited) {
 		return {
 
+			/**
+		       * @method constructor
+		       *
+		       * @param {object} source The source object
+		       * can either be an instance of a Table
+		       * or a Store. A Table should be used if validations and other data
+		       * processing methods are desired. A Store is sufficient if just
+		       * performing simple queries and returning the results with little
+		       * manipulation.
+		       *
+		       * @param {object} query The query object contains keys specifying query
+		       * parameters and values specifying their respective values. This query
+		       * object can be updated later with the `set_query` method.
+		       *
+		       * @param {object} options The options object contains keys specifying
+		       * option parameters and values specifying their respective values.
+		       *
+		       * @return {QueryCollection} A new instance of QueryCollection.
+		       */
 			constructor: function (source, query, options) {
 				inherited.constructor.call(this);
 				options = options || {};
@@ -52,6 +77,15 @@ Scoped.define("module:Collections.QueryCollection", [
 			},
 
 			
+		      /**
+		       * @method paginate
+		       *
+		       * Paginate to a specific page.
+		       *
+		       * @param {int} index The page to paginate to.
+		       *
+		       * @return {Promise} Promise from query execution.
+		       */
 			
 			paginate: function (index) {
 				return this.update({options: {
@@ -60,14 +94,33 @@ Scoped.define("module:Collections.QueryCollection", [
 				}});
 			},
 			
+		      /**
+		       * @method paginate_index
+		       *
+		       * @return {int} Current pagination page.
+		       */
 			paginate_index: function () {
 				return Math.floor(this.getSkip() / this._range);
 			},
 			
+		      /**
+		       * @method paginate_next
+		       *
+		       * Update the query to paginate to the next page.
+		       *
+		       * @return {Promise} Promise of the query.
+		       */
 			paginate_next: function () {
 				return this.isComplete() ? Promise.create(true) : this.paginate(this.paginate_index() + 1);
 			},
 			
+	      /**
+	       * @method paginate_prev
+	       *
+	       * Update the query to paginate to the previous page.
+	       *
+	       * @return {Promise} Promise of the query.
+	       */
 			paginate_prev: function () {
 				return this.paginate_index() > 0 ? this.paginate(this.paginate_index() - 1) : Promise.create(true);
 			},		
@@ -104,6 +157,19 @@ Scoped.define("module:Collections.QueryCollection", [
 				return this._query.options.limit || null;
 			},
 
+		      /**
+		       * @method update
+		       *
+		       * Update the collection with a new query. Setting the query not only
+		       * updates the query field, but also updates the data with the results of
+		       * the new query.
+		       *
+		       * @param {object} constrainedQuery The new query for this collection.
+		       *
+		       * @example
+		       * // Updates the query dictating the collection contents.
+		       * collectionQuery.update({query: {'queryField': 'queryValue'}, options: {skip: 10}});
+		       */
 			update: function (constrainedQuery) {
 				constrainedQuery = Constrained.rectify(constrainedQuery);
 				var currentSkip = this._query.options.skip || 0;
@@ -196,6 +262,18 @@ Scoped.define("module:Collections.QueryCollection", [
 				return this._enabled;
 			},
 
+		      /**
+		       * @method _execute
+		       *
+		       * Execute a constrained query. This method is called whenever a new query is set.
+		       * Doesn't override previous reults.
+		       *
+		       * @protected
+		       *
+		       * @param {constrainedQuery} constrainedQuery The constrained query that should be executed
+		       *
+		       * @return {Promise} Promise from executing query.
+		       */
 			_execute: function (constrainedQuery) {
 				var limit = constrainedQuery.options.limit;
 				return this._subExecute(constrainedQuery.query, constrainedQuery.options).mapSuccess(function (iter) {
@@ -206,10 +284,27 @@ Scoped.define("module:Collections.QueryCollection", [
 				}, this);
 			},
 
+		      /**
+		       * @method _sub_execute
+		       *
+		       * Run the specified query on the data source.
+		       *
+		       * @private
+		       *
+		       * @param {object} options The options for the subquery.
+		       *
+		       * @return {object} Iteratable object containing query results.
+		       */
 			_subExecute: function (query, options) {
 				return this._source.query(query, options);
 			},
 
+		      /**
+		       * @method isComplete
+		       *
+		       * @return {boolean} Return value indicates if the query has finished/if
+		       * data has been returned.
+		       */
 			isComplete: function () {
 				return this._complete;
 			},
