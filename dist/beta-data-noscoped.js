@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-06-10
+betajs-data - v1.0.0 - 2015-06-11
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -14,7 +14,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '28.1433977762202'
+		version: '31.1434065840442'
 	};
 });
 
@@ -1044,14 +1044,12 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 
 		_initializeReadStore: function (options) {
 			options = options || {};
-			this._query_model = "query_model" in options ? options.query_model : null;
 			this.indices = {};
+			this._watcher = options.watcher || null;
 		},
-
-		query_model: function () {
-			if (arguments.length > 0)
-				this._query_model = arguments[0];
-			return this._query_model;
+		
+		watcher: function () {
+			return this._watcher;
 		},
 
 		_get: function (id) {
@@ -1078,14 +1076,6 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 					options.limit = parseInt(options.limit, 10);
 				if (options.skip)
 					options.skip = parseInt(options.skip, 10);
-			}
-			if (this._query_model) {
-				var subsumizer = this._query_model.subsumizer_of({query: query, options: options});
-				if (!subsumizer) {
-					this.trigger("query_miss", {query: query, options: options});
-					return Promise.error(new StoreException("Cannot execute query"));
-				}
-				this.trigger("query_hit", {query: query, options: options}, subsumizer);
 			}
 			return QueryEngine.compileIndexedQuery(
 					{query: query, options: options || {}},
@@ -1243,13 +1233,6 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			this._create_ids = options.create_ids || false;
 			if (this._create_ids)
 				this._id_generator = options.id_generator || this._auto_destroy(new TimedIdGenerator());
-			this._query_model = "query_model" in options ? options.query_model : null;
-		},
-
-		query_model: function () {
-			if (arguments.length > 0)
-				this._query_model = arguments[0];
-			return this._query_model;
 		},
 
 		id_key: function () {
@@ -1279,10 +1262,6 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			var event_data = null;
 			if (arguments.length > 2)
 				event_data = arguments[2];
-			if (query && this._query_model) {
-				this.trigger("query_register", query);
-				this._query_model.register(query);
-			}
 			var promise = Promise.and();
 			for (var i = 0; i < data.length; ++i)
 				promise = promise.and(this.insert(event_data ? [data[i], event_data] : data[i]));
@@ -2216,6 +2195,343 @@ Scoped.define("module:Stores.SocketStore", [
 
 
 
+Scoped.define("module:Stores.Watchers.ConsumerWatcher", [
+                                                         "module:Stores.Watchers.StoreWatcher"
+                                                         ], function(StoreWatcher, scoped) {
+	return StoreWatcher.extend({scoped: scoped}, function (inherited) {
+		return {
+
+			constructor: function (sender, receiver, options) {
+				inherited.constructor.call(this, options);
+				this._receiver = receiver;
+				this._sender = sender;
+				receiver.on("receive", function (message, data) {
+					if (message === "insert")
+						this._insertedWatchedInsert(data);
+					if (message === "update")
+						this._updatedWatchedItem(data.row, data.data);
+					else if (message === "remove")
+						this._removedWatchedItem(data);
+				}, this);
+			},
+
+			destroy: function () {
+				this._receiver.off(null, null, this);
+				inherited.destroy.apply(this);
+			},
+
+			_watchItem: function (id) {
+				this._sender.send("watch_item", id);
+			},
+
+			_unwatchItem: function (id) {
+				this._sender.send("unwatch_item", id);
+			},
+
+			_watchInsert: function (query) {
+				this._sender.send("watch_insert", query);
+			},
+
+			_unwatchInsert: function (query) {
+				this._sender.send("unwatch_insert", query);
+			}
+
+		};
+	});
+});
+
+
+Scoped.define("module:Stores.Watchers.ProducerWatcher", [
+                                                         "base:Class"
+                                                         ], function(Class, scoped) {
+	return Class.extend({scoped: scoped}, function (inherited) {
+		return {
+
+			constructor: function (sender, receiver, watcher) {
+				inherited.constructor.apply(this);
+				this._watcher = watcher;
+				this._receiver = receiver;
+				receiver.on("receive", function (message, data) {
+					if (message === "watch_item")
+						watcher.watchItem(data, this);
+					else if (message === "unwatch_item")
+						watcher.unwatchItem(data, this);
+					else if (message === "watch_insert")
+						watcher.watchInsert(data, this);
+					else if (message === "unwatch_insert")
+						watcher.unwatchInsert(data, this);
+				}, this);
+				watcher.on("insert", function (data) {
+					sender.send("insert", data);
+				}, this).on("update", function (row, data) {
+					sender.send("update", {row: row, data: data});
+				}, this).on("remove", function (id) {
+					sender.send("remove", id);
+				}, this);
+			},
+
+			destroy: function () {
+				this._receiver.off(null, null, this);
+				this._watcher.off(null, null, this);
+				inherited.destroy.apply(this);
+			}
+
+		};
+	});
+});
+
+Scoped.define("module:Stores.Watchers.LocalWatcher", [
+                                                      "module:Stores.Watchers.StoreWatcher"
+                                                      ], function(StoreWatcher, scoped) {
+	return StoreWatcher.extend({scoped: scoped}, function (inherited) {
+		return {
+
+			constructor: function (store, options) {
+				options = options || {};
+				options.id_key = store.id_key();
+				inherited.constructor.call(this, options);
+				this._store = store;
+				this._store.on("insert", function (data) {
+					this._insertedInsert(data);
+				}, this).on("update", function (row, data) {
+					this._updatedItem(row, data);
+				}, this).on("remove", function (id) {
+					this._removedItem(id);
+				}, this);
+			},
+
+			destroy: function () {
+				this._store.off(null, null, this);
+				inherited.destroy.apply(this);
+			}
+
+		};
+	});
+});
+
+Scoped.define("module:Stores.Watchers.PollWatcher", [
+                                                     "module:Stores.Watchers.StoreWatcher",
+                                                     "base:Comparators",
+                                                     "base:Objs"
+                                                     ], function(StoreWatcher, Comparators, Objs, scoped) {
+	return StoreWatcher.extend({scoped: scoped}, function (inherited) {
+		return {
+
+			constructor: function (store, options) {
+				options = options || {};
+				options.id_key = store.id_key();
+				inherited.constructor.call(this, options);
+				this._store = store;
+				options = options || {};
+				this.__itemCache = {};
+				this.__lastKey = null;
+				this.__insertsCount = 0;
+				this.__increasingKey = options.increasing_key || this.id_key;
+			},
+
+			_watchItem : function(id) {
+				this.__itemCache[id] = null;
+			},
+
+			_unwatchItem : function(id) {
+				delete this.__itemCache[id];
+			},
+
+			_queryLastKey: function () {
+				var sort = {};
+				return this._store.query({}, {
+					limit: 1,
+					sort: Objs.objectBy(this.__increasingKey, -1)
+				}).mapSuccess(function (iter) {
+					return iter.hasNext() ? iter.next()[this.__increasingKey] : null;
+				}).mapError(function () {
+					return null;
+				});
+			},
+
+			_watchInsert : function(query) {
+				if (this.__insertsCount === 0) {
+					this._queryLastKey().success(function (value) {
+						this.__lastKey = value;
+					}, this);
+				}
+				this.__insertsCount++;
+			},
+
+			_unwatchInsert : function(query) {
+				this.__insertsCount--;
+				if (this.__insertsCount === 0)
+					this.__lastKey = null;
+			},
+
+			poll: function () {
+				Objs.iter(this.__itemCache, function (value, id) {
+					this._store.get(id).success(function (data) {
+						if (!data)
+							this._removedItem(id);
+						else {
+							this.__itemCache[id] = Objs.clone(data, 1);
+							if (value && !Comparators.deepEqual(value, data, -1))
+								this._updatedItem(data, data);
+						}
+					}, this).error(function () {
+						this._removedItem(id);
+					}, this);
+				}, this);
+				if (this.__lastKey !== null) {
+					this.insertsIterator().iterate(function (query) {
+						var keyQuery = Objs.objectBy(this.__increasingKey, {"$gt": this.__lastKey});
+						this._store.query({"$and": [keyQuery, query]}).success(function (result) {
+							while (result.hasNext())
+								this._insertedInsert(result.next());
+						}, this);
+					}, this);
+				}
+				this._queryLastKey().success(function (value) {
+					this.__lastKey = value;
+				}, this);
+			}
+
+		};
+	});
+});
+
+Scoped.define("module:Stores.Watchers.StoreWatcherMixin", [], function() {
+	return {
+
+		watchItem : function(id, context) {},
+
+		unwatchItem : function(id, context) {},
+
+		watchInsert : function(query, context) {},
+
+		unwatchInsert : function(query, context) {},
+
+		_removedWatchedItem : function(id) {
+			this.trigger("remove", id);
+		},
+
+		_updatedWatchedItem : function(row, data) {
+			this.trigger("update", row, data);
+		},
+
+		_insertedWatchedInsert : function(data) {
+			this.trigger("insert", data);
+		},
+		
+		delegateStoreEvents: function (store) {
+			this.on("insert", function (data) {
+				store.trigger("insert", data);
+			}, store).on("update", function (row, data) {
+				store.trigger("update", row, data);
+			}, store).on("remove", function (id) {
+				store.trigger("remove", id);
+			}, store);
+		},
+
+		undelegateStoreEvents: function (store) {
+			this.off(null, null, store);
+		}
+
+	};	
+});
+
+
+Scoped.define("module:Stores.Watchers.StoreWatcher", [
+                                                      "base:Class",
+                                                      "base:Events.EventsMixin",
+                                                      "base:Classes.ContextRegistry",    
+                                                      "module:Stores.Watchers.StoreWatcherMixin",
+                                                      "module:Queries"
+                                                      ], function(Class, EventsMixin, ContextRegistry, StoreWatcherMixin, Queries, scoped) {
+	return Class.extend({scoped: scoped}, [EventsMixin, StoreWatcherMixin, function (inherited) {
+		return {
+
+			constructor: function (options) {
+				inherited.constructor.call(this);
+				options = options || {};
+				if (options.id_key)
+					this.id_key = options.id_key;
+				else
+					this.id_key = "id";
+				this.__items = new ContextRegistry();
+				this.__inserts = new ContextRegistry();
+			},
+
+			destroy: function () {
+				this.__inserts.iterator().iterate(this.unwatchInsert, this);
+				this.__items.iterator().iterate(this.unwatchItem, this);
+				this.__inserts.destroy();
+				this.__items.destroy();
+				inherited.destroy.call(this);
+			},
+
+			insertsIterator: function () {
+				return this.__inserts.iterator();
+			},
+
+			watchItem : function(id, context) {
+				if (this.__items.register(id, context))
+					this._watchItem(id);
+			},
+
+			unwatchItem : function(id, context) {
+				if (this.__items.unregister(id, context))
+					this._unwatchItem(id);
+			},
+
+			watchInsert : function(query, context) {
+				if (this.__inserts.register(id, context))
+					this._watchInsert(id);
+			},
+
+			unwatchInsert : function(query, context) {
+				if (this.__inserts.unregister(id, context))
+					this._unwatchInsert(id);
+			},
+
+			_removedItem : function(id) {
+				if (!this.__items.get(id))
+					return;
+				this.__items.unregister(id);
+				this._removedWatchedItem(id);
+			},
+
+			_updatedItem : function(row, data) {
+				var id = row[this.id_key];
+				if (!this.__items.get(id))
+					return;
+				this._updatedWatchedItem(id);
+			},
+
+			_insertedInsert : function(data) {
+				var trig = false;
+				var iter = this.__inserts.iterator();
+				while (!trig && iter.hasNext())
+					trig = Queries.evaluate(iter.next(), data);
+				if (!trig)
+					return;
+				this._insertedWatchedInserted(data);
+			},
+
+			unregisterItem: function (id, context) {
+				if (this.__items.unregister(id, context))
+					this._unregisterItem(id);
+			},			
+
+			_watchItem : function(id) {},
+
+			_unwatchItem : function(id) {},
+
+			_watchInsert : function(query) {},
+
+			_unwatchInsert : function(query) {}
+
+		};
+	}]);
+});
+
+
 Scoped.define("module:Stores.AbstractIndex", [
                                               "base:Class",
                                               "base:Comparators",
@@ -2440,468 +2756,6 @@ Scoped.define("module:Stores.MemoryIndex", [
 	});
 });
 
-
-Scoped.define("module:Stores.CachedStore", [
-                                            "module:Stores.DualStore",
-                                            "module:Stores.MemoryStore",
-                                            "module:Queries.DefaultQueryModel",
-                                            "module:Queries.Constrained",
-                                            "base:Objs",
-                                            "base:Async"
-                                            ], function (DualStore, MemoryStore, DefaultQueryModel, Constrained, Objs, Async, scoped) {
-	return DualStore.extend({scoped: scoped}, function (inherited) {			
-		return {
-
-			constructor: function (parent, options) {
-				options = options || {};
-				var cache_store = options.cache_store;
-				if (!("cache_store" in options)) {
-					cache_store = this._auto_destroy(new MemoryStore({
-						id_key: parent.id_key()
-					}));
-				}
-				if (!cache_store.query_model())
-					cache_store.query_model(options.cache_query_model ? options.cache_query_model : this._auto_destroy(new DefaultQueryModel()));
-				this.__invalidation_options = options.invalidation || {};
-				inherited.constructor.call(this,
-						parent,
-						cache_store,
-						Objs.extend({
-							get_options: {
-								start: "second",
-								strategy: "or"
-							},
-							query_options: {
-								start: "second",
-								strategy: "or",
-								clone: true,
-								or_on_null: false
-							}
-						}, options));
-				if (this.__invalidation_options.reload_after_first_hit) {
-					this.__queries = {};
-					this.cache().on("query_hit", function (query, subsumizer) {
-						var s = Constrained.serialize(subsumizer);
-						if (!this.__queries[s]) {
-							this.__queries[s] = true;
-							Async.eventually(function () {
-								this.invalidate_query(subsumizer, true);	                   
-							}, [], this);
-						}
-					}, this);
-					this.cache().on("query_miss", function (query) {
-						var s = Constrained.serialize(query);
-						this.__queries[s] = true;
-					}, this);
-				}
-			},
-
-			destroy: function () {
-				this.cache().off(null, null, this);
-				inherited.destroy.call(this);
-			},
-
-			invalidate_query: function (query, reload) {
-				this.cache().query_model().invalidate(query);
-				if (reload) 
-					this.query(query.query, query.options);
-				this.trigger("invalidate_query", query, reload);
-			},
-
-			cache: function () {
-				return this.second();
-			},
-
-			store: function () {
-				return this.first();
-			}
-
-		};
-	});
-});
-
-Scoped.define("module:Stores.DualStore", [
-                                          "module:Queries",
-                                          "module:Queries.Constrained",
-                                          "module:Stores.BaseStore",
-                                          "base:Objs",
-                                          "base:Iterators.ArrayIterator"
-                                          ], function (Queries, Constrained, BaseStore, Objs, ArrayIterator, scoped) {
-	return BaseStore.extend({scoped: scoped}, function (inherited) {			
-		return {
-
-			constructor: function (first, second, options) {
-				options = Objs.extend({
-					create_options: {},
-					update_options: {},
-					delete_options: {},
-					get_options: {},
-					query_options: {}
-				}, options || {});
-				options.id_key = first._id_key;
-				this.__first = first;
-				this.__second = second;
-				inherited.constructor.call(this, options);
-				this.__create_options = Objs.extend({
-					start: "first", // "second"
-					strategy: "then", // "or", "single"
-					auto_replicate: "first" // "first", "second", "both", "none"
-				}, options.create_options);
-				this.__update_options = Objs.extend({
-					start: "first", // "second"
-					strategy: "then", // "or", "single"
-					auto_replicate: "first" // "first", "second", "both", "none"
-				}, options.update_options);
-				this.__remove_options = Objs.extend({
-					start: "first", // "second"
-					strategy: "then", // "or", "single",
-					auto_replicate: "first" // "first", "second", "both", "none"
-				}, options.delete_options);
-				this.__get_options = Objs.extend({
-					start: "first", // "second"
-					strategy: "or", // "single"
-					clone: true, // false
-					clone_second: false,
-					or_on_null: true // false
-				}, options.get_options);
-				this.__query_options = Objs.extend({
-					start: "first", // "second"
-					strategy: "or", // "single"
-					clone: true, // false
-					clone_second: false,
-					or_on_null: true // false
-				}, options.query_options);
-				this.__first.on("insert", this.__inserted_first, this);
-				this.__second.on("insert", this.__inserted_second, this);
-				this.__first.on("update", this.__updated_first, this);
-				this.__second.on("update", this.__updated_second, this);
-				this.__first.on("remove", this.__removed_first, this);
-				this.__second.on("remove", this.__removed_second, this);
-			},
-
-			__inserted_first: function (row, event_data) {
-				if (event_data && event_data.dual_insert)
-					return;
-				if (this.__create_options.auto_replicate == "first" || this.__create_options.auto_replicate == "both")
-					this.__second.insert([row, {dual_insert: true}]);
-				this._inserted(row);
-			},
-
-			__inserted_second: function (row, event_data) {
-				if (event_data && event_data.dual_insert)
-					return;
-				if (this.__create_options.auto_replicate == "second" || this.__create_options.auto_replicate == "both")
-					this.__first.insert([row, {dual_insert: true}]);
-				this._inserted(row);
-			},
-
-			__updated_first: function (row, update, event_data) {
-				if (event_data && event_data.dual_update)
-					return;
-				if (this.__update_options.auto_replicate == "first" || this.__update_options.auto_replicate == "both")
-					this.__second.update(row[this.id_key()], [update, {dual_update: true}]);
-				this._updated(row, update);
-			},
-
-			__updated_second: function (row, update, event_data) {
-				if (event_data && event_data.dual_update)
-					return;
-				if (this.__update_options.auto_replicate == "second" || this.__update_options.auto_replicate == "both")
-					this.__first.update(row[this.id_key()], [update, {dual_update: true}]);
-				this._updated(row, update);
-			},
-
-			__removed_first: function (id, event_data) {
-				if (event_data && event_data.dual_remove)
-					return;
-				if (this.__remove_options.auto_replicate == "first" || this.__remove_options.auto_replicate == "both")
-					this.__second.remove([id, {dual_remove: true}]);
-				this._removed(id);
-			},
-
-			__removed_second: function (id, event_data) {
-				if (event_data && event_data.dual_remove)
-					return;
-				if (this.__remove_options.auto_replicate == "second" || this.__remove_options.auto_replicate == "both")
-					this.__first.remove([id, {dual_remove: true}]);
-				this._removed(id);
-			},
-
-			first: function () {
-				return this.__first;
-			},
-
-			second: function () {
-				return this.__second;
-			},
-
-			_insert: function (data) {
-				var first = this.__first;
-				var second = this.__second;
-				if (this.__create_options.start != "first") {
-					first = this.__second;
-					second = this.__first;
-				}
-				var strategy = this.__create_options.strategy;
-				if (strategy == "then")
-					return first.insert([data, {dual_insert: true}]).mapSuccess(function (row) {
-						return second.insert([row, {dual_insert: true}]);
-					}, this);
-				else if (strategy == "or")
-					return first.insert([data, {dual_insert: true}]).mapError(function () {
-						return second.insert([data, {dual_insert: true}]);
-					}, this);
-				else
-					return first.insert([data, {dual_insert: true}]);
-			},
-
-			_update: function (id, data) {
-				var first = this.__first;
-				var second = this.__second;
-				if (this.__update_options.start != "first") {
-					first = this.__second;
-					second = this.__first;
-				}
-				var strategy = this.__update_options.strategy;
-				if (strategy == "then")
-					return first.update(id, [data, {dual_update: true}]).mapSuccess(function (row) {
-						return second.update(id, [row, {dual_update: true}]);
-					}, this);
-				else if (strategy == "or")
-					return first.update(id, [data, {dual_update: true}]).mapError(function () {
-						return second.update(id, [data, {dual_update: true}]);
-					}, this);
-				else
-					return first.update(id, [data, {dual_update: true}]);
-			},
-
-			_remove: function (id) {
-				var first = this.__first;
-				var second = this.__second;
-				if (this.__remove_options.start != "first") {
-					first = this.__second;
-					second = this.__first;
-				}
-				var strategy = this.__remove_options.strategy;
-				if (strategy == "then")
-					return first.remove([id, {dual_remove: true}]).mapSuccess(function () {
-						return second.remove([id, {dual_remove: true}]);
-					}, this);
-				else if (strategy == "or")
-					return first.remove([id, {dual_remove: true}]).mapError(function () {
-						return second.remove([id, {dual_remove: true}]);
-					}, this);
-				else
-					return first.remove(id);
-			},
-
-			_query_capabilities: function () {
-				return Constrained.fullConstrainedQueryCapabilities(Queries.fullQueryCapabilities()); 
-			},
-
-			_get: function (id) {
-				var first = this.__first;
-				var second = this.__second;
-				if (this.__get_options.start != "first") {
-					first = this.__second;
-					second = this.__first;
-				}
-				var strategy = this.__get_options.strategy;
-				var clone = this.__get_options.clone;
-				var clone_second = this.__get_options.clone_second;
-				var or_on_null = this.__get_options.or_on_null;
-				var result = null;
-				if (strategy == "or") {
-					return first.get(id).mapCallback(function (error, result) {
-						if (error || (!result && or_on_null))
-							return second.get(id).mapSuccess(function (result) {
-								return result && clone ? first.insert(result) : result;
-							}, this);
-						if (!clone_second)
-							return result;
-						return second.get(id).mapCallback(function (error, row) {
-							if (error || !row)
-								return second.insert(result);
-							return result;
-						}, this);
-					}, this);
-				} else
-					return first.get(id);
-			},
-
-			_query: function (query, options) {
-				var first = this.__first;
-				var second = this.__second;
-				if (this.__query_options.start != "first") {
-					first = this.__second;
-					second = this.__first;
-				}
-				var strategy = this.__query_options.strategy;
-				var clone = this.__query_options.clone;
-				var clone_second = this.__get_options.clone_second;
-				var or_on_null = this.__query_options.or_on_null;
-				var result = null;
-				if (strategy == "or") {
-					this.trigger("query_first", query, options);
-					return first.query(query, options).mapCallback(function (error, result) {
-						if (error || (!result && or_on_null)) {
-							this.trigger("query_second", query, options);
-							return second.query(query, options).mapSuccess(function (result) {
-								if (result && clone) {
-									var arr = result.asArray();
-									return first.insert_all(arr, {query: query, options: options}, {dual_insert: true}).mapSuccess(function () {
-										return new ArrayIterator(arr);
-									});
-								}
-								return result;
-							}, this);
-						}
-						if (!clone_second)
-							return result;
-						this.trigger("query_second", query, options);
-						return second.query(query, options).mapCallback(function (error, result2) {
-							if (error || !result2) {
-								var arr = result.asArray();
-								return second.insert_all(arr, {query: query, options: options}, {dual_insert: true}).mapSuccess(function () {
-									return new ArrayIterator(arr);
-								});
-							}
-							return result;
-						}, this);
-					}, this);
-				} else {
-					this.trigger("query_first", query, options);
-					return first.query(query, options);
-				}
-			}
-
-		};
-	});
-});
-
-Scoped.define("module:Queries.AbstractQueryModel", [
-                                                    "base:Class"
-                                                    ], function (Class, scoped) {
-	return Class.extend({scoped: scoped}, {
-
-		register: function (query) {},
-
-		executable: function (query) {}
-
-	});
-});
-
-
-Scoped.define("module:Queries.DefaultQueryModel", [
-                                                   "module:Queries.AbstractQueryModel",
-                                                   "module:Queries.Constrained",
-                                                   "base:Objs"
-                                                   ], function (AbstractQueryModel, Constrained, Objs, scoped) {
-	return AbstractQueryModel.extend({scoped: scoped}, function (inherited) {
-		return {
-
-			constructor: function () {
-				inherited.constructor.call(this);
-				this.__queries = {};    
-			},
-
-			_insert: function (query) {
-				this.__queries[Constrained.serialize(query)] = query;
-			},
-
-			_remove: function (query) {
-				delete this.__queries[Constrained.serialize(query)];
-			},
-
-			exists: function (query) {
-				return Constrained.serialize(query) in this.__queries;
-			},
-
-			subsumizer_of: function (query) {
-				if (this.exists(query))
-					return query;
-				var result = null;
-				Objs.iter(this.__queries, function (query2) {
-					if (Constrained.subsumizes(query2, query))
-						result = query2;
-					return !result;
-				}, this);
-				return result;
-			},
-
-			executable: function (query) {
-				return !!this.subsumizer_of(query);
-			},
-
-			register: function (query) {
-				var changed = true;
-				var check = function (query2) {
-					if (Constrained.subsumizes(query, query2)) {
-						this._remove(query2);
-						changed = true;
-					}/* else if (Constrained.mergeable(query, query2)) {
-						this._remove(query2);
-						changed = true;
-						query = Constrained.merge(query, query2);
-					} */
-				};
-				while (changed) {
-					changed = false;
-					Objs.iter(this.__queries, check, this);
-				}
-				this._insert(query);
-			},
-
-			invalidate: function (query) {
-				var subsumizer = this.subsumizer_of(query);
-				if (subsumizer)
-					this._remove(subsumizer);
-			}
-
-		};
-	});
-});
-
-
-Scoped.define("module:Queries.StoreQueryModel", [
-                                                 "module:Queries.DefaultQueryModel",
-                                                 "module:Queries.Constrained"
-                                                 ], function (DefaultQueryModel, Constrained, scoped) {
-	return DefaultQueryModel.extend({scoped: scoped}, function (inherited) {
-		return {
-
-			constructor: function (store) {
-				this.__store = store;
-				inherited.constructor.call(this);
-			},
-
-			initialize: function () {
-				return this.__store.mapSuccess(function (result) {
-					while (result.hasNext()) {
-						var query = result.next();
-						delete query.id;
-						this._insert(query);
-					}
-				}, this);
-			},
-
-			_insert: function (query) {
-				inherited._insert.call(this, query);
-				this.__store.insert(query);
-			},
-
-			_remove: function (query) {
-				delete this.__queries[Constrained.serialize(query)];
-				this.__store.query({query: query}).success(function (result) {
-					while (result.hasNext())
-						this.__store.remove(result.next().id);
-				}, this);
-			}
-
-		};
-	});
-});
-
 /**
  * @class QueryCollection
  *
@@ -2953,6 +2807,14 @@ Scoped.define("module:Collections.QueryCollection", [
 				this._range = options.range || null;
 				this._forward_steps = options.forward_steps || null;
 				this._backward_steps = options.backward_steps || null;
+				if (this._active) {
+					this.on("add", function (object) {
+						this._watchItem(object.get(this._id_key));
+					}, this);
+					this.on("remove", function (object) {
+						this._unwatchItem(object.get(this._id_key));
+					}, this);
+				}
 				this._query = {
 					query: {},
 					options: {
@@ -2961,7 +2823,6 @@ Scoped.define("module:Collections.QueryCollection", [
 						sort: null
 					}
 				};
-				this._watched = null;
 				query = query || {};
 				this.update(query.query ? query : {
 					query: query,
@@ -2977,6 +2838,10 @@ Scoped.define("module:Collections.QueryCollection", [
 
 			destroy: function () {
 				this.disable();
+				if (this._watcher()) {
+					this._watcher()._unwatchInsert(null, this);
+					this._watcher()._unwatchItem(null, this);
+				}
 				inherited.destroy.call(this);
 			},
 
@@ -3138,10 +3003,7 @@ Scoped.define("module:Collections.QueryCollection", [
 					return;
 				this._enabled = false;
 				this.clear();
-				if (this._watched) {
-					this._unwatchQuery(this._watched);
-					this._watched = null;
-				}
+				this._unwatchInsert();
 			},
 
 			refresh: function (clear) {
@@ -3151,14 +3013,9 @@ Scoped.define("module:Collections.QueryCollection", [
 					this.set_compare(Comparators.byObject(this._query.options.sort));
 				else
 					this.set_compare(null);
-				if (this._watched) {
-					this._unwatchQuery(this._watched);
-					this._watched = null;
-				}
-				if (this._active) {
-					this._watched = this._query.query;
-					this._watchQuery(this._watched);
-				}
+				this._unwatchInsert();
+				if (this._active)
+					this._watchInsert(this._query.query);
 				return this._execute(this._query);
 			},
 
@@ -3212,11 +3069,7 @@ Scoped.define("module:Collections.QueryCollection", [
 			isComplete: function () {
 				return this._complete;
 			},
-
-			_watchQuery: function (query) {},
-
-			_unwatchQuery: function () {},
-
+			
 			isValid: function (data) {
 				return Queries.evaluate(this._query.query, data);
 			},
@@ -3263,8 +3116,31 @@ Scoped.define("module:Collections.QueryCollection", [
 					this._activeRemove(id);
 				else
 					object.setAll(data);
-			}
+			},
 
+			_watcher: function () {
+				return null;
+			},
+			
+			_watchInsert: function (query) {
+				if (this._watcher())
+					this._watcher().watchInsert(query, this);
+			},
+
+			_unwatchInsert: function () {
+				if (this._watcher())
+					this._watcher().unwatchInsert(null, this);
+			},
+			
+			_watchItem: function (id) {
+				if (this._watcher())
+					this._watcher().watchItem(id, this);
+			},
+			
+			_unwatchItem: function (id) {
+				if (this._watcher())
+					this._watcher().unwatchItem(id, this);
+			}			
 
 		};
 	});
@@ -3284,6 +3160,7 @@ Scoped.define("module:Collections.StoreQueryCollection", [
 				inherited.constructor.call(this, source, query, Objs.extend({
 					id_key: source.id_key()
 				}, options));
+				this._source = source;
 				source.on("insert", this._activeCreate, this);
 				source.on("remove", this._activeRemove, this);
 				source.on("update", function (row, data) {
@@ -3298,6 +3175,10 @@ Scoped.define("module:Collections.StoreQueryCollection", [
 
 			get_ident: function (obj) {
 				return obj.get(this._source.id_key());
+			},
+			
+			_watcher: function () {
+				return this._source.watcher();
 			}
 
 		};
@@ -3327,6 +3208,10 @@ Scoped.define("module:Collections.TableQueryCollection", [
 
 			_materialize: function (data) {
 				return this._source.materialize(data);
+			},
+			
+			_watcher: function () {
+				return this._source.store().watcher();
 			}
 
 		};
@@ -3848,16 +3733,6 @@ Scoped.define("module:Modelling.Table", [
 					this.trigger("remove", id);
 					this.trigger("remove:" + id);
 				}, this);
-				if ("activeQuery" in this.__store) {
-					this.activeQuery = function (constrainedQuery, ctx) {
-						return this.__store.activeQuery(constrainedQuery, ctx || this);
-					};
-				}
-				if ("unregisterQuery" in this.__store) {
-					this.unregisterQuery = function (constrainedQuery, ctx) {
-						return this.__store.unregisterQuery(constrainedQuery, ctx || this);
-					};
-				}
 			},
 
 			modelClass: function (cls) {

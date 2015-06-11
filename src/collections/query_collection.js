@@ -49,6 +49,14 @@ Scoped.define("module:Collections.QueryCollection", [
 				this._range = options.range || null;
 				this._forward_steps = options.forward_steps || null;
 				this._backward_steps = options.backward_steps || null;
+				if (this._active) {
+					this.on("add", function (object) {
+						this._watchItem(object.get(this._id_key));
+					}, this);
+					this.on("remove", function (object) {
+						this._unwatchItem(object.get(this._id_key));
+					}, this);
+				}
 				this._query = {
 					query: {},
 					options: {
@@ -57,7 +65,6 @@ Scoped.define("module:Collections.QueryCollection", [
 						sort: null
 					}
 				};
-				this._watched = null;
 				query = query || {};
 				this.update(query.query ? query : {
 					query: query,
@@ -73,6 +80,10 @@ Scoped.define("module:Collections.QueryCollection", [
 
 			destroy: function () {
 				this.disable();
+				if (this._watcher()) {
+					this._watcher()._unwatchInsert(null, this);
+					this._watcher()._unwatchItem(null, this);
+				}
 				inherited.destroy.call(this);
 			},
 
@@ -234,10 +245,7 @@ Scoped.define("module:Collections.QueryCollection", [
 					return;
 				this._enabled = false;
 				this.clear();
-				if (this._watched) {
-					this._unwatchQuery(this._watched);
-					this._watched = null;
-				}
+				this._unwatchInsert();
 			},
 
 			refresh: function (clear) {
@@ -247,14 +255,9 @@ Scoped.define("module:Collections.QueryCollection", [
 					this.set_compare(Comparators.byObject(this._query.options.sort));
 				else
 					this.set_compare(null);
-				if (this._watched) {
-					this._unwatchQuery(this._watched);
-					this._watched = null;
-				}
-				if (this._active) {
-					this._watched = this._query.query;
-					this._watchQuery(this._watched);
-				}
+				this._unwatchInsert();
+				if (this._active)
+					this._watchInsert(this._query.query);
 				return this._execute(this._query);
 			},
 
@@ -308,11 +311,7 @@ Scoped.define("module:Collections.QueryCollection", [
 			isComplete: function () {
 				return this._complete;
 			},
-
-			_watchQuery: function (query) {},
-
-			_unwatchQuery: function () {},
-
+			
 			isValid: function (data) {
 				return Queries.evaluate(this._query.query, data);
 			},
@@ -359,8 +358,31 @@ Scoped.define("module:Collections.QueryCollection", [
 					this._activeRemove(id);
 				else
 					object.setAll(data);
-			}
+			},
 
+			_watcher: function () {
+				return null;
+			},
+			
+			_watchInsert: function (query) {
+				if (this._watcher())
+					this._watcher().watchInsert(query, this);
+			},
+
+			_unwatchInsert: function () {
+				if (this._watcher())
+					this._watcher().unwatchInsert(null, this);
+			},
+			
+			_watchItem: function (id) {
+				if (this._watcher())
+					this._watcher().watchItem(id, this);
+			},
+			
+			_unwatchItem: function (id) {
+				if (this._watcher())
+					this._watcher().unwatchItem(id, this);
+			}			
 
 		};
 	});

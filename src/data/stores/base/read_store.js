@@ -8,14 +8,12 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 
 		_initializeReadStore: function (options) {
 			options = options || {};
-			this._query_model = "query_model" in options ? options.query_model : null;
 			this.indices = {};
+			this._watcher = options.watcher || null;
 		},
-
-		query_model: function () {
-			if (arguments.length > 0)
-				this._query_model = arguments[0];
-			return this._query_model;
+		
+		watcher: function () {
+			return this._watcher;
 		},
 
 		_get: function (id) {
@@ -42,14 +40,6 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 					options.limit = parseInt(options.limit, 10);
 				if (options.skip)
 					options.skip = parseInt(options.skip, 10);
-			}
-			if (this._query_model) {
-				var subsumizer = this._query_model.subsumizer_of({query: query, options: options});
-				if (!subsumizer) {
-					this.trigger("query_miss", {query: query, options: options});
-					return Promise.error(new StoreException("Cannot execute query"));
-				}
-				this.trigger("query_hit", {query: query, options: options}, subsumizer);
 			}
 			return QueryEngine.compileIndexedQuery(
 					{query: query, options: options || {}},

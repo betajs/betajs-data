@@ -12,13 +12,6 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			this._create_ids = options.create_ids || false;
 			if (this._create_ids)
 				this._id_generator = options.id_generator || this._auto_destroy(new TimedIdGenerator());
-			this._query_model = "query_model" in options ? options.query_model : null;
-		},
-
-		query_model: function () {
-			if (arguments.length > 0)
-				this._query_model = arguments[0];
-			return this._query_model;
 		},
 
 		id_key: function () {
@@ -48,10 +41,6 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			var event_data = null;
 			if (arguments.length > 2)
 				event_data = arguments[2];
-			if (query && this._query_model) {
-				this.trigger("query_register", query);
-				this._query_model.register(query);
-			}
 			var promise = Promise.and();
 			for (var i = 0; i < data.length; ++i)
 				promise = promise.and(this.insert(event_data ? [data[i], event_data] : data[i]));

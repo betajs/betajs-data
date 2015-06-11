@@ -34,16 +34,6 @@ Scoped.define("module:Modelling.Table", [
 					this.trigger("remove", id);
 					this.trigger("remove:" + id);
 				}, this);
-				if ("activeQuery" in this.__store) {
-					this.activeQuery = function (constrainedQuery, ctx) {
-						return this.__store.activeQuery(constrainedQuery, ctx || this);
-					};
-				}
-				if ("unregisterQuery" in this.__store) {
-					this.unregisterQuery = function (constrainedQuery, ctx) {
-						return this.__store.unregisterQuery(constrainedQuery, ctx || this);
-					};
-				}
 			},
 
 			modelClass: function (cls) {

@@ -9,6 +9,7 @@ Scoped.define("module:Collections.StoreQueryCollection", [
 				inherited.constructor.call(this, source, query, Objs.extend({
 					id_key: source.id_key()
 				}, options));
+				this._source = source;
 				source.on("insert", this._activeCreate, this);
 				source.on("remove", this._activeRemove, this);
 				source.on("update", function (row, data) {
@@ -23,6 +24,10 @@ Scoped.define("module:Collections.StoreQueryCollection", [
 
 			get_ident: function (obj) {
 				return obj.get(this._source.id_key());
+			},
+			
+			_watcher: function () {
+				return this._source.watcher();
 			}
 
 		};

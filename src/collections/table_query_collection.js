@@ -21,6 +21,10 @@ Scoped.define("module:Collections.TableQueryCollection", [
 
 			_materialize: function (data) {
 				return this._source.materialize(data);
+			},
+			
+			_watcher: function () {
+				return this._source.store().watcher();
 			}
 
 		};
