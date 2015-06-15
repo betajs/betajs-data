@@ -10,10 +10,16 @@ test("test collection", function() {
 		}
 	});
 	var table = new BetaJS.Data.Modelling.Table(new BetaJS.Data.Stores.MemoryStore(), Model, {});
+	var model0 = table.newModel({test: "abc"});
+	model0.save();
 	var coll = new BetaJS.Data.Collections.TableQueryCollection(table, {test: "abc"}, {
 		active: true,
 		auto: true
 	});
+	QUnit.equal(coll.getByIndex(0).get("test"), "abc");
+	QUnit.equal(coll.count(), 1);
+	model0.remove();
+	QUnit.equal(coll.count(), 0);
 	var adder = 0;
 	var remover = 0;
 	coll.on("add", function () {

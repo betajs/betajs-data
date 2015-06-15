@@ -22,28 +22,25 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			return row[this.id_key()];
 		},
 
-		_inserted: function (row, event_data) {
-			this.trigger("insert", row, event_data);		
-			this.trigger("write", "insert", row, event_data);
+		_inserted: function (row) {
+			this.trigger("insert", row);		
+			this.trigger("write", "insert", row);
 		},
 
-		_removed: function (id, event_data) {
-			this.trigger("remove", id, event_data);
-			this.trigger("write", "remove", id, event_data);
+		_removed: function (id) {
+			this.trigger("remove", id);
+			this.trigger("write", "remove", id);
 		},
 
-		_updated: function (row, data, event_data) {
-			this.trigger("update", row, data, event_data);	
-			this.trigger("write", "update", row, data, event_data);
+		_updated: function (row, data) {
+			this.trigger("update", row, data);	
+			this.trigger("write", "update", row, data);
 		}, 
 
 		insert_all: function (data, query) {
-			var event_data = null;
-			if (arguments.length > 2)
-				event_data = arguments[2];
 			var promise = Promise.and();
 			for (var i = 0; i < data.length; ++i)
-				promise = promise.and(this.insert(event_data ? [data[i], event_data] : data[i]));
+				promise = promise.and(this.insert(data[i]));
 			return promise.end();
 		},
 
@@ -60,37 +57,24 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 		},
 
 		insert: function (data) {
-			var event_data = null;
-			if (Types.is_array(data)) {
-				event_data = data[1];
-				data = data[0];
-			}			
+			if (!data)
+				return Promise.create(null, new StoreException("empty insert"));
 			if (this._create_ids && !(this._id_key in data && data[this._id_key]))
 				data[this._id_key] = this._id_generator.generate();
 			return this._insert(data).success(function (row) {
-				this._inserted(row, event_data);
+				this._inserted(row);
 			}, this);
 		},
 
 		remove: function (id) {
-			var event_data = null;
-			if (Types.is_array(id)) {
-				event_data = id[1];
-				id = id[0];
-			}			
 			return this._remove(id).success(function () {
-				this._removed(id, event_data);
+				this._removed(id);
 			}, this);
 		},
 
 		update: function (id, data) {
-			var event_data = null;
-			if (Types.is_array(data)) {
-				event_data = data[1];
-				data = data[0];
-			}			
 			return this._update(id, data).success(function (row) {
-				this._updated(row, data, event_data);
+				this._updated(row, data);
 			}, this);
 		}
 
