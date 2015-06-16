@@ -1,10 +1,14 @@
 test("test watcher items read store polling", function() {
 	var store = new BetaJS.Data.Stores.MemoryStore();
 	var counts = {
+		insert: 0,
 		update: 0,
 		remove: 0
 	};
 	var watcherItems = new BetaJS.Data.Stores.Watchers.PollWatcher(store);
+	watcherItems.on("insert", function () {
+		counts.insert++;
+	});
 	watcherItems.on("update", function () {
 		counts.update++;
 	});
@@ -15,7 +19,7 @@ test("test watcher items read store polling", function() {
 	var item2_id = store.insert({"first":"def"}).value().id;
 	var item3_id = store.insert({"first":"geh"}).value().id;
 	watcherItems.poll();
-	QUnit.deepEqual(counts, {update: 0, remove: 0});
+	QUnit.deepEqual(counts, {insert: 0, update: 0, remove: 0});
 	
 	watcherItems.watchItem(item1_id);
 	watcherItems.watchItem(item2_id);
@@ -23,17 +27,28 @@ test("test watcher items read store polling", function() {
 
 	store.update(item3_id, {"first": "ijk"});
 	watcherItems.poll();
-	QUnit.deepEqual(counts, {update: 0, remove: 0});
+	QUnit.deepEqual(counts, {insert: 0, update: 0, remove: 0});
 
 	store.update(item1_id, {"first": "mno"});
-	QUnit.deepEqual(counts, {update: 0, remove: 0});
+	QUnit.deepEqual(counts, {insert: 0, update: 0, remove: 0});
 	watcherItems.poll();
-	QUnit.deepEqual(counts, {update: 1, remove: 0});
+	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 0});
 
 	store.remove(item2_id);
-	QUnit.deepEqual(counts, {update: 1, remove: 0});
+	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 0});
 	watcherItems.poll();
-	QUnit.deepEqual(counts, {update: 1, remove: 1});
+	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 1});
+	
+	watcherItems.watchInsert({"first": "foobar"});
+	watcherItems.poll();
+	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 1});
+	store.insert({"first":"testtest"});
+	watcherItems.poll();
+	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 1});
+	store.insert({"first":"foobar"});
+	watcherItems.poll();
+	QUnit.deepEqual(counts, {insert: 1, update: 1, remove: 1});
+	
 });
 
 

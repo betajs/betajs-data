@@ -8,8 +8,9 @@ Scoped.define("module:Stores.CachedStore", [
                                             "base:Objs",
                                             "base:Types",
                                             "base:Iterators.ArrayIterator",
-                                            "base:Iterators.MappedIterator"
-                                            ], function (Store, MemoryStore, Constrained, ExpiryCacheStrategy, Promise, Objs, Types, ArrayIterator, MappedIterator, scoped) {
+                                            "base:Iterators.MappedIterator",
+                                            "base:Timers.Timer"
+                                            ], function (Store, MemoryStore, Constrained, ExpiryCacheStrategy, Promise, Objs, Types, ArrayIterator, MappedIterator, Timer, scoped) {
 	return Store.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -21,9 +22,18 @@ Scoped.define("module:Stores.CachedStore", [
 					queryKey: "query"
 				}, options);
 				this.remoteStore = remoteStore;
-				this.itemCache = options.itemCache || this.auto_destroy(new MemoryStore());
-				this.queryCache = options.queryCache || this.auto_destroy(new MemoryStore());
-				this.cacheStrategy = options.cacheStrategy || this.auto_destroy(new ExpiryCacheStrategy());
+				this._online = true;
+				this.itemCache = this._options.itemCache || this.auto_destroy(new MemoryStore());
+				this.queryCache = this._options.queryCache || this.auto_destroy(new MemoryStore());
+				this.cacheStrategy = this._options.cacheStrategy || this.auto_destroy(new ExpiryCacheStrategy());
+				if (this._options.auto_cleanup) {
+					this.auto_destroy(new Timer({
+						fire: this.cleanup,
+						context: this,
+						start: true,
+						delay: this._options.auto_cleanup
+					}));
+				}
 			},
 
 			_query_capabilities: function () {
@@ -41,7 +51,7 @@ Scoped.define("module:Stores.CachedStore", [
 
 			_update: function (id, data) {
 				return this.cacheUpdate(id, data, {
-					lockItem: false,
+					ignoreLock: false,
 					silent: true,
 					lockAttrs: true,
 					refreshMeta: false,
@@ -152,7 +162,7 @@ Scoped.define("module:Stores.CachedStore", [
 				return this.itemCache.get(id).mapSuccess(function (data) {
 					if (!data)
 						return data;
-					var meta = this.readItemMeta(item);
+					var meta = this.readItemMeta(data);
 					if (!options.ignoreLock && (meta.lockedItem || !Types.is_empty(meta.lockedAttrs)))
 						return Promise.error("locked item");
 					return this.itemCache.remove(id).success(function () {
@@ -174,6 +184,7 @@ Scoped.define("module:Stores.CachedStore", [
 				return this.itemCache.get(id).mapSuccess(function (data) {
 					if (!data) {
 						return this.remoteStore.get(id).success(function (data) {
+							this.online();
 							if (data) {
 								this.cacheInsert(data, {
 									lockItem: false,
@@ -193,19 +204,24 @@ Scoped.define("module:Stores.CachedStore", [
 						return this.removeItemMeta(data);
 					}
 					return this.remoteStore.get(id).success(function (data) {
+						this.online();
 						if (data) {
-							return this.cacheUpdate(id, data, {
+							this.cacheUpdate(id, data, {
 								ignoreLock: false,
 								lockAttrs: false,
 								silent: options.silentUpdate,
 								accessMeta: true,
 								refreshMeta: true
 							});
+						} else {
+							this.cacheRemove(id, {
+								ignoreLock: false,
+								silent: options.silentRemove
+							});
 						}
-						return this.cacheRemove(id, {
-							ignoreLock: false,
-							silent: options.silentRemove
-						});
+					}, this).mapError(function () {
+						this.offline();
+						return Promise.value(data);
 					}, this);
 				}, this);
 			},
@@ -254,6 +270,7 @@ Scoped.define("module:Stores.CachedStore", [
 						this.queryCache.remove(query_id);
 					}
 					return this.remoteStore.query(query, queryOptions).mapSuccess(function (items) {
+						this.online();
 						items = items.asArray();
 						var meta = {
 								refreshMeta: options.queryRefreshMeta ? this.cacheStrategy.queryRefreshMeta() : null,
@@ -273,8 +290,33 @@ Scoped.define("module:Stores.CachedStore", [
 							});
 						}, this);
 						return new ArrayIterator(items);
+					}, this).mapError(function () {
+						this.offline();
+						return this.itemCache.query(query, options).mapSuccess(function (items) {
+							items = items.asArray();
+							Objs.iter(items, function (item) {
+								this.cacheUpdate(this.itemCache.id_of(item), {}, {
+									lockItem: false,
+									lockAttrs: false,
+									silent: true,
+									accessMeta: options.accessMeta,
+									refreshMeta: false
+								});
+							}, this);
+							return new MappedIterator(new ArrayIterator(items), this.removeItemMeta, this);
+						}, this);
 					}, this);
 				}, this);
+			},
+			
+			online: function () {
+				this.trigger("online");
+				this._online = true;
+			},
+			
+			offline: function () {
+				this.trigger("offline");
+				this._online = false;
 			},
 
 			addItemMeta: function (data, meta) {
@@ -321,6 +363,8 @@ Scoped.define("module:Stores.CachedStore", [
 			},
 
 			cleanup: function () {
+				if (!this._online)
+					return;
 				this.queryCache.query().success(function (queries) {
 					while (queries.hasNext()) {
 						var query = queries.next();

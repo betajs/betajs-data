@@ -57,7 +57,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				else
 					this.id_key = "id";
 				this.__items = new ContextRegistry();
-				this.__inserts = new ContextRegistry();
+				this.__inserts = new ContextRegistry(Queries.serialize, Queries);
 			},
 
 			destroy: function () {
@@ -83,19 +83,19 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			},
 
 			watchInsert : function(query, context) {
-				if (this.__inserts.register(id, context))
-					this._watchInsert(id);
+				if (this.__inserts.register(query, context))
+					this._watchInsert(query);
 			},
 
 			unwatchInsert : function(query, context) {
-				if (this.__inserts.unregister(id, context))
-					this._unwatchInsert(id);
+				if (this.__inserts.unregister(query, context))
+					this._unwatchInsert(query);
 			},
 
 			_removedItem : function(id) {
 				if (!this.__items.get(id))
 					return;
-				this.__items.unregister(id);
+				this.unwatchItem(id, null);
 				this._removedWatchedItem(id);
 			},
 
@@ -113,7 +113,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 					trig = Queries.evaluate(iter.next(), data);
 				if (!trig)
 					return;
-				this._insertedWatchedInserted(data);
+				this._insertedWatchedInsert(data);
 			},
 
 			unregisterItem: function (id, context) {

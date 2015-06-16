@@ -1,7 +1,7 @@
 Scoped.define("module:Stores.WriteStoreMixin", [
                                                 "module:Stores.StoreException",                                               
                                                 "base:Promise",
-                                                "base:Classes.TimedIdGenerator",
+                                                "base:IdGenerators.TimedIdGenerator",
                                                 "base:Types"
                                                 ], function (StoreException, Promise, TimedIdGenerator, Types) {
 	return {

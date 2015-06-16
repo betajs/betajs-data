@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-06-15
+betajs-data - v1.0.0 - 2015-06-16
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -537,7 +537,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.0 - 2015-06-15
+betajs-data - v1.0.0 - 2015-06-16
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -552,7 +552,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '32.1434410898925'
+		version: '33.1434484845642'
 	};
 });
 
@@ -1760,7 +1760,7 @@ Scoped.define("module:Stores.StoreHistory", [
 Scoped.define("module:Stores.WriteStoreMixin", [
                                                 "module:Stores.StoreException",                                               
                                                 "base:Promise",
-                                                "base:Classes.TimedIdGenerator",
+                                                "base:IdGenerators.TimedIdGenerator",
                                                 "base:Types"
                                                 ], function (StoreException, Promise, TimedIdGenerator, Types) {
 	return {
@@ -2088,6 +2088,46 @@ Scoped.define("module:Stores.ReadDelegatorStore", [
 });
 
 
+Scoped.define("module:Stores.SimulatorStore", [
+                                               "module:Stores.PassthroughStore",
+                                               "base:Promise"
+                                               ], function (BaseStore, Promise, scoped) {
+	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+		return {
+
+			constructor: function () {
+				inherited.constructor.apply(this, arguments);
+				this.online = true;
+			},
+
+			_execute: function (f, args) {
+				return this.online ? f.apply(this, args) : Promise.error("Offline");
+			},
+
+			_insert: function () {
+				return this._execute(inherited._insert, arguments);				
+			},
+
+			_remove: function () {
+				return this._execute(inherited._remove, arguments);
+			},
+
+			_get: function () {
+				return this._execute(inherited._get, arguments);
+			},
+
+			_update: function () {
+				return this._execute(inherited._update, arguments);
+			},
+
+			_query: function () {
+				return this._execute(inherited._query, arguments);
+			}
+
+		};
+	});
+});
+
 Scoped.define("module:Stores.AssocDumbStore", ["module:Stores.DumbStore"], function (DumbStore, scoped) {
 	return DumbStore.extend({scoped: scoped}, {
 
@@ -2341,8 +2381,9 @@ Scoped.define("module:Stores.CachedStore", [
                                             "base:Objs",
                                             "base:Types",
                                             "base:Iterators.ArrayIterator",
-                                            "base:Iterators.MappedIterator"
-                                            ], function (Store, MemoryStore, Constrained, ExpiryCacheStrategy, Promise, Objs, Types, ArrayIterator, MappedIterator, scoped) {
+                                            "base:Iterators.MappedIterator",
+                                            "base:Timers.Timer"
+                                            ], function (Store, MemoryStore, Constrained, ExpiryCacheStrategy, Promise, Objs, Types, ArrayIterator, MappedIterator, Timer, scoped) {
 	return Store.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -2354,9 +2395,18 @@ Scoped.define("module:Stores.CachedStore", [
 					queryKey: "query"
 				}, options);
 				this.remoteStore = remoteStore;
-				this.itemCache = options.itemCache || this.auto_destroy(new MemoryStore());
-				this.queryCache = options.queryCache || this.auto_destroy(new MemoryStore());
-				this.cacheStrategy = options.cacheStrategy || this.auto_destroy(new ExpiryCacheStrategy());
+				this._online = true;
+				this.itemCache = this._options.itemCache || this.auto_destroy(new MemoryStore());
+				this.queryCache = this._options.queryCache || this.auto_destroy(new MemoryStore());
+				this.cacheStrategy = this._options.cacheStrategy || this.auto_destroy(new ExpiryCacheStrategy());
+				if (this._options.auto_cleanup) {
+					this.auto_destroy(new Timer({
+						fire: this.cleanup,
+						context: this,
+						start: true,
+						delay: this._options.auto_cleanup
+					}));
+				}
 			},
 
 			_query_capabilities: function () {
@@ -2374,7 +2424,7 @@ Scoped.define("module:Stores.CachedStore", [
 
 			_update: function (id, data) {
 				return this.cacheUpdate(id, data, {
-					lockItem: false,
+					ignoreLock: false,
 					silent: true,
 					lockAttrs: true,
 					refreshMeta: false,
@@ -2485,7 +2535,7 @@ Scoped.define("module:Stores.CachedStore", [
 				return this.itemCache.get(id).mapSuccess(function (data) {
 					if (!data)
 						return data;
-					var meta = this.readItemMeta(item);
+					var meta = this.readItemMeta(data);
 					if (!options.ignoreLock && (meta.lockedItem || !Types.is_empty(meta.lockedAttrs)))
 						return Promise.error("locked item");
 					return this.itemCache.remove(id).success(function () {
@@ -2507,6 +2557,7 @@ Scoped.define("module:Stores.CachedStore", [
 				return this.itemCache.get(id).mapSuccess(function (data) {
 					if (!data) {
 						return this.remoteStore.get(id).success(function (data) {
+							this.online();
 							if (data) {
 								this.cacheInsert(data, {
 									lockItem: false,
@@ -2526,19 +2577,24 @@ Scoped.define("module:Stores.CachedStore", [
 						return this.removeItemMeta(data);
 					}
 					return this.remoteStore.get(id).success(function (data) {
+						this.online();
 						if (data) {
-							return this.cacheUpdate(id, data, {
+							this.cacheUpdate(id, data, {
 								ignoreLock: false,
 								lockAttrs: false,
 								silent: options.silentUpdate,
 								accessMeta: true,
 								refreshMeta: true
 							});
+						} else {
+							this.cacheRemove(id, {
+								ignoreLock: false,
+								silent: options.silentRemove
+							});
 						}
-						return this.cacheRemove(id, {
-							ignoreLock: false,
-							silent: options.silentRemove
-						});
+					}, this).mapError(function () {
+						this.offline();
+						return Promise.value(data);
 					}, this);
 				}, this);
 			},
@@ -2587,6 +2643,7 @@ Scoped.define("module:Stores.CachedStore", [
 						this.queryCache.remove(query_id);
 					}
 					return this.remoteStore.query(query, queryOptions).mapSuccess(function (items) {
+						this.online();
 						items = items.asArray();
 						var meta = {
 								refreshMeta: options.queryRefreshMeta ? this.cacheStrategy.queryRefreshMeta() : null,
@@ -2606,8 +2663,33 @@ Scoped.define("module:Stores.CachedStore", [
 							});
 						}, this);
 						return new ArrayIterator(items);
+					}, this).mapError(function () {
+						this.offline();
+						return this.itemCache.query(query, options).mapSuccess(function (items) {
+							items = items.asArray();
+							Objs.iter(items, function (item) {
+								this.cacheUpdate(this.itemCache.id_of(item), {}, {
+									lockItem: false,
+									lockAttrs: false,
+									silent: true,
+									accessMeta: options.accessMeta,
+									refreshMeta: false
+								});
+							}, this);
+							return new MappedIterator(new ArrayIterator(items), this.removeItemMeta, this);
+						}, this);
 					}, this);
 				}, this);
+			},
+			
+			online: function () {
+				this.trigger("online");
+				this._online = true;
+			},
+			
+			offline: function () {
+				this.trigger("offline");
+				this._online = false;
 			},
 
 			addItemMeta: function (data, meta) {
@@ -2654,6 +2736,8 @@ Scoped.define("module:Stores.CachedStore", [
 			},
 
 			cleanup: function () {
+				if (!this._online)
+					return;
 				this.queryCache.query().success(function (queries) {
 					while (queries.hasNext()) {
 						var query = queries.next();
@@ -2761,6 +2845,320 @@ Scoped.define("module:Stores.CacheStrategies.ExpiryCacheStrategy", [
 		};
 	});	
 });
+Scoped.define("module:Stores.PartialStore", [
+                                            "module:Stores.BaseStore",
+                                            "module:Stores.CachedStore",
+                                            "module:Stores.PartialStoreWriteStrategies.PostWriteStrategy",
+                                            "base:Objs"
+                                            ], function (Store, CachedStore, PostWriteStrategy, Objs, scoped) {
+	return Store.extend({scoped: scoped}, function (inherited) {			
+		return {
+
+			constructor: function (remoteStore, options) {
+				inherited.constructor.call(this, options);
+				this._options = Objs.extend({}, options);
+				this.remoteStore = remoteStore;
+				this.cachedStore = new CachedStore(remoteStore, this._options);
+				this.writeStrategy = this._options.writeStrategy || this.auto_destroy(new PostWriteStrategy());
+				if (this._watcher) {
+					this._watcher.on("insert", this._remoteInsert, this);
+					this._watcher.on("update", this._remoteUpdate, this);
+					this._watcher.on("remove", this._remoteRemove, this);
+				}
+				this.cachedStore.on("insert", this._inserted, this);
+				this.cachedStore.on("remove", this._removed, this);
+				this.cachedStore.on("update", function (row, data) {
+					this._updated(this.cachedStore.id_of(row), data);
+				}, this);
+			},
+			
+			destroy: function () {
+				if (this._watcher)
+					this._watcher.off(null, null, this);
+				this.cachedStore.destroy();
+				inherited.destroy.call(this);
+			},
+
+			_insert: function (data) {
+				return this.writeStrategy.insert(this, data);
+			},
+			
+			_remove: function (id) {
+				return this.writeStrategy.remove(this, id);
+			},
+			
+			_update: function (id, data) {
+				return this.writeStrategy.update(this, id, data);
+			},
+
+			_get: function (id) {
+				return this.cachedStore.get(id);
+			},
+			
+			_query: function (query, options) {
+				return this.cachedStore.query(query, options);
+			},			
+			
+			_query_capabilities: function () {
+				return this.cachedStore._query_capabilities();
+			},
+			
+			_remoteInsert: function (data) {
+				this.cachedStore.cacheInsert(data, {
+					lockItem: false,
+					silent: false,
+					refreshMeta: true,
+					accessMeta: true
+				});
+			},
+			
+			_remoteUpdate: function (row, data) {
+				var id = this.remoteStore.id_of(row);
+				this.cachedStore.cacheUpdate(id, data, {
+					ignoreLock: false,
+					lockAttrs: false,
+					silent: false,
+					accessMeta: true,
+					refreshMeta: true
+				});
+			},
+			
+			_remoteRemove: function (id) {
+				this.cachedStore.cacheRemove(id, {
+					ignoreLock: true,
+					silent: false
+				});
+			}
+
+		};
+	});	
+});
+Scoped.define("module:Stores.PartialStoreWriteStrategies.WriteStrategy", [
+                                                                          "base:Class"
+                                                                          ], function (Class, scoped) {
+	return Class.extend({scoped: scoped}, function (inherited) {
+		return {
+
+			insert: function (partialStore, data) {},
+
+			remove: function (partialStore, id) {},
+
+			update: function (partialStore, data) {}
+
+		};
+	});
+});
+
+Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
+                                                                              "module:Stores.PartialStoreWriteStrategies.WriteStrategy"
+                                                                              ], function (Class, scoped) {
+	return Class.extend({scoped: scoped}, function (inherited) {
+		return {
+
+			insert: function (partialStore, data) {
+				return partialStore.remoteStore.insert(data).mapSuccess(function (data) {
+					return partialStore.cachedStore.cacheInsert(data, {
+						lockItem: false,
+						silent: true,
+						refreshMeta: true,
+						accessMeta: true
+					});
+				});
+			},
+
+			remove: function (partialStore, id) {
+				return partialStore.remoteStore.remove(id).mapSuccess(function () {
+					return partialStore.cachedStore.cacheRemove(id, {
+						ignoreLock: true,
+						silent: true
+					});
+				});
+			},
+
+			update: function (partialStore, id, data) {
+				return partialStore.remoteStore.update(id, data).mapSuccess(function () {
+					return partialStore.cachedStore.cacheUpdate(id, data, {
+						ignoreLock: false,
+						lockAttrs: false,
+						silent: true,
+						refreshMeta: true,
+						accessMeta: true
+					});
+				});
+			}
+
+		};
+	});
+});
+
+
+Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
+                                                                             "module:Stores.PartialStoreWriteStrategies.WriteStrategy"
+                                                                             ], function (Class, scoped) {
+	return Class.extend({scoped: scoped}, function (inherited) {
+		return {
+
+			insert: function (partialStore, data) {
+				return partialStore.cachedStore.cacheInsert(data, {
+					lockItem: true,
+					silent: true,
+					refreshMeta: true,
+					accessMeta: true
+				}).success(function (data) {
+					partialStore.remoteStore.insert(data).success(function () {
+						partialStore.cachedStore.unlockItem(partialStore.cachedStore.id_of(data));
+					}).error(function () {
+						partialStore.cachedStore.cacheRemove(partialStore.cachedStore.id_of(data), {
+							ignoreLock: true,
+							silent: false
+						});
+					});
+				});
+			},
+
+			remove: function (partialStore, id) {
+				return partialStore.cachedStore.cacheRemove(id, {
+					ignoreLock: true,
+					silent: true
+				}).success(function () {
+					partialStore.remoteStore.remove(id);
+				});
+			},
+
+			update: function (partialStore, id, data) {
+				return partialStore.cachedStore.cacheUpdate(id, data, {
+					lockAttrs: true,
+					ignoreLock: false,
+					silent: true,
+					refreshMeta: false,
+					accessMeta: true
+				}).success(function (data) {
+					partialStore.remoteStore.update(id, data).success(function () {
+						partialStore.cachedStore.unlockItem(partialStore.cachedStore.id_of(data));
+					});
+				});
+			}
+	
+		};
+	});
+});
+
+
+Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
+                                                                           "module:Stores.PartialStoreWriteStrategies.WriteStrategy",
+                                                                           "module:Stores.StoreHistory",
+                                                                           "module:Stores.MemoryStore",
+                                                                           "base:Objs"
+                                                                           ], function (Class, StoreHistory, MemoryStore, Objs, scoped) {
+	return Class.extend({scoped: scoped}, function (inherited) {
+		return {
+
+			constructor: function (historyStore, options) {
+				inherited.constructor.call(this);
+				options = options || {};
+				this.historyStore = options.historyStore || this.auto_destroy(new MemoryStore());
+				this.storeHistory = this.auto_destroy(new StoreHistory(null, this.historyStore, {
+					source_id_key: options.source_id_key || "id",
+					row_data: {
+						pushed: false,
+						success: false
+					},
+					filter_data: {
+						pushed: false
+					}
+				}));
+			},
+
+			insert: function (partialStore, data) {
+				return partialStore.cachedStore.cacheInsert(data, {
+					lockItem: true,
+					silent: true,
+					refreshMeta: true,
+					accessMeta: true
+				}).success(function (data) {
+					this.storeHistory.sourceInsert(data);
+				}, this);
+			},
+
+			remove: function (partialStore, id) {
+				return partialStore.cachedStore.cacheRemove(id, {
+					ignoreLock: true,
+					silent: true
+				}).success(function () {
+					this.storeHistory.sourceRemove(id);
+				}, this);
+			},
+
+			update: function (partialStore, id, data) {
+				return partialStore.cachedStore.cacheUpdate(id, data, {
+					lockAttrs: true,
+					ignoreLock: false,
+					silent: true,
+					refreshMeta: false,
+					accessMeta: true
+				}).success(function () {
+					this.storeHistory.sourceUpdate(id, data);
+				}, this);
+			},
+
+			push: function (partialStore) {
+				if (this.pushing)
+					return;
+				var failedIds = {};
+				var unlockIds = {};
+				var hs = this.storeHistory.historyStore;
+				var iter = hs.query({success: false}, {sort: {commit_id: 1}}).value();
+				var next = function () {
+					if (!iter.hasNext()) {
+						this.pushing = false;
+						Objs.iter(unlockIds, function (value, id) {
+							if (value) 
+								partialStore.cachedStore.unlockItem(id);
+						}, this);
+						return;
+					}
+					var commit = iter.next();
+					var commit_id = hs.id_of(commit);
+					if (commit_id in failedIds) {
+						hs.update(commit_id, {
+							pushed: true,
+							success: false
+						});
+						next.apply(this);
+					} else {
+						var promise = null;
+						if (commit.type === "insert")
+							promise = partialStore.remoteStore.insert(commit.row);
+						else if (commit.type === "update")
+							promise = partialStore.remoteStore.update(commit.row_id, commit.row);
+						else if (commit.type === "remove")
+							promise = partialStore.remoteStore.remove(commit.row_id);
+						promise.success(function () {
+							hs.update(commit_id, {
+								pushed: true,
+								success: true
+							});
+							if (!(commit.row_id in unlockIds))
+								unlockIds[commit.row_id] = true;
+							next.apply(this);
+						}, this).error(function () {
+							hs.update(commit_id, {
+								pushed: true,
+								success: false
+							});
+							failedIds[commit_id] = true;
+							unlockIds[commit.row_id] = false;
+							next.apply(this);
+						}, this);
+					}
+				};
+				next.apply(this);
+			}
+
+		};
+	});
+});
+
 Scoped.define("module:Stores.RemoteStoreException", [
                                                      "module:Stores.StoreException",
                                                      "base:Net.AjaxException"
@@ -3296,7 +3694,7 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 					sort: Objs.objectBy(this.__increasingKey, -1)
 				}).mapSuccess(function (iter) {
 					return iter.hasNext() ? iter.next()[this.__increasingKey] : null;
-				}).mapError(function () {
+				}, this).mapError(function () {
 					return null;
 				});
 			},
@@ -3330,9 +3728,9 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 						this._removedItem(id);
 					}, this);
 				}, this);
-				if (this.__lastKey !== null) {
+				if (this.__lastKey) {
 					this.insertsIterator().iterate(function (query) {
-						var keyQuery = Objs.objectBy(this.__increasingKey, {"$gt": this.__lastKey});
+						var keyQuery = Objs.objectBy(this.__increasingKey, {"$gte": this.__lastKey});
 						this._store.query({"$and": [keyQuery, query]}).success(function (result) {
 							while (result.hasNext())
 								this._insertedInsert(result.next());
@@ -3407,7 +3805,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				else
 					this.id_key = "id";
 				this.__items = new ContextRegistry();
-				this.__inserts = new ContextRegistry();
+				this.__inserts = new ContextRegistry(Queries.serialize, Queries);
 			},
 
 			destroy: function () {
@@ -3433,19 +3831,19 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			},
 
 			watchInsert : function(query, context) {
-				if (this.__inserts.register(id, context))
-					this._watchInsert(id);
+				if (this.__inserts.register(query, context))
+					this._watchInsert(query);
 			},
 
 			unwatchInsert : function(query, context) {
-				if (this.__inserts.unregister(id, context))
-					this._unwatchInsert(id);
+				if (this.__inserts.unregister(query, context))
+					this._unwatchInsert(query);
 			},
 
 			_removedItem : function(id) {
 				if (!this.__items.get(id))
 					return;
-				this.__items.unregister(id);
+				this.unwatchItem(id, null);
 				this._removedWatchedItem(id);
 			},
 
@@ -3463,7 +3861,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 					trig = Queries.evaluate(iter.next(), data);
 				if (!trig)
 					return;
-				this._insertedWatchedInserted(data);
+				this._insertedWatchedInsert(data);
 			},
 
 			unregisterItem: function (id, context) {

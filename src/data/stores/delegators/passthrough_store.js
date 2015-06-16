@@ -119,3 +119,43 @@ Scoped.define("module:Stores.ReadDelegatorStore", [
 	});
 });
 
+
+Scoped.define("module:Stores.SimulatorStore", [
+                                               "module:Stores.PassthroughStore",
+                                               "base:Promise"
+                                               ], function (BaseStore, Promise, scoped) {
+	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+		return {
+
+			constructor: function () {
+				inherited.constructor.apply(this, arguments);
+				this.online = true;
+			},
+
+			_execute: function (f, args) {
+				return this.online ? f.apply(this, args) : Promise.error("Offline");
+			},
+
+			_insert: function () {
+				return this._execute(inherited._insert, arguments);				
+			},
+
+			_remove: function () {
+				return this._execute(inherited._remove, arguments);
+			},
+
+			_get: function () {
+				return this._execute(inherited._get, arguments);
+			},
+
+			_update: function () {
+				return this._execute(inherited._update, arguments);
+			},
+
+			_query: function () {
+				return this._execute(inherited._query, arguments);
+			}
+
+		};
+	});
+});
