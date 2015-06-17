@@ -1,8 +1,8 @@
 
 Scoped.define("module:Stores.PassthroughStore", [
                                                  "module:Stores.BaseStore",
-                                                 "base:Objs"
-                                                 ], function (BaseStore, Objs, scoped) {
+                                                 "base:Promise"
+                                                 ], function (BaseStore, Promise, scoped) {
 	return BaseStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -10,7 +10,6 @@ Scoped.define("module:Stores.PassthroughStore", [
 				this.__store = store;
 				options = options || {};
 				options.id_key = store.id_key();
-				this._projection = options.projection || {};
 				inherited.constructor.call(this, options);
 				if (options.destroy_store)
 					this._auto_destroy(store);
@@ -21,23 +20,43 @@ Scoped.define("module:Stores.PassthroughStore", [
 			},
 
 			_insert: function (data) {
-				return this.__store.insert(Objs.extend(data, this._projection));
+				return this._preInsert(data).mapSuccess(function (data) {
+					return this.__store.insert(data).mapSuccess(function (data) {
+						return this._postInsert(data);
+					}, this);
+				}, this);
 			},
 
 			_remove: function (id) {
-				return this.__store.remove(id);
+				return this._preRemove().mapSuccess(function (id) {
+					return this.__store.remove(id).mapSuccess(function () {
+						return this._postRemove(id);
+					}, this);
+				}, this);
 			},
 
 			_get: function (id) {
-				return this.__store.get(id);
+				return this._preGet(id).mapSuccess(function (id) {
+					return this.__store.get(id).mapSuccess(function (data) {
+						return this._postGet(data);
+					}, this);
+				}, this);
 			},
 
 			_update: function (id, data) {
-				return this.__store.update(id, data);
+				return this._preUpdate(id, data).mapSuccess(function (args) {
+					return this.__store.update(args.id, args.data).mapSuccess(function (row) {
+						return this._postUpdate(row);
+					}, this);
+				}, this);
 			},
 
 			_query: function (query, options) {
-				return this.__store.query(Objs.extend(query, this._projection), options);
+				return this._preQuery(query, options).mapSuccess(function (args) {
+					return this.__store.query(args.query, args.options).mapSuccess(function (results) {
+						return this._postQuery(results);
+					}, this);
+				}, this);
 			},
 
 			_ensure_index: function (key) {
@@ -46,116 +65,49 @@ Scoped.define("module:Stores.PassthroughStore", [
 
 			_store: function () {
 				return this.__store;
+			},
+
+			_preInsert: function (data) {
+				return Promise.create(data);
+			},
+			
+			_postInsert: function (data) {
+				return Promise.create(data);
+			},
+			
+			_preRemove: function (id) {
+				return Promise.create(id);
+			},
+			
+			_postRemove: function (id) {
+				return Promise.create(true);
+			},
+			
+			_preGet: function (id) {
+				return Promise.create(id);
+			},
+			
+			_postGet: function (data) {
+				return Promise.create(data);
+			},
+
+			_preUpdate: function (id, data) {
+				return Promise.create({id: id, data: data});
+			},
+			
+			_postUpdate: function (row) {
+				return Promise.create(row);
+			},
+			
+			_preQuery: function (query, options) {
+				return Promise.create({query: query, options: options});
+			},
+			
+			_postQuery: function (results) {
+				return Promise.create(results);
 			}
 
 		};
 	});
 });
 
-
-
-
-Scoped.define("module:Stores.WriteDelegatorStore", [
-                                                    "module:Stores.BaseStore"
-                                                    ], function (BaseStore, scoped) {
-	return BaseStore.extend({scoped: scoped}, function (inherited) {			
-		return {
-
-			constructor: function (writeStore, options) {
-				inherited.constructor.call(this, options);
-				this.writeStore = writeStore;
-			},
-
-			destroy: function () {
-				this.writeStore.off(null, null, this);
-				inherited.destroy.call(this);
-			},
-
-			_insert: function (data) {
-				return this.writeStore.insert(data);
-			},
-
-			_remove: function (id) {
-				return this.writeStore.remove(id);
-			},
-
-			_update: function (id, data) {
-				return this.writeStore.update(id, data);
-			},
-
-			_ensure_index: function (key) {
-				return this.writeStore.ensure_index(key);
-			}
-
-		};
-	});
-});
-
-
-Scoped.define("module:Stores.ReadDelegatorStore", [
-                                                   "module:Stores.BaseStore"
-                                                   ], function (BaseStore, scoped) {
-	return BaseStore.extend({scoped: scoped}, function (inherited) {			
-		return {
-
-			constructor: function (readStore, options) {
-				inherited.constructor.call(this, options);
-				this.readStore = readStore;
-			},
-
-			_query_capabilities: function () {
-				return this.readStore._query_capabilities();
-			},
-
-			_get: function (id) {
-				return this.readStore.get(id);
-			},
-
-			_query: function (query, options) {
-				return this.readStore.query(Objs.extend(query, this._projection), options);
-			}
-
-		};
-	});
-});
-
-
-Scoped.define("module:Stores.SimulatorStore", [
-                                               "module:Stores.PassthroughStore",
-                                               "base:Promise"
-                                               ], function (BaseStore, Promise, scoped) {
-	return BaseStore.extend({scoped: scoped}, function (inherited) {			
-		return {
-
-			constructor: function () {
-				inherited.constructor.apply(this, arguments);
-				this.online = true;
-			},
-
-			_execute: function (f, args) {
-				return this.online ? f.apply(this, args) : Promise.error("Offline");
-			},
-
-			_insert: function () {
-				return this._execute(inherited._insert, arguments);				
-			},
-
-			_remove: function () {
-				return this._execute(inherited._remove, arguments);
-			},
-
-			_get: function () {
-				return this._execute(inherited._get, arguments);
-			},
-
-			_update: function () {
-				return this._execute(inherited._update, arguments);
-			},
-
-			_query: function () {
-				return this._execute(inherited._query, arguments);
-			}
-
-		};
-	});
-});

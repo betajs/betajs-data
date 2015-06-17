@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-06-16
+betajs-data - v1.0.0 - 2015-06-17
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -537,7 +537,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.0 - 2015-06-16
+betajs-data - v1.0.0 - 2015-06-17
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -552,7 +552,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '33.1434484845642'
+		version: '34.1434567668435'
 	};
 });
 
@@ -1866,111 +1866,10 @@ Scoped.define("module:Stores.WriteStore", [
 });
 
 
-Scoped.define("module:Stores.ConversionStore", [
-                                                "module:Stores.BaseStore",
-                                                "base:Objs",
-                                                "base:Iterators.MappedIterator"
-                                                ], function (BaseStore, Objs, MappedIterator, scoped) {
-	return BaseStore.extend({scoped: scoped}, function (inherited) {			
-		return {
-
-			constructor: function (store, options) {
-				options = options || {};
-				options.id_key = store._id_key;
-				inherited.constructor.call(this, options);
-				this.__store = store;
-				this.__key_encoding = options.key_encoding || {};
-				this.__key_decoding = options.key_decoding || {};
-				this.__value_encoding = options.value_encoding || {};
-				this.__value_decoding = options.value_decoding || {};
-				this.__projection = options.projection || {};
-			},
-
-			store: function () {
-				return this.__store;
-			},
-
-			encode_object: function (obj) {
-				if (!obj)
-					return null;
-				var result = {};
-				for (var key in obj) {
-					var encoded_key = this.encode_key(key);
-					if (encoded_key)
-						result[encoded_key] = this.encode_value(key, obj[key]);
-				}
-				return Objs.extend(result, this.__projection);
-			},
-
-			decode_object: function (obj) {
-				if (!obj)
-					return null;
-				var result = {};
-				for (var key in obj) {
-					var decoded_key = this.decode_key(key);
-					if (decoded_key)
-						result[decoded_key] = this.decode_value(key, obj[key]);
-				}
-				for (key in this.__projection)
-					delete result[key];
-				return result;
-			},
-
-			encode_key: function (key) {
-				return key in this.__key_encoding ? this.__key_encoding[key] : key;
-			},
-
-			decode_key: function (key) {
-				return key in this.__key_decoding ? this.__key_decoding[key] : key;
-			},
-
-			encode_value: function (key, value) {
-				return key in this.__value_encoding ? this.__value_encoding[key](value) : value;
-			},
-
-			decode_value: function (key, value) {
-				return key in this.__value_decoding ? this.__value_decoding[key](value) : value;
-			},	
-
-			_query_capabilities: function () {
-				return this.__store._query_capabilities();
-			},
-
-			_ensure_index: function (key) {
-				return this.__store.ensure_index(key);
-			},
-
-			_insert: function (data) {
-				return this.__store.insert(this.encode_object(data)).mapSuccess(this.decode_object, this);
-			},
-
-			_remove: function (id) {
-				return this.__store.remove(this.encode_value(this._id_key, id));
-			},
-
-			_get: function (id) {
-				return this.__store.get(this.encode_value(this._id_key, id)).mapSuccess(this.decode_object, this);
-			},
-
-			_update: function (id, data) {
-				return this.__store.update(this.encode_value(this._id_key, id), this.encode_object(data)).mapSuccess(this.decode_object, this);
-			},
-
-			_query: function (query, options) {
-				return this.__store.query(this.encode_object(query), options).mapSuccess(function (result) {
-					return new MappedIterator(result, this.decode_object, this);
-				}, this);
-			}		
-
-		};
-	});
-});
-
-
 Scoped.define("module:Stores.PassthroughStore", [
                                                  "module:Stores.BaseStore",
-                                                 "base:Objs"
-                                                 ], function (BaseStore, Objs, scoped) {
+                                                 "base:Promise"
+                                                 ], function (BaseStore, Promise, scoped) {
 	return BaseStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -1978,7 +1877,6 @@ Scoped.define("module:Stores.PassthroughStore", [
 				this.__store = store;
 				options = options || {};
 				options.id_key = store.id_key();
-				this._projection = options.projection || {};
 				inherited.constructor.call(this, options);
 				if (options.destroy_store)
 					this._auto_destroy(store);
@@ -1989,23 +1887,43 @@ Scoped.define("module:Stores.PassthroughStore", [
 			},
 
 			_insert: function (data) {
-				return this.__store.insert(Objs.extend(data, this._projection));
+				return this._preInsert(data).mapSuccess(function (data) {
+					return this.__store.insert(data).mapSuccess(function (data) {
+						return this._postInsert(data);
+					}, this);
+				}, this);
 			},
 
 			_remove: function (id) {
-				return this.__store.remove(id);
+				return this._preRemove().mapSuccess(function (id) {
+					return this.__store.remove(id).mapSuccess(function () {
+						return this._postRemove(id);
+					}, this);
+				}, this);
 			},
 
 			_get: function (id) {
-				return this.__store.get(id);
+				return this._preGet(id).mapSuccess(function (id) {
+					return this.__store.get(id).mapSuccess(function (data) {
+						return this._postGet(data);
+					}, this);
+				}, this);
 			},
 
 			_update: function (id, data) {
-				return this.__store.update(id, data);
+				return this._preUpdate(id, data).mapSuccess(function (args) {
+					return this.__store.update(args.id, args.data).mapSuccess(function (row) {
+						return this._postUpdate(row);
+					}, this);
+				}, this);
 			},
 
 			_query: function (query, options) {
-				return this.__store.query(Objs.extend(query, this._projection), options);
+				return this._preQuery(query, options).mapSuccess(function (args) {
+					return this.__store.query(args.query, args.options).mapSuccess(function (results) {
+						return this._postQuery(results);
+					}, this);
+				}, this);
 			},
 
 			_ensure_index: function (key) {
@@ -2014,73 +1932,46 @@ Scoped.define("module:Stores.PassthroughStore", [
 
 			_store: function () {
 				return this.__store;
-			}
-
-		};
-	});
-});
-
-
-
-
-Scoped.define("module:Stores.WriteDelegatorStore", [
-                                                    "module:Stores.BaseStore"
-                                                    ], function (BaseStore, scoped) {
-	return BaseStore.extend({scoped: scoped}, function (inherited) {			
-		return {
-
-			constructor: function (writeStore, options) {
-				inherited.constructor.call(this, options);
-				this.writeStore = writeStore;
 			},
 
-			destroy: function () {
-				this.writeStore.off(null, null, this);
-				inherited.destroy.call(this);
+			_preInsert: function (data) {
+				return Promise.create(data);
+			},
+			
+			_postInsert: function (data) {
+				return Promise.create(data);
+			},
+			
+			_preRemove: function (id) {
+				return Promise.create(id);
+			},
+			
+			_postRemove: function (id) {
+				return Promise.create(true);
+			},
+			
+			_preGet: function (id) {
+				return Promise.create(id);
+			},
+			
+			_postGet: function (data) {
+				return Promise.create(data);
 			},
 
-			_insert: function (data) {
-				return this.writeStore.insert(data);
+			_preUpdate: function (id, data) {
+				return Promise.create({id: id, data: data});
 			},
-
-			_remove: function (id) {
-				return this.writeStore.remove(id);
+			
+			_postUpdate: function (row) {
+				return Promise.create(row);
 			},
-
-			_update: function (id, data) {
-				return this.writeStore.update(id, data);
+			
+			_preQuery: function (query, options) {
+				return Promise.create({query: query, options: options});
 			},
-
-			_ensure_index: function (key) {
-				return this.writeStore.ensure_index(key);
-			}
-
-		};
-	});
-});
-
-
-Scoped.define("module:Stores.ReadDelegatorStore", [
-                                                   "module:Stores.BaseStore"
-                                                   ], function (BaseStore, scoped) {
-	return BaseStore.extend({scoped: scoped}, function (inherited) {			
-		return {
-
-			constructor: function (readStore, options) {
-				inherited.constructor.call(this, options);
-				this.readStore = readStore;
-			},
-
-			_query_capabilities: function () {
-				return this.readStore._query_capabilities();
-			},
-
-			_get: function (id) {
-				return this.readStore.get(id);
-			},
-
-			_query: function (query, options) {
-				return this.readStore.query(Objs.extend(query, this._projection), options);
+			
+			_postQuery: function (results) {
+				return Promise.create(results);
 			}
 
 		};
@@ -2094,34 +1985,106 @@ Scoped.define("module:Stores.SimulatorStore", [
                                                ], function (BaseStore, Promise, scoped) {
 	return BaseStore.extend({scoped: scoped}, function (inherited) {			
 		return {
+			
+			online: true,
 
-			constructor: function () {
-				inherited.constructor.apply(this, arguments);
-				this.online = true;
+			_preInsert: function () {
+				return this.online ? inherited._preInsert.apply(this, arguments) : Promise.error("Offline");
+			},
+			
+			_preRemove: function () {
+				return this.online ? inherited._preRemove.apply(this, arguments) : Promise.error("Offline");
+			},
+			
+			_preGet: function () {
+				return this.online ? inherited._preGet.apply(this, arguments) : Promise.error("Offline");
+			},
+			
+			_preUpdate: function () {
+				return this.online ? inherited._preUpdate.apply(this, arguments) : Promise.error("Offline");
+			},
+			
+			_preQuery: function () {
+				return this.online ? inherited._preQuery.apply(this, arguments) : Promise.error("Offline");
+			}
+			
+		};
+	});
+});
+
+
+Scoped.define("module:Stores.TransformationStore", [
+                                                 "module:Stores.PassthroughStore",
+                                                 "base:Iterators.MappedIterator",
+                                                 "base:Objs"
+                                                 ], function (PassthroughStore, MappedIterator, Objs, scoped) {
+	return PassthroughStore.extend({scoped: scoped}, function (inherited) {			
+		return {
+			
+			_encodeData: function (data) {
+				return data;
+			},
+			
+			_decodeData: function (data) {
+				return data;
+			},
+			
+			_encodeId: function (id) {
+				return this.id_of(this._encodeData(Objs.objectBy(this.id_key(), id)));
+			},
+			
+			_decodeId: function (id) {
+				return this.id_of(this._decodeData(Objs.objectBy(this.id_key(), id)));
+			},
+			
+			_encodeQuery: function (query, options) {
+				// Usually needs better encoding
+				return {
+					query: query,
+					options: options
+				};
 			},
 
-			_execute: function (f, args) {
-				return this.online ? f.apply(this, args) : Promise.error("Offline");
+			_preInsert: function (data) {
+				return Promise.create(this._encodeData(data));
+			},
+			
+			_postInsert: function (data) {
+				return Promise.create(this._decodeData(data));
+			},
+			
+			_preRemove: function (id) {
+				return Promise.create(this._encodeId(id));
+			},
+			
+			_postRemove: function (id) {
+				return Promise.create(true);
+			},
+			
+			_preGet: function (id) {
+				return Promise.create(this._encodeId(id));
+			},
+			
+			_postGet: function (data) {
+				return Promise.create(this._decodeData(data));
 			},
 
-			_insert: function () {
-				return this._execute(inherited._insert, arguments);				
+			_preUpdate: function (id, data) {
+				return Promise.create({id: this._encodeId(id), data: this._encodeData(data)});
 			},
-
-			_remove: function () {
-				return this._execute(inherited._remove, arguments);
+			
+			_postUpdate: function (row) {
+				return Promise.create(this._decodeData(row));
 			},
-
-			_get: function () {
-				return this._execute(inherited._get, arguments);
+			
+			_preQuery: function (query, options) {
+				return Promise.create(this._encodeQuery(query, options));
 			},
-
-			_update: function () {
-				return this._execute(inherited._update, arguments);
-			},
-
-			_query: function () {
-				return this._execute(inherited._query, arguments);
+			
+			_postQuery: function (results) {
+				return Promise.create(new MappedIterator(results, function (data) {
+					return this._decodeData(data);
+				}, this));
 			}
 
 		};
