@@ -1,8 +1,9 @@
 Scoped.define("module:Stores.Watchers.PollWatcher", [
                                                      "module:Stores.Watchers.StoreWatcher",
                                                      "base:Comparators",
-                                                     "base:Objs"
-                                                     ], function(StoreWatcher, Comparators, Objs, scoped) {
+                                                     "base:Objs",
+                                                     "base:Timers.Timer"
+                                                     ], function(StoreWatcher, Comparators, Objs, Timer, scoped) {
 	return StoreWatcher.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -14,8 +15,17 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 				options = options || {};
 				this.__itemCache = {};
 				this.__lastKey = null;
+				this.__lastKeyIds = {};
 				this.__insertsCount = 0;
 				this.__increasingKey = options.increasing_key || this.id_key;
+				if (options.auto_poll) {
+					this.auto_destroy(new Timer({
+						fire: this.poll,
+						context: this,
+						start: true,
+						delay: options.auto_poll
+					}));
+				}
 			},
 
 			_watchItem : function(id) {
@@ -42,6 +52,7 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 				if (this.__insertsCount === 0) {
 					this._queryLastKey().success(function (value) {
 						this.__lastKey = value;
+						this.__lastKeyIds = {};
 					}, this);
 				}
 				this.__insertsCount++;
@@ -56,29 +67,38 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 			poll: function () {
 				Objs.iter(this.__itemCache, function (value, id) {
 					this._store.get(id).success(function (data) {
-						if (!data)
+						if (!data) 
 							this._removedItem(id);
 						else {
 							this.__itemCache[id] = Objs.clone(data, 1);
 							if (value && !Comparators.deepEqual(value, data, -1))
 								this._updatedItem(data, data);
 						}
-					}, this).error(function () {
-						this._removedItem(id);
 					}, this);
 				}, this);
 				if (this.__lastKey) {
 					this.insertsIterator().iterate(function (query) {
 						var keyQuery = Objs.objectBy(this.__increasingKey, {"$gte": this.__lastKey});
 						this._store.query({"$and": [keyQuery, query]}).success(function (result) {
-							while (result.hasNext())
-								this._insertedInsert(result.next());
+							while (result.hasNext()) {
+								var item = result.next();
+								var id = this._store.id_of(item);
+								if (!this.__lastKeyIds[id])
+									this._insertedInsert(item);
+								this.__lastKeyIds[id] = true;
+								if (id > this.__lastKey)
+									this.__lastKey = id; 
+							}
 						}, this);
 					}, this);
+				} else {
+					this._queryLastKey().success(function (value) {
+						if (value !== this.__lastKey) {
+							this.__lastKey = value;
+							this.__lastKeyIds = {};
+						}
+					}, this);
 				}
-				this._queryLastKey().success(function (value) {
-					this.__lastKey = value;
-				}, this);
 			}
 
 		};

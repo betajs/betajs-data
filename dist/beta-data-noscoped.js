@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-06-17
+betajs-data - v1.0.0 - 2015-06-18
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -14,7 +14,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '34.1434567668435'
+		version: '35.1434642836486'
 	};
 });
 
@@ -1357,7 +1357,7 @@ Scoped.define("module:Stores.PassthroughStore", [
 			},
 
 			_remove: function (id) {
-				return this._preRemove().mapSuccess(function (id) {
+				return this._preRemove(id).mapSuccess(function (id) {
 					return this.__store.remove(id).mapSuccess(function () {
 						return this._postRemove(id);
 					}, this);
@@ -2350,7 +2350,7 @@ Scoped.define("module:Stores.PartialStore", [
 			
 			_remoteRemove: function (id) {
 				this.cachedStore.cacheRemove(id, {
-					ignoreLock: true,
+					ignoreLock: false,
 					silent: false
 				});
 			}
@@ -2473,8 +2473,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
                                                                            "module:Stores.PartialStoreWriteStrategies.WriteStrategy",
                                                                            "module:Stores.StoreHistory",
                                                                            "module:Stores.MemoryStore",
-                                                                           "base:Objs"
-                                                                           ], function (Class, StoreHistory, MemoryStore, Objs, scoped) {
+                                                                           "base:Objs",
+                                                                           "base:Timers.Timer"
+                                                                           ], function (Class, StoreHistory, MemoryStore, Objs, Timer, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -2524,6 +2525,17 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 				}).success(function () {
 					this.storeHistory.sourceUpdate(id, data);
 				}, this);
+			},
+			
+			autopush: function (partialStore, delay) {
+				this._autopushTimer = this.auto_destroy(new Timer({
+					fire: function () {
+						this.push(partialStore);
+					},
+					context: this,
+					start: true,
+					delay: delay
+				}));
 			},
 
 			push: function (partialStore) {
@@ -3087,8 +3099,9 @@ Scoped.define("module:Stores.Watchers.LocalWatcher", [
 Scoped.define("module:Stores.Watchers.PollWatcher", [
                                                      "module:Stores.Watchers.StoreWatcher",
                                                      "base:Comparators",
-                                                     "base:Objs"
-                                                     ], function(StoreWatcher, Comparators, Objs, scoped) {
+                                                     "base:Objs",
+                                                     "base:Timers.Timer"
+                                                     ], function(StoreWatcher, Comparators, Objs, Timer, scoped) {
 	return StoreWatcher.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -3100,8 +3113,17 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 				options = options || {};
 				this.__itemCache = {};
 				this.__lastKey = null;
+				this.__lastKeyIds = {};
 				this.__insertsCount = 0;
 				this.__increasingKey = options.increasing_key || this.id_key;
+				if (options.auto_poll) {
+					this.auto_destroy(new Timer({
+						fire: this.poll,
+						context: this,
+						start: true,
+						delay: options.auto_poll
+					}));
+				}
 			},
 
 			_watchItem : function(id) {
@@ -3128,6 +3150,7 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 				if (this.__insertsCount === 0) {
 					this._queryLastKey().success(function (value) {
 						this.__lastKey = value;
+						this.__lastKeyIds = {};
 					}, this);
 				}
 				this.__insertsCount++;
@@ -3142,29 +3165,38 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 			poll: function () {
 				Objs.iter(this.__itemCache, function (value, id) {
 					this._store.get(id).success(function (data) {
-						if (!data)
+						if (!data) 
 							this._removedItem(id);
 						else {
 							this.__itemCache[id] = Objs.clone(data, 1);
 							if (value && !Comparators.deepEqual(value, data, -1))
 								this._updatedItem(data, data);
 						}
-					}, this).error(function () {
-						this._removedItem(id);
 					}, this);
 				}, this);
 				if (this.__lastKey) {
 					this.insertsIterator().iterate(function (query) {
 						var keyQuery = Objs.objectBy(this.__increasingKey, {"$gte": this.__lastKey});
 						this._store.query({"$and": [keyQuery, query]}).success(function (result) {
-							while (result.hasNext())
-								this._insertedInsert(result.next());
+							while (result.hasNext()) {
+								var item = result.next();
+								var id = this._store.id_of(item);
+								if (!this.__lastKeyIds[id])
+									this._insertedInsert(item);
+								this.__lastKeyIds[id] = true;
+								if (id > this.__lastKey)
+									this.__lastKey = id; 
+							}
 						}, this);
 					}, this);
+				} else {
+					this._queryLastKey().success(function (value) {
+						if (value !== this.__lastKey) {
+							this.__lastKey = value;
+							this.__lastKeyIds = {};
+						}
+					}, this);
 				}
-				this._queryLastKey().success(function (value) {
-					this.__lastKey = value;
-				}, this);
 			}
 
 		};
@@ -3268,7 +3300,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			_removedItem : function(id) {
 				if (!this.__items.get(id))
 					return;
-				this.unwatchItem(id, null);
+				//this.unwatchItem(id, null);
 				this._removedWatchedItem(id);
 			},
 

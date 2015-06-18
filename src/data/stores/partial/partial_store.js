@@ -78,7 +78,7 @@ Scoped.define("module:Stores.PartialStore", [
 			
 			_remoteRemove: function (id) {
 				this.cachedStore.cacheRemove(id, {
-					ignoreLock: true,
+					ignoreLock: false,
 					silent: false
 				});
 			}

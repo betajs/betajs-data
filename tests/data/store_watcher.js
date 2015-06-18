@@ -30,7 +30,7 @@ test("test watcher items read store polling", function() {
 	QUnit.deepEqual(counts, {insert: 0, update: 0, remove: 0});
 
 	store.update(item1_id, {"first": "mno"});
-	QUnit.deepEqual(counts, {insert: 0, update: 0, remove: 0});
+	QUnit.deepEqual(counts, {insert: 0, update: 0, remove: 0});	
 	watcherItems.poll();
 	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 0});
 
@@ -38,6 +38,7 @@ test("test watcher items read store polling", function() {
 	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 0});
 	watcherItems.poll();
 	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 1});
+	watcherItems.unwatchItem(item2_id);
 	
 	watcherItems.watchInsert({"first": "foobar"});
 	watcherItems.poll();

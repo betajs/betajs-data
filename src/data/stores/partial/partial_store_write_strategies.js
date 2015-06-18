@@ -113,8 +113,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
                                                                            "module:Stores.PartialStoreWriteStrategies.WriteStrategy",
                                                                            "module:Stores.StoreHistory",
                                                                            "module:Stores.MemoryStore",
-                                                                           "base:Objs"
-                                                                           ], function (Class, StoreHistory, MemoryStore, Objs, scoped) {
+                                                                           "base:Objs",
+                                                                           "base:Timers.Timer"
+                                                                           ], function (Class, StoreHistory, MemoryStore, Objs, Timer, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -164,6 +165,17 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 				}).success(function () {
 					this.storeHistory.sourceUpdate(id, data);
 				}, this);
+			},
+			
+			autopush: function (partialStore, delay) {
+				this._autopushTimer = this.auto_destroy(new Timer({
+					fire: function () {
+						this.push(partialStore);
+					},
+					context: this,
+					start: true,
+					delay: delay
+				}));
 			},
 
 			push: function (partialStore) {

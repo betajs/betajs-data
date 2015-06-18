@@ -28,7 +28,7 @@ Scoped.define("module:Stores.PassthroughStore", [
 			},
 
 			_remove: function (id) {
-				return this._preRemove().mapSuccess(function (id) {
+				return this._preRemove(id).mapSuccess(function (id) {
 					return this.__store.remove(id).mapSuccess(function () {
 						return this._postRemove(id);
 					}, this);

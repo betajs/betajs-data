@@ -95,7 +95,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			_removedItem : function(id) {
 				if (!this.__items.get(id))
 					return;
-				this.unwatchItem(id, null);
+				//this.unwatchItem(id, null);
 				this._removedWatchedItem(id);
 			},
 
