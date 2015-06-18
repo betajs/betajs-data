@@ -23,6 +23,7 @@ Scoped.define("module:Stores.PartialStore", [
 				this.cachedStore.on("update", function (row, data) {
 					this._updated(this.cachedStore.id_of(row), data);
 				}, this);
+				this.writeStrategy.init(this);
 			},
 			
 			destroy: function () {
@@ -33,15 +34,15 @@ Scoped.define("module:Stores.PartialStore", [
 			},
 
 			_insert: function (data) {
-				return this.writeStrategy.insert(this, data);
+				return this.writeStrategy.insert(data);
 			},
 			
 			_remove: function (id) {
-				return this.writeStrategy.remove(this, id);
+				return this.writeStrategy.remove(id);
 			},
 			
 			_update: function (id, data) {
-				return this.writeStrategy.update(this, id, data);
+				return this.writeStrategy.update(id, data);
 			},
 
 			_get: function (id) {

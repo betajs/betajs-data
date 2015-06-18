@@ -552,7 +552,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '35.1434642836486'
+		version: '36.1434647859751'
 	};
 });
 
@@ -2833,6 +2833,7 @@ Scoped.define("module:Stores.PartialStore", [
 				this.cachedStore.on("update", function (row, data) {
 					this._updated(this.cachedStore.id_of(row), data);
 				}, this);
+				this.writeStrategy.init(this);
 			},
 			
 			destroy: function () {
@@ -2843,15 +2844,15 @@ Scoped.define("module:Stores.PartialStore", [
 			},
 
 			_insert: function (data) {
-				return this.writeStrategy.insert(this, data);
+				return this.writeStrategy.insert(data);
 			},
 			
 			_remove: function (id) {
-				return this.writeStrategy.remove(this, id);
+				return this.writeStrategy.remove(id);
 			},
 			
 			_update: function (id, data) {
-				return this.writeStrategy.update(this, id, data);
+				return this.writeStrategy.update(id, data);
 			},
 
 			_get: function (id) {
@@ -2901,12 +2902,16 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.WriteStrategy", [
                                                                           ], function (Class, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
+			
+			init: function (partialStore) {
+				this.partialStore = partialStore;
+			},
 
-			insert: function (partialStore, data) {},
+			insert: function (data) {},
 
-			remove: function (partialStore, id) {},
+			remove: function (id) {},
 
-			update: function (partialStore, data) {}
+			update: function (data) {}
 
 		};
 	});
@@ -2918,36 +2923,36 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
-			insert: function (partialStore, data) {
-				return partialStore.remoteStore.insert(data).mapSuccess(function (data) {
-					return partialStore.cachedStore.cacheInsert(data, {
+			insert: function (data) {
+				return this.partialStore.remoteStore.insert(data).mapSuccess(function (data) {
+					return this.partialStore.cachedStore.cacheInsert(data, {
 						lockItem: false,
 						silent: true,
 						refreshMeta: true,
 						accessMeta: true
-					});
-				});
+					}, this);
+				}, this);
 			},
 
-			remove: function (partialStore, id) {
-				return partialStore.remoteStore.remove(id).mapSuccess(function () {
-					return partialStore.cachedStore.cacheRemove(id, {
+			remove: function (id) {
+				return this.partialStore.remoteStore.remove(id).mapSuccess(function () {
+					return this.partialStore.cachedStore.cacheRemove(id, {
 						ignoreLock: true,
 						silent: true
-					});
-				});
+					}, this);
+				}, this);
 			},
 
-			update: function (partialStore, id, data) {
-				return partialStore.remoteStore.update(id, data).mapSuccess(function () {
-					return partialStore.cachedStore.cacheUpdate(id, data, {
+			update: function (id, data) {
+				return this.partialStore.remoteStore.update(id, data).mapSuccess(function () {
+					return this.partialStore.cachedStore.cacheUpdate(id, data, {
 						ignoreLock: false,
 						lockAttrs: false,
 						silent: true,
 						refreshMeta: true,
 						accessMeta: true
-					});
-				});
+					}, this);
+				}, this);
 			}
 
 		};
@@ -2961,45 +2966,45 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
-			insert: function (partialStore, data) {
-				return partialStore.cachedStore.cacheInsert(data, {
+			insert: function (data) {
+				return this.partialStore.cachedStore.cacheInsert(data, {
 					lockItem: true,
 					silent: true,
 					refreshMeta: true,
 					accessMeta: true
 				}).success(function (data) {
-					partialStore.remoteStore.insert(data).success(function () {
-						partialStore.cachedStore.unlockItem(partialStore.cachedStore.id_of(data));
-					}).error(function () {
-						partialStore.cachedStore.cacheRemove(partialStore.cachedStore.id_of(data), {
+					this.partialStore.remoteStore.insert(data).success(function () {
+						this.partialStore.cachedStore.unlockItem(this.partialStore.cachedStore.id_of(data));
+					}, this).error(function () {
+						this.partialStore.cachedStore.cacheRemove(this.partialStore.cachedStore.id_of(data), {
 							ignoreLock: true,
 							silent: false
 						});
-					});
-				});
+					}, this);
+				}, this);
 			},
 
-			remove: function (partialStore, id) {
-				return partialStore.cachedStore.cacheRemove(id, {
+			remove: function (id) {
+				return this.partialStore.cachedStore.cacheRemove(id, {
 					ignoreLock: true,
 					silent: true
 				}).success(function () {
-					partialStore.remoteStore.remove(id);
-				});
+					this.partialStore.remoteStore.remove(id);
+				}, this);
 			},
 
-			update: function (partialStore, id, data) {
-				return partialStore.cachedStore.cacheUpdate(id, data, {
+			update: function (id, data) {
+				return this.partialStore.cachedStore.cacheUpdate(id, data, {
 					lockAttrs: true,
 					ignoreLock: false,
 					silent: true,
 					refreshMeta: false,
 					accessMeta: true
 				}).success(function (data) {
-					partialStore.remoteStore.update(id, data).success(function () {
-						partialStore.cachedStore.unlockItem(partialStore.cachedStore.id_of(data));
-					});
-				});
+					this.partialStore.remoteStore.update(id, data).success(function () {
+						this.partialStore.cachedStore.unlockItem(this.partialStore.cachedStore.id_of(data));
+					}, this);
+				}, this);
 			}
 	
 		};
@@ -3019,10 +3024,10 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 
 			constructor: function (historyStore, options) {
 				inherited.constructor.call(this);
-				options = options || {};
-				this.historyStore = options.historyStore || this.auto_destroy(new MemoryStore());
+				this._options = options || {};
+				this.historyStore = this._options.historyStore || this.auto_destroy(new MemoryStore());
 				this.storeHistory = this.auto_destroy(new StoreHistory(null, this.historyStore, {
-					source_id_key: options.source_id_key || "id",
+					source_id_key: this._options.source_id_key || "id",
 					row_data: {
 						pushed: false,
 						success: false
@@ -3032,9 +3037,23 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					}
 				}));
 			},
+			
+			init: function (partialStore) {
+				inherited.init.call(this, partialStore);
+				if (this._options.auto_push) {
+					this.auto_destroy(new Timer({
+						fire: function () {
+							this.push(this.partialStore);
+						},
+						context: this,
+						start: true,
+						delay: this._options.auto_push
+					}));
+				}
+			},
 
-			insert: function (partialStore, data) {
-				return partialStore.cachedStore.cacheInsert(data, {
+			insert: function (data) {
+				return this.partialStore.cachedStore.cacheInsert(data, {
 					lockItem: true,
 					silent: true,
 					refreshMeta: true,
@@ -3044,8 +3063,8 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 				}, this);
 			},
 
-			remove: function (partialStore, id) {
-				return partialStore.cachedStore.cacheRemove(id, {
+			remove: function (id) {
+				return this.partialStore.cachedStore.cacheRemove(id, {
 					ignoreLock: true,
 					silent: true
 				}).success(function () {
@@ -3053,8 +3072,8 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 				}, this);
 			},
 
-			update: function (partialStore, id, data) {
-				return partialStore.cachedStore.cacheUpdate(id, data, {
+			update: function (id, data) {
+				return this.partialStore.cachedStore.cacheUpdate(id, data, {
 					lockAttrs: true,
 					ignoreLock: false,
 					silent: true,
@@ -3065,18 +3084,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 				}, this);
 			},
 			
-			autopush: function (partialStore, delay) {
-				this._autopushTimer = this.auto_destroy(new Timer({
-					fire: function () {
-						this.push(partialStore);
-					},
-					context: this,
-					start: true,
-					delay: delay
-				}));
-			},
-
-			push: function (partialStore) {
+			push: function () {
 				if (this.pushing)
 					return;
 				var failedIds = {};
@@ -3088,7 +3096,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 						this.pushing = false;
 						Objs.iter(unlockIds, function (value, id) {
 							if (value) 
-								partialStore.cachedStore.unlockItem(id);
+								this.partialStore.cachedStore.unlockItem(id);
 						}, this);
 						return;
 					}
@@ -3103,11 +3111,11 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					} else {
 						var promise = null;
 						if (commit.type === "insert")
-							promise = partialStore.remoteStore.insert(commit.row);
+							promise = this.partialStore.remoteStore.insert(commit.row);
 						else if (commit.type === "update")
-							promise = partialStore.remoteStore.update(commit.row_id, commit.row);
+							promise = this.partialStore.remoteStore.update(commit.row_id, commit.row);
 						else if (commit.type === "remove")
-							promise = partialStore.remoteStore.remove(commit.row_id);
+							promise = this.partialStore.remoteStore.remove(commit.row_id);
 						promise.success(function () {
 							hs.update(commit_id, {
 								pushed: true,

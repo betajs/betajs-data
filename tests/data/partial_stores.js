@@ -146,7 +146,7 @@ test("test partial stores, commit write strategy, no watchers", function() {
 	});
 	store.insert({i: 5, j: 0});
 	QUnit.equal(remoteStore.query().value().asArray().length, 50);
-	store.writeStrategy.push(store);
+	store.writeStrategy.push();
 	QUnit.equal(remoteStore.query().value().asArray().length, 51);
 	QUnit.equal(remoteStore.query({i: 5}).value().asArray().length, 1);
 	QUnit.equal(store.query({i: 5}).value().asArray().length, 1);
@@ -194,7 +194,7 @@ test("test partial stores, commit write strategy, with watchers", function() {
 	});
 	store.insert({i: 5, j: 0});
 	QUnit.equal(remoteStore.query().value().asArray().length, 50);
-	store.writeStrategy.push(store);
+	store.writeStrategy.push();
 	QUnit.equal(remoteStore.query().value().asArray().length, 51);
 	QUnit.equal(remoteStore.query({i: 5}).value().asArray().length, 1);
 	QUnit.equal(store.query({i: 5}).value().asArray().length, 1);
