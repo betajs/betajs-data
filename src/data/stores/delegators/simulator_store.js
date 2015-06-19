@@ -1,8 +1,8 @@
 Scoped.define("module:Stores.SimulatorStore", [
                                                "module:Stores.PassthroughStore",
                                                "base:Promise"
-                                               ], function (BaseStore, Promise, scoped) {
-	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+                                               ], function (PassthroughStore, Promise, scoped) {
+	return PassthroughStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 			
 			online: true,

@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-06-18
+betajs-data - v1.0.0 - 2015-06-19
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -537,7 +537,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.0 - 2015-06-18
+betajs-data - v1.0.0 - 2015-06-19
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -552,7 +552,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '36.1434647859751'
+		version: '37.1434726244967'
 	};
 });
 
@@ -1979,11 +1979,64 @@ Scoped.define("module:Stores.PassthroughStore", [
 });
 
 
+Scoped.define("module:Stores.ReadyStore", [
+                                               "module:Stores.PassthroughStore",
+                                               "base:Promise",
+                                               "base:Objs"
+                                               ], function (PassthroughStore, Promise, Objs, scoped) {
+	return PassthroughStore.extend({scoped: scoped}, function (inherited) {			
+		return {
+			
+			__promises: [],
+			__ready: false,
+			
+			ready: function () {
+				this.__ready = true;
+				Objs.iter(this.__promises, function (rec) {
+					rec.promise.forwardCallback(rec.stalling);
+				});
+				this.__promises = [];
+			},
+			
+			__execute: function (promise) {
+				if (this.__ready)
+					return promise;
+				var stalling = Promise.create();
+				this.__promises.push({
+					stalling: stalling,
+					promise: promise
+				});
+			},
+
+			_preInsert: function () {
+				return this.__execute(inherited._preInsert.apply(this, arguments));
+			},
+			
+			_preRemove: function () {
+				return this.__execute(inherited._preRemove.apply(this, arguments));
+			},
+			
+			_preGet: function () {
+				return this.__execute(inherited._preGet.apply(this, arguments));
+			},
+			
+			_preUpdate: function () {
+				return this.__execute(inherited._preUpdate.apply(this, arguments));
+			},
+			
+			_preQuery: function () {
+				return this.__execute(inherited._preQuery.apply(this, arguments));
+			}
+			
+		};
+	});
+});
+
 Scoped.define("module:Stores.SimulatorStore", [
                                                "module:Stores.PassthroughStore",
                                                "base:Promise"
-                                               ], function (BaseStore, Promise, scoped) {
-	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+                                               ], function (PassthroughStore, Promise, scoped) {
+	return PassthroughStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 			
 			online: true,
