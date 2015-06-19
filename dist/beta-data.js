@@ -552,7 +552,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '37.1434726244967'
+		version: '38.1434756150706'
 	};
 });
 
@@ -1158,8 +1158,49 @@ Scoped.define("module:Queries", [
 				}
 			}, this);
 			return result;
-		}
+		},
+		
+		mapKeyValue: function (query, callback, context) {
+			return this.mapKeyValueQuery(query, callback, context);
+		},
+		
+		mapKeyValueQuery: function (query, callback, context) {
+			var result = {};
+			Objs.iter(query, function (value, key) {
+				result = Objs.extend(result, this.mapKeyValuePair(value, key, callback, context));
+			}, this);
+			return result;
+		},
+		
+		mapKeyValueQueries: function (queries, callback, context) {
+			return Objs.map(queries, function (query) {
+				return this.mapKeyValueQuery(query, callback, context);
+			}, this);
+		},
+		
+		mapKeyValuePair: function (value, key, callback, context) {
+			if (key in this.SYNTAX_PAIR_KEYS)
+				return Objs.objectBy(key, this.mapKeyValueQueries(value, callback, context));
+			if (this.is_query_atom(value))
+				return callback.call(context, key, value);
+			var result = {};
+			Objs.iter(value, function (condition_value, condition_key) {
+				result[condition_key] = this.mapKeyValueCondition(condition_value, key, callback, context);
+			}, this);
+			return Obj.objectBy(key, result);
+		},
 
+		mapKeyValueCondition: function (condition_value, key, callback, context) {
+			var is_array = Types.is_array(condition_value);
+			if (!is_array)
+				condition_value = [condition_value];
+			var result = Objs.map(condition_value, function (value) {
+				return Objs.peek(callback.call(context, key, value));
+			}, this);
+			return is_array ? result : result[0];
+		}
+		
+		
 	}; 
 });
 Scoped.define("module:Queries.Engine", [
@@ -2068,9 +2109,12 @@ Scoped.define("module:Stores.SimulatorStore", [
 
 Scoped.define("module:Stores.TransformationStore", [
                                                  "module:Stores.PassthroughStore",
+                                                 "module:Queries",
                                                  "base:Iterators.MappedIterator",
-                                                 "base:Objs"
-                                                 ], function (PassthroughStore, MappedIterator, Objs, scoped) {
+                                                 "base:Objs",
+                                                 "base:Types",
+                                                 "base:Promise"
+                                                 ], function (PassthroughStore, Queries, MappedIterator, Objs, Types, Promise, scoped) {
 	return PassthroughStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 			
@@ -2091,10 +2135,14 @@ Scoped.define("module:Stores.TransformationStore", [
 			},
 			
 			_encodeQuery: function (query, options) {
-				// Usually needs better encoding
+				var opts = Objs.clone(options);
+				if (opts.sort)
+					opts.sort = Types.is_object(opts.sort) ? this._encodeData(opts.sort) : {};
 				return {
-					query: query,
-					options: options
+					query: Queries.mapKeyValue(query, function (key, value) {
+						return this._encodeData(Objs.objectBy(key, value)); 
+					}, this),
+					options: opts
 				};
 			},
 

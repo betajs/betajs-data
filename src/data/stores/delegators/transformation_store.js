@@ -1,9 +1,12 @@
 
 Scoped.define("module:Stores.TransformationStore", [
                                                  "module:Stores.PassthroughStore",
+                                                 "module:Queries",
                                                  "base:Iterators.MappedIterator",
-                                                 "base:Objs"
-                                                 ], function (PassthroughStore, MappedIterator, Objs, scoped) {
+                                                 "base:Objs",
+                                                 "base:Types",
+                                                 "base:Promise"
+                                                 ], function (PassthroughStore, Queries, MappedIterator, Objs, Types, Promise, scoped) {
 	return PassthroughStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 			
@@ -24,10 +27,14 @@ Scoped.define("module:Stores.TransformationStore", [
 			},
 			
 			_encodeQuery: function (query, options) {
-				// Usually needs better encoding
+				var opts = Objs.clone(options);
+				if (opts.sort)
+					opts.sort = Types.is_object(opts.sort) ? this._encodeData(opts.sort) : {};
 				return {
-					query: query,
-					options: options
+					query: Queries.mapKeyValue(query, function (key, value) {
+						return this._encodeData(Objs.objectBy(key, value)); 
+					}, this),
+					options: opts
 				};
 			},
 

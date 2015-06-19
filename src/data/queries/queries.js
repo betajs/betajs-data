@@ -436,7 +436,48 @@ Scoped.define("module:Queries", [
 				}
 			}, this);
 			return result;
-		}
+		},
+		
+		mapKeyValue: function (query, callback, context) {
+			return this.mapKeyValueQuery(query, callback, context);
+		},
+		
+		mapKeyValueQuery: function (query, callback, context) {
+			var result = {};
+			Objs.iter(query, function (value, key) {
+				result = Objs.extend(result, this.mapKeyValuePair(value, key, callback, context));
+			}, this);
+			return result;
+		},
+		
+		mapKeyValueQueries: function (queries, callback, context) {
+			return Objs.map(queries, function (query) {
+				return this.mapKeyValueQuery(query, callback, context);
+			}, this);
+		},
+		
+		mapKeyValuePair: function (value, key, callback, context) {
+			if (key in this.SYNTAX_PAIR_KEYS)
+				return Objs.objectBy(key, this.mapKeyValueQueries(value, callback, context));
+			if (this.is_query_atom(value))
+				return callback.call(context, key, value);
+			var result = {};
+			Objs.iter(value, function (condition_value, condition_key) {
+				result[condition_key] = this.mapKeyValueCondition(condition_value, key, callback, context);
+			}, this);
+			return Obj.objectBy(key, result);
+		},
 
+		mapKeyValueCondition: function (condition_value, key, callback, context) {
+			var is_array = Types.is_array(condition_value);
+			if (!is_array)
+				condition_value = [condition_value];
+			var result = Objs.map(condition_value, function (value) {
+				return Objs.peek(callback.call(context, key, value));
+			}, this);
+			return is_array ? result : result[0];
+		}
+		
+		
 	}; 
 });
