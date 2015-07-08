@@ -1,5 +1,5 @@
 Scoped.define("module:Modelling.Associations.ConditionalAssociation", [
-                                                                       "module:Modelling.Associations.Associations",
+                                                                       "module:Modelling.Associations.Association",
                                                                        "base:Objs"
                                                                        ], function (Associations, Objs, scoped) {
 	return Associations.extend({scoped: scoped}, function (inherited) {

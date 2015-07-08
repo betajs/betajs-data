@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-06-19
+betajs-data - v1.0.0 - 2015-07-08
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -14,7 +14,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '38.1434756150706'
+		version: '39.1436389370226'
 	};
 });
 
@@ -4795,7 +4795,7 @@ Scoped.define("module:Modelling.Associations.BelongsToAssociation", [
     });
 });
 Scoped.define("module:Modelling.Associations.ConditionalAssociation", [
-                                                                       "module:Modelling.Associations.Associations",
+                                                                       "module:Modelling.Associations.Association",
                                                                        "base:Objs"
                                                                        ], function (Associations, Objs, scoped) {
 	return Associations.extend({scoped: scoped}, function (inherited) {
