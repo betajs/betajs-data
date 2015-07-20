@@ -1,5 +1,5 @@
 Scoped.define("module:Collections.TableQueryCollection", [      
-                                                          "module:Collections.QueryCollection",
+                                                          "module:Collections.AbstractQueryCollection",
                                                           "base:Objs"
                                                           ], function (QueryCollection, Objs, scoped) {
 	return QueryCollection.extend({scoped: scoped}, function (inherited) {

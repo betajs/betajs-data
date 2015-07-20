@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-07-08
+betajs-data - v1.0.0 - 2015-07-20
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -14,7 +14,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '39.1436389370226'
+		version: '40.1437422226820'
 	};
 });
 
@@ -3673,12 +3673,12 @@ Scoped.define("module:Stores.MemoryIndex", [
 });
 
 /**
- * @class QueryCollection
+ * @class AbstractQueryCollection
  *
  * A base class for querying collections. Subclasses specify the expected type
  * of data store and specify whether the query collection is active.
  */
-Scoped.define("module:Collections.QueryCollection", [      
+Scoped.define("module:Collections.AbstractQueryCollection", [      
                                                      "base:Collections.Collection",
                                                      "base:Objs",
                                                      "base:Types",
@@ -4066,7 +4066,7 @@ Scoped.define("module:Collections.QueryCollection", [
 
 
 Scoped.define("module:Collections.StoreQueryCollection", [      
-                                                          "module:Collections.QueryCollection",
+                                                          "module:Collections.AbstractQueryCollection",
                                                           "base:Objs"
                                                           ], function (QueryCollection, Objs, scoped) {
 	return QueryCollection.extend({scoped: scoped}, function (inherited) {
@@ -4102,7 +4102,7 @@ Scoped.define("module:Collections.StoreQueryCollection", [
 });
 
 Scoped.define("module:Collections.TableQueryCollection", [      
-                                                          "module:Collections.QueryCollection",
+                                                          "module:Collections.AbstractQueryCollection",
                                                           "base:Objs"
                                                           ], function (QueryCollection, Objs, scoped) {
 	return QueryCollection.extend({scoped: scoped}, function (inherited) {

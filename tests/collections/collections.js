@@ -56,7 +56,7 @@ test("test query collection", function() {
 		for (var j = 1; j < 3; ++j)
 			for (var k = 1; k < 3; ++k)
 				store.insert({i:i,j:j,k:k});
-	var coll = new BetaJS.Data.Collections.QueryCollection(store, {query: {i:1, j:1}}, {
+	var coll = new BetaJS.Data.Collections.StoreQueryCollection(store, {query: {i:1, j:1}}, {
 		active: true,
 		auto: true
 	});
@@ -81,7 +81,7 @@ test("test query collection pagination", function() {
 	for (var i = 0; i <= 4; ++i)
 		for (var j = 0; j <= 9; ++j)
 			store.insert({i:i,j:j});
-	var coll = new BetaJS.Data.Collections.QueryCollection(store, {}, {
+	var coll = new BetaJS.Data.Collections.StoreQueryCollection(store, {}, {
 		range: 10,
 		auto: 10,
 		sort: {
@@ -121,7 +121,7 @@ test("test query collection increasing", function() {
 	for (var i = 0; i <= 4; ++i)
 		for (var j = 0; j <= 9; ++j)
 			store.insert({i:i,j:j});
-	var coll = new BetaJS.Data.Collections.QueryCollection(store, {}, {
+	var coll = new BetaJS.Data.Collections.StoreQueryCollection(store, {}, {
 		limit: 10,
 		forward_steps: 10,
 		auto: 10,

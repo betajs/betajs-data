@@ -1,10 +1,10 @@
 /**
- * @class QueryCollection
+ * @class AbstractQueryCollection
  *
  * A base class for querying collections. Subclasses specify the expected type
  * of data store and specify whether the query collection is active.
  */
-Scoped.define("module:Collections.QueryCollection", [      
+Scoped.define("module:Collections.AbstractQueryCollection", [      
                                                      "base:Collections.Collection",
                                                      "base:Objs",
                                                      "base:Types",
