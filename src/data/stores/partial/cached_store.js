@@ -23,7 +23,9 @@ Scoped.define("module:Stores.CachedStore", [
 				}, options);
 				this.remoteStore = remoteStore;
 				this._online = true;
-				this.itemCache = this._options.itemCache || this.auto_destroy(new MemoryStore());
+				this.itemCache = this._options.itemCache || this.auto_destroy(new MemoryStore({					
+					id_key: remoteStore.id_key()
+				}));
 				this.queryCache = this._options.queryCache || this.auto_destroy(new MemoryStore());
 				this.cacheStrategy = this._options.cacheStrategy || this.auto_destroy(new ExpiryCacheStrategy());
 				if (this._options.auto_cleanup) {

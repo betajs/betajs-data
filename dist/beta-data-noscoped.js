@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-07-20
+betajs-data - v1.0.0 - 2015-08-03
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -14,7 +14,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '40.1437422226820'
+		version: '41.1438582605146'
 	};
 });
 
@@ -1922,7 +1922,9 @@ Scoped.define("module:Stores.CachedStore", [
 				}, options);
 				this.remoteStore = remoteStore;
 				this._online = true;
-				this.itemCache = this._options.itemCache || this.auto_destroy(new MemoryStore());
+				this.itemCache = this._options.itemCache || this.auto_destroy(new MemoryStore({					
+					id_key: remoteStore.id_key()
+				}));
 				this.queryCache = this._options.queryCache || this.auto_destroy(new MemoryStore());
 				this.cacheStrategy = this._options.cacheStrategy || this.auto_destroy(new ExpiryCacheStrategy());
 				if (this._options.auto_cleanup) {
