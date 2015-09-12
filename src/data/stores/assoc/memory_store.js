@@ -2,8 +2,9 @@
 
 Scoped.define("module:Stores.MemoryStore", [
                                             "module:Stores.AssocStore",
-                                            "base:Iterators.ObjectValuesIterator"
-                                            ], function (AssocStore, ObjectValuesIterator, scoped) {
+                                            "base:Iterators.ObjectValuesIterator",
+                                            "base:Objs"
+                                            ], function (AssocStore, ObjectValuesIterator, Objs, scoped) {
 	return AssocStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -26,6 +27,10 @@ Scoped.define("module:Stores.MemoryStore", [
 
 			_iterate: function () {
 				return new ObjectValuesIterator(this.__data);
+			},
+			
+			_count: function (query) {
+				return query ? inherited._count.call(this, query) : Objs.count(this.__data);
 			}
 
 		};

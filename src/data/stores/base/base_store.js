@@ -21,12 +21,12 @@ Scoped.define("module:Stores.BaseStore", [
 				return this._ensure_index(key);
 			},
 
-			clear: function () {
-				return this.query().mapSuccess(function (iter) {
+			clear: function (ctx) {
+				return this.query(null, null, ctx).mapSuccess(function (iter) {
 					var promise = Promise.and();
 					while (iter.hasNext()) {
 						var obj = iter.next();
-						promise = promise.and(this.remove(obj[this._id_key]));
+						promise = promise.and(this.remove(obj[this._id_key], ctx));
 					}
 					return promise;
 				}, this);

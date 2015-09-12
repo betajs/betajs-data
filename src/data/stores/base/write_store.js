@@ -21,60 +21,66 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 		id_of: function (row) {
 			return row[this.id_key()];
 		},
-
-		_inserted: function (row) {
-			this.trigger("insert", row);		
-			this.trigger("write", "insert", row);
+		
+		id_row: function (id) {
+			var result = {};
+			result[this._id_key] = id;
+			return result;
 		},
 
-		_removed: function (id) {
-			this.trigger("remove", id);
-			this.trigger("write", "remove", id);
+		_inserted: function (row, ctx) {
+			this.trigger("insert", row, ctx);		
+			this.trigger("write", "insert", row, ctx);
 		},
 
-		_updated: function (row, data) {
-			this.trigger("update", row, data);	
-			this.trigger("write", "update", row, data);
+		_removed: function (id, ctx) {
+			this.trigger("remove", id, ctx);
+			this.trigger("write", "remove", id, ctx);
+		},
+
+		_updated: function (row, data, ctx) {
+			this.trigger("update", row, data, ctx);	
+			this.trigger("write", "update", row, data, ctx);
 		}, 
 
-		insert_all: function (data, query) {
+		insert_all: function (data, ctx) {
 			var promise = Promise.and();
 			for (var i = 0; i < data.length; ++i)
-				promise = promise.and(this.insert(data[i]));
+				promise = promise.and(this.insert(data[i], ctx));
 			return promise.end();
 		},
 
-		_insert: function (data) {
+		_insert: function (data, ctx) {
 			return Promise.create(null, new StoreException("unsupported: insert"));
 		},
 
-		_remove: function (id) {
+		_remove: function (id, ctx) {
 			return Promise.create(null, new StoreException("unsupported: remove"));
 		},
 
-		_update: function (id, data) {
+		_update: function (id, data, ctx) {
 			return Promise.create(null, new StoreException("unsupported: update"));
 		},
 
-		insert: function (data) {
+		insert: function (data, ctx) {
 			if (!data)
 				return Promise.create(null, new StoreException("empty insert"));
 			if (this._create_ids && !(this._id_key in data && data[this._id_key]))
 				data[this._id_key] = this._id_generator.generate();
-			return this._insert(data).success(function (row) {
-				this._inserted(row);
+			return this._insert(data, ctx).success(function (row) {
+				this._inserted(row, ctx);
 			}, this);
 		},
 
-		remove: function (id) {
-			return this._remove(id).success(function () {
-				this._removed(id);
+		remove: function (id, ctx) {
+			return this._remove(id, ctx).success(function () {
+				this._removed(id, ctx);
 			}, this);
 		},
 
-		update: function (id, data) {
-			return this._update(id, data).success(function (row) {
-				this._updated(row, data);
+		update: function (id, data, ctx) {
+			return this._update(id, data, ctx).success(function (row) {
+				this._updated(row, data, ctx);
 			}, this);
 		}
 

@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-08-03
+betajs-data - v1.0.0 - 2015-09-12
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -14,7 +14,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '41.1438582605146'
+		version: '42.1442085042499'
 	};
 });
 
@@ -1007,8 +1007,9 @@ Scoped.define("module:Stores.AssocStore", [
 
 Scoped.define("module:Stores.MemoryStore", [
                                             "module:Stores.AssocStore",
-                                            "base:Iterators.ObjectValuesIterator"
-                                            ], function (AssocStore, ObjectValuesIterator, scoped) {
+                                            "base:Iterators.ObjectValuesIterator",
+                                            "base:Objs"
+                                            ], function (AssocStore, ObjectValuesIterator, Objs, scoped) {
 	return AssocStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -1031,6 +1032,10 @@ Scoped.define("module:Stores.MemoryStore", [
 
 			_iterate: function () {
 				return new ObjectValuesIterator(this.__data);
+			},
+			
+			_count: function (query) {
+				return query ? inherited._count.call(this, query) : Objs.count(this.__data);
 			}
 
 		};
@@ -1060,12 +1065,12 @@ Scoped.define("module:Stores.BaseStore", [
 				return this._ensure_index(key);
 			},
 
-			clear: function () {
-				return this.query().mapSuccess(function (iter) {
+			clear: function (ctx) {
+				return this.query(null, null, ctx).mapSuccess(function (iter) {
 					var promise = Promise.and();
 					while (iter.hasNext()) {
 						var obj = iter.next();
-						promise = promise.and(this.remove(obj[this._id_key]));
+						promise = promise.and(this.remove(obj[this._id_key], ctx));
 					}
 					return promise;
 				}, this);
@@ -1093,7 +1098,7 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 			return this._watcher;
 		},
 
-		_get: function (id) {
+		_get: function (id, ctx) {
 			return Promise.create(null, new StoreException("unsupported: get"));
 		},
 
@@ -1101,15 +1106,25 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 			return {};
 		},
 
-		_query: function (query, options) {
+		_query: function (query, options, ctx) {
 			return Promise.create(null, new StoreException("unsupported: query"));
 		},
 
-		get: function (id) {
-			return this._get(id);
+		get: function (id, ctx) {
+			return this._get(id, ctx);
+		},
+		
+		count: function (query, ctx) {
+			return this._count(query, ctx);
+		},
+		
+		_count: function (query, ctx) {
+			return this.query(query, {}, ctx).mapSuccess(function (iter) {
+				return iter.asArray().length;
+			});
 		},
 
-		query: function (query, options) {
+		query: function (query, options, ctx) {
 			query = Objs.clone(query, -1);
 			options = Objs.clone(options, -1);
 			if (options) {
@@ -1122,7 +1137,7 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 					{query: query, options: options || {}},
 					this._query_capabilities(),
 					function (constrainedQuery) {
-						return this._query(constrainedQuery.query, constrainedQuery.options);
+						return this._query(constrainedQuery.query, constrainedQuery.options, ctx);
 					},
 					this,
 					this.indices);
@@ -1283,60 +1298,66 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 		id_of: function (row) {
 			return row[this.id_key()];
 		},
-
-		_inserted: function (row) {
-			this.trigger("insert", row);		
-			this.trigger("write", "insert", row);
+		
+		id_row: function (id) {
+			var result = {};
+			result[this._id_key] = id;
+			return result;
 		},
 
-		_removed: function (id) {
-			this.trigger("remove", id);
-			this.trigger("write", "remove", id);
+		_inserted: function (row, ctx) {
+			this.trigger("insert", row, ctx);		
+			this.trigger("write", "insert", row, ctx);
 		},
 
-		_updated: function (row, data) {
-			this.trigger("update", row, data);	
-			this.trigger("write", "update", row, data);
+		_removed: function (id, ctx) {
+			this.trigger("remove", id, ctx);
+			this.trigger("write", "remove", id, ctx);
+		},
+
+		_updated: function (row, data, ctx) {
+			this.trigger("update", row, data, ctx);	
+			this.trigger("write", "update", row, data, ctx);
 		}, 
 
-		insert_all: function (data, query) {
+		insert_all: function (data, ctx) {
 			var promise = Promise.and();
 			for (var i = 0; i < data.length; ++i)
-				promise = promise.and(this.insert(data[i]));
+				promise = promise.and(this.insert(data[i], ctx));
 			return promise.end();
 		},
 
-		_insert: function (data) {
+		_insert: function (data, ctx) {
 			return Promise.create(null, new StoreException("unsupported: insert"));
 		},
 
-		_remove: function (id) {
+		_remove: function (id, ctx) {
 			return Promise.create(null, new StoreException("unsupported: remove"));
 		},
 
-		_update: function (id, data) {
+		_update: function (id, data, ctx) {
 			return Promise.create(null, new StoreException("unsupported: update"));
 		},
 
-		insert: function (data) {
+		insert: function (data, ctx) {
 			if (!data)
 				return Promise.create(null, new StoreException("empty insert"));
 			if (this._create_ids && !(this._id_key in data && data[this._id_key]))
 				data[this._id_key] = this._id_generator.generate();
-			return this._insert(data).success(function (row) {
-				this._inserted(row);
+			return this._insert(data, ctx).success(function (row) {
+				this._inserted(row, ctx);
 			}, this);
 		},
 
-		remove: function (id) {
-			return this._remove(id).success(function () {
-				this._removed(id);
+		remove: function (id, ctx) {
+			return this._remove(id, ctx).success(function () {
+				this._removed(id, ctx);
 			}, this);
 		},
 
-		update: function (id, data) {
-			return this._update(id, data).success(function (row) {
-				this._updated(row, data);
+		update: function (id, data, ctx) {
+			return this._update(id, data, ctx).success(function (row) {
+				this._updated(row, data, ctx);
 			}, this);
 		}
 
@@ -1366,6 +1387,167 @@ Scoped.define("module:Stores.WriteStore", [
 
 		};
 	}]);
+});
+
+Scoped.define("module:Stores.ContextualizedStore", [
+                                                 "module:Stores.BaseStore",
+                                                 "base:Iterators.MappedIterator",
+                                                 "base:Promise"
+                                                 ], function (BaseStore, MappedIterator, Promise, scoped) {
+	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+		return {
+
+			constructor: function (store, options) {
+				this.__store = store;
+				options = options || {};
+				options.id_key = store.id_key();
+				this.__context = options.context || this;
+				this.__decode = options.decode;
+				this.__encode = options.encode;
+				inherited.constructor.call(this, options);
+				if (options.destroy_store)
+					this._auto_destroy(store);
+			},
+			
+			_decode: function (data) {
+				return this.__decode.call(this.__context, data);
+			},
+			
+			_encode: function (data, ctx) {
+				return this.__encode.call(this.__context, data, ctx);
+			},
+			
+			_decodeId: function (id) {
+				var result = this._decode(this.id_row(id));
+				return {
+					id: this.id_of(result.data),
+					ctx: result.ctx
+				};
+			},
+
+			_query_capabilities: function () {
+				return this.__store._query_capabilities();
+			},
+
+			_insert: function (data) {
+				var decoded = this._decode(data);
+				return this.__store.insert(decoded.data, decoded.ctx).mapSuccess(function (data) {
+					return this._encode(data, decoded.ctx);
+				}, this);
+			},
+
+			_remove: function (id) {
+				var decoded = this._decodeId(id);
+				return this.__store.remove(decoded.id, decoded.ctx).mapSuccess(function () {
+					return id;
+				}, this);
+			},
+
+			_get: function (id) {
+				var decoded = this._decodeId(id);
+				return this.__store.get(decoded.id, decoded.ctx).mapSuccess(function (data) {
+					return this._encode(data, decoded.ctx);
+				}, this);
+			},
+
+			_update: function (id, data) {
+				var decoded = this._decodeId(id);
+				this.__store.update(decoded.id, data, decoded.ctx).mapSuccess(function (row) {
+					return row;
+				}, this);
+			},
+
+			_query: function (query, options) {
+				var decoded = this._decode(query);
+				return this.__store.query(decoded.data, options, decoded.ctx).mapSuccess(function (results) {
+					return new MappedIterator(results, function (row) {
+						return this._encode(row, decoded.ctx);
+					}, this);
+				}, this);
+			},
+
+			_ensure_index: function (key) {
+				return this.__store.ensure_index(key);
+			},
+
+			_store: function () {
+				return this.__store;
+			}
+
+		};
+	});
+});
+
+Scoped.define("module:Stores.MultiplexerStore", [
+                                                 "module:Stores.BaseStore",
+                                                 "module:Queries.Constrained",
+                                                 "base:Promise"
+                                                 ], function (BaseStore, Constrained, Promise, scoped) {
+	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+		return {
+
+			constructor: function (options) {
+				inherited.constructor.call(this, options);
+				this.__context = options.context || this;
+				this.__acquireStore = options.acquireStore;
+				this.__releaseStore = options.releaseStore;
+			},
+			
+			_acquireStore: function (ctx) {
+				return this.__acquireStore ? this.__acquireStore.call(this.__context, ctx) : ctx;
+			},
+			
+			_releaseStore: function (ctx, store) {
+				if (this.__releaseStore)
+					this.__releaseStore.call(this.__context, ctx, store);
+			},
+
+			_query_capabilities: function () {
+				return Constrained.fullConstrainedQueryCapabilities();
+			},
+
+			_insert: function (data, ctx) {
+				return this._acquireStore(ctx).mapSuccess(function (store) {
+					return store.insert(data).callback(function () {
+						this._releaseStore(ctx, store);
+					}, this);
+				}, this);
+			},
+			
+			_remove: function (id, ctx) {
+				return this._acquireStore(ctx).mapSuccess(function (store) {
+					return store.remove(id).callback(function () {
+						this._releaseStore(ctx, store);
+					}, this);
+				}, this);
+			},
+
+			_update: function (id, data, ctx) {
+				return this._acquireStore(ctx).mapSuccess(function (store) {
+					return store.update(id, data).callback(function () {
+						this._releaseStore(ctx, store);
+					}, this);
+				}, this);
+			},
+
+			_get: function (id, ctx) {
+				return this._acquireStore(ctx).mapSuccess(function (store) {
+					return store.get(id).callback(function () {
+						this._releaseStore(ctx, store);
+					}, this);
+				}, this);
+			},
+
+			_query: function (query, options, ctx) {
+				return this._preQuery(query, options).mapSuccess(function (args) {
+					return this.__store.query(args.query, args.options).mapSuccess(function (results) {
+						return this._postQuery(results);
+					}, this);
+				}, this);
+			}
+
+		};
+	});
 });
 
 
@@ -1534,6 +1716,61 @@ Scoped.define("module:Stores.ReadyStore", [
 		};
 	});
 });
+
+
+Scoped.define("module:Stores.ResilientStore", [
+                                                 "module:Stores.BaseStore",
+                                                 "base:Promise"
+                                                 ], function (BaseStore, Promise, scoped) {
+	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+		return {
+
+			constructor: function (store, options) {
+				this.__store = store;
+				options = options || {};
+				options.id_key = store.id_key();
+				inherited.constructor.call(this, options);
+				this._resilience = options.resilience || 10;
+				if (options.destroy_store)
+					this._auto_destroy(store);
+			},
+
+			_query_capabilities: function () {
+				return this.__store._query_capabilities();
+			},
+
+			_insert: function () {
+				return Promise.resilientCall(this._store.insert, this._store, this._resilience, arguments);
+			},
+
+			_remove: function () {
+				return Promise.resilientCall(this._store.remove, this._store, this._resilience, arguments);
+			},
+
+			_get: function () {
+				return Promise.resilientCall(this._store.get, this._store, this._resilience, arguments);
+			},
+
+			_update: function (id, data) {
+				return Promise.resilientCall(this._store.update, this._store, this._resilience, arguments);
+			},
+
+			_query: function (query, options) {
+				return Promise.resilientCall(this._store.update, this._store, this._resilience, arguments);
+			},
+
+			_ensure_index: function (key) {
+				return this.__store.ensure_index(key);
+			},
+
+			_store: function () {
+				return this.__store;
+			}
+
+		};
+	});
+});
+
 
 Scoped.define("module:Stores.SimulatorStore", [
                                                "module:Stores.PassthroughStore",
@@ -3067,7 +3304,6 @@ Scoped.define("module:Stores.SocketStore", [
 				inherited.constructor.call(this, options);
 				this.__socket = socket;
 				this.__prefix = prefix;
-				this._supportsAsync = false;
 			},
 
 			/** @suppress {missingProperties} */

@@ -16,7 +16,7 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 			return this._watcher;
 		},
 
-		_get: function (id) {
+		_get: function (id, ctx) {
 			return Promise.create(null, new StoreException("unsupported: get"));
 		},
 
@@ -24,15 +24,25 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 			return {};
 		},
 
-		_query: function (query, options) {
+		_query: function (query, options, ctx) {
 			return Promise.create(null, new StoreException("unsupported: query"));
 		},
 
-		get: function (id) {
-			return this._get(id);
+		get: function (id, ctx) {
+			return this._get(id, ctx);
+		},
+		
+		count: function (query, ctx) {
+			return this._count(query, ctx);
+		},
+		
+		_count: function (query, ctx) {
+			return this.query(query, {}, ctx).mapSuccess(function (iter) {
+				return iter.asArray().length;
+			});
 		},
 
-		query: function (query, options) {
+		query: function (query, options, ctx) {
 			query = Objs.clone(query, -1);
 			options = Objs.clone(options, -1);
 			if (options) {
@@ -45,7 +55,7 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 					{query: query, options: options || {}},
 					this._query_capabilities(),
 					function (constrainedQuery) {
-						return this._query(constrainedQuery.query, constrainedQuery.options);
+						return this._query(constrainedQuery.query, constrainedQuery.options, ctx);
 					},
 					this,
 					this.indices);

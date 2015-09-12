@@ -9,7 +9,6 @@ Scoped.define("module:Stores.SocketStore", [
 				inherited.constructor.call(this, options);
 				this.__socket = socket;
 				this.__prefix = prefix;
-				this._supportsAsync = false;
 			},
 
 			/** @suppress {missingProperties} */
