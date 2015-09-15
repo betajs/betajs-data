@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.0 - 2015-09-12
+betajs-data - v1.0.0 - 2015-09-15
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -14,7 +14,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '42.1442085042499'
+		version: '43.1442356254999'
 	};
 });
 
@@ -1539,9 +1539,9 @@ Scoped.define("module:Stores.MultiplexerStore", [
 			},
 
 			_query: function (query, options, ctx) {
-				return this._preQuery(query, options).mapSuccess(function (args) {
-					return this.__store.query(args.query, args.options).mapSuccess(function (results) {
-						return this._postQuery(results);
+				return this._acquireStore(ctx).mapSuccess(function (store) {
+					return store.query(query, options).callback(function () {
+						this._releaseStore(ctx, store);
 					}, this);
 				}, this);
 			}

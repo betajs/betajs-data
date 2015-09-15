@@ -59,9 +59,9 @@ Scoped.define("module:Stores.MultiplexerStore", [
 			},
 
 			_query: function (query, options, ctx) {
-				return this._preQuery(query, options).mapSuccess(function (args) {
-					return this.__store.query(args.query, args.options).mapSuccess(function (results) {
-						return this._postQuery(results);
+				return this._acquireStore(ctx).mapSuccess(function (store) {
+					return store.query(query, options).callback(function () {
+						this._releaseStore(ctx, store);
 					}, this);
 				}, this);
 			}
