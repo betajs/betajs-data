@@ -1,8 +1,9 @@
 Scoped.define("module:Stores.Invokers.RestInvokeeAjaxInvoker", [
     "base:Class",
     "base:Net.Uri",
+    "base:Net.HttpHeader",
     "module:Stores.Invokers.RestInvokee"
-], function (Class, Uri, Invokee, scoped) {
+], function (Class, Uri, HttpHeader, Invokee, scoped) {
 	return Class.extend({scoped: scoped}, [Invokee, function (inherited) {
 		return {
 			
@@ -15,8 +16,14 @@ Scoped.define("module:Stores.Invokers.RestInvokeeAjaxInvoker", [
 				return this.__ajax.asyncCall({
 					method: method,
 					data: post,
-					uri: Net.appendUriParams(uri, get)
-				});
+					uri: Uri.appendUriParams(uri, get)
+				}).mapError(function (error) {
+					return {
+						error: error.status_code(),
+						data: error.data(),
+						invalid: error.status_code() === HttpHeader.HTTP_STATUS_PRECONDITION_FAILED
+					};
+				}, this);
 			}			
 			
 		};

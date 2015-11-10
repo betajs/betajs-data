@@ -2,8 +2,9 @@ Scoped.define("module:Stores.Invokers.StoreInvokeeRestInvoker", [
     "base:Class",
     "base:Objs",
     "base:Types",
+    "json:",
     "module:Stores.Invokers.StoreInvokee"
-], function (Class, Objs, Types, Invokee, scoped) {
+], function (Class, Objs, Types, JSON, Invokee, scoped) {
 	return Class.extend({scoped: scoped}, [Invokee, function (inherited) {
 		return {
 			
@@ -21,17 +22,15 @@ Scoped.define("module:Stores.Invokers.StoreInvokeeRestInvoker", [
 					toMethod: null,
 					dataMap: {
 						"insert": function (data, context) { return data; },
-						"update": function (data, context) { return data.data; },
-						"query": function (data, context) { return data; }
+						"update": function (data, context) { return data.data; }
 					},
 					toData: null,
 					getMap: {
 						"query": function (data, context) {
 							var result = {};
-							if (data.query)
-								result.query = data.query;
-							if (data.options)
-								result = Objs.extend(result, data.options);
+							if (data.query && !Types.is_empty(data.query))
+								result.query = JSON.stringify(data.query);
+							result = Objs.extend(result, data.options);
 							return result;
 						}
 					},

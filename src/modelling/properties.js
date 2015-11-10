@@ -2,11 +2,8 @@ Scoped.define("module:Modelling.SchemedProperties", [
                                                      "base:Properties.Properties",
                                                      "base:Types",
                                                      "base:Promise",
-                                                     "base:Objs",
-                                                     "module:Stores.RemoteStoreException",
-                                                     "base:Net.HttpHeader",
-                                                     "module:Modelling.ModelInvalidException"
-                                                     ], function (Properties, Types, Promise, Objs, RemoteStoreException, HttpHeader, ModelInvalidException, scoped) {
+                                                     "base:Objs"
+                                                     ], function (Properties, Types, Promise, Objs, scoped) {
 	return Properties.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -175,21 +172,6 @@ Scoped.define("module:Modelling.SchemedProperties", [
 				for (var key in data)
 					if (key in scheme)
 						setInner.call(this, key);
-			},
-
-			validation_exception_conversion: function (e) {
-				var source = e;
-				if ("instance_of" in e && e.instance_of(RemoteStoreException))
-					source = e.source();
-				else if (!("status_code" in source && "data" in source))
-					return e;
-				if (source.status_code() == HttpHeader.HTTP_STATUS_PRECONDITION_FAILED && source.data()) {
-					Objs.iter(source.data(), function (value, key) {
-						this.setError(key, value);
-					}, this);
-					e = new ModelInvalidException(this);
-				}
-				return e;		
 			}
 
 		};

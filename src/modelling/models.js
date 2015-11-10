@@ -108,8 +108,14 @@ Scoped.define("module:Modelling.Model", [
 					var wasNew = this.isNew();
 					var promise = this.isNew() ? this.__table.store().insert(attrs) : this.__table.store().update(this.id(), attrs);
 					return promise.mapCallback(function (err, result) {
-						if (err)
-							return Exceptions.ensure(this.validation_exception_conversion(err));
+						if (err) {
+							if (err.data) {
+								Objs.iter(err.data, function (value, key) {
+									this.setError(key, value);
+								}, this);
+							}
+							return Exceptions.ensure(new ModalInvalidException(this));
+						}
 						this.__silent++;
 						this.setAll(result);
 						this.__silent--;

@@ -10,6 +10,7 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 			options = options || {};
 			this.indices = {};
 			this._watcher = options.watcher || null;
+			this._capabilities = options.capabilities || {};
 		},
 		
 		watcher: function () {
@@ -21,7 +22,7 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 		},
 
 		_query_capabilities: function () {
-			return {};
+			return this._capabilities;
 		},
 
 		_query: function (query, options, ctx) {
