@@ -41,19 +41,19 @@ Scoped.define("module:Modelling.Table", [
 				return Types.is_string(cls) ? Scoped.getGlobal(cls) : cls;
 			},
 
-			newModel: function (attributes, cls) {
+			newModel: function (attributes, cls, ctx) {
 				cls = this.modelClass(cls);
-				var model = new cls(attributes, this);
+				var model = new cls(attributes, this, {}, ctx);
 				if (this.__options.auto_create)
 					model.save();
 				return model;
 			},
 
-			materialize: function (obj) {
+			materialize: function (obj, ctx) {
 				if (!obj)
 					return null;
 				var cls = this.modelClass(this.__options.type_column && obj[this.__options.type_column] ? this.__options.type_column : null);
-				return new cls(obj, this, {newModel: false});
+				return new cls(obj, this, {newModel: false}, ctx);
 			},
 
 			options: function () {
@@ -64,20 +64,22 @@ Scoped.define("module:Modelling.Table", [
 				return this.__store;
 			},
 
-			findById: function (id) {
-				return this.__store.get(id).mapSuccess(this.materialize, this);
+			findById: function (id, ctx) {
+				return this.__store.get(id, ctx).mapSuccess(function (obj) {
+					return this.materialize(obj, ctx);
+				}, this);
 			},
 
-			findBy: function (query) {
-				return this.allBy(query, {limit: 1}).mapSuccess(function (iter) {
+			findBy: function (query, ctx) {
+				return this.allBy(query, {limit: 1}, ctx).mapSuccess(function (iter) {
 					return iter.next();
 				});
 			},
 
-			allBy: function (query, options) {
-				return this.__store.query(query, options).mapSuccess(function (iterator) {
+			allBy: function (query, options, ctx) {
+				return this.__store.query(query, options, ctx).mapSuccess(function (iterator) {
 					return new MappedIterator(iterator, function (obj) {
-						return this.materialize(obj);
+						return this.materialize(obj, ctx);
 					}, this);
 				}, this);
 			},
@@ -86,8 +88,8 @@ Scoped.define("module:Modelling.Table", [
 				return (Types.is_string(this.__model_type) ? Scoped.getGlobal(this.__model_type) : this.__model_type).primary_key();
 			},
 
-			all: function (options) {
-				return this.allBy({}, options);
+			all: function (options, ctx) {
+				return this.allBy({}, options, ctx);
 			},
 
 			query: function () {

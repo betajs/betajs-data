@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.4 - 2015-11-09
+betajs-data - v1.0.4 - 2015-11-11
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -14,7 +14,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '47.1447120515433'
+		version: '48.1447272762968'
 	};
 });
 
@@ -1479,6 +1479,91 @@ Scoped.define("module:Stores.ContextualizedStore", [
 	});
 });
 
+
+
+Scoped.define("module:Stores.DecontextualizedSelectStore", [
+	"module:Stores.BaseStore",
+	"base:Iterators.MappedIterator",
+	"base:Promise"
+], function (BaseStore, MappedIterator, Promise, scoped) {
+   	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+   		return {
+
+   			constructor: function (store, options) {
+   				this.__store = store;
+   				options = options || {};
+   				options.id_key = store.id_key();
+   				inherited.constructor.call(this, options);
+   				if (options.destroy_store)
+   					this._auto_destroy(store);
+   			},
+   			
+   			_decode: function (data, ctx) {
+   				data = Objs.clone(data, 1);
+   				Objs.iter(ctx, function (value, key) {
+   					delete data[key];
+   				});
+   				return data;
+   			},
+   			
+   			_encode: function (data, ctx) {
+   				return Objs.extend(Objs.clone(data, 1), ctx);
+   			},
+   			
+   			_query_capabilities: function () {
+   				return this.__store._query_capabilities();
+   			},
+
+   			_insert: function (data, ctx) {
+   				return this.__store.insert(this._encode(data, ctx)).mapSuccess(function (data) {
+   					return this._decode(data, ctx);
+   				}, this);
+   			},
+
+   			_query: function (query, options, ctx) {
+   				return this.__store.query(this._encode(query, ctx), options).mapSuccess(function (results) {
+   					return new MappedIterator(results, function (row) {
+   						return this._decode(row, ctx);
+   					}, this);
+   				}, this);
+   			},
+
+   			_ensure_index: function (key) {
+   				return this.__store.ensure_index(key);
+   			},
+
+   			_store: function () {
+   				return this.__store;
+   			},
+
+   			_get: function (id, ctx) {
+   				return this.query(this.id_row(id), {limit: 1}, ctx).mapSuccess(function (rows) {
+   					if (!rows.hasNext())
+   						return null;
+   					return this._decode(rows.next(), ctx);
+   				}, this);
+   			},
+
+   			_remove: function (id, ctx) {
+   				return this.query(this.id_row(id), {limit: 1}, ctx).mapSuccess(function (rows) {
+   					if (!rows.hasNext())
+   						return null;
+   					return this.__store.remove(this.__store.id_of(this._decode(rows.next(), ctx)));
+   				}, this);
+   			},
+
+   			_update: function (id, data, ctx) {
+   				return this.query(this.id_row(id), {limit: 1}, ctx).mapSuccess(function (rows) {
+   					if (!rows.hasNext())
+   						return null;
+   					return this.__store.update(this.__store.id_of(this._decode(rows.next(), ctx)), data);
+   				}, this);
+   			}
+
+   		};
+   	});
+});
+
 Scoped.define("module:Stores.MultiplexerStore", [
                                                  "module:Stores.BaseStore",
                                                  "module:Queries.Constrained",
@@ -1805,6 +1890,70 @@ Scoped.define("module:Stores.SimulatorStore", [
 		};
 	});
 });
+
+
+Scoped.define("module:Stores.TableStore", [
+    "module:Stores.BaseStore",
+    "base:Iterators.MappedIterator"
+], function (BaseStore, MappedIterator, scoped) {
+	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+		return {
+
+			constructor: function (table, options) {
+				this.__table = table;
+				options = options || {};
+				options.id_key = table.primary_key();
+				inherited.constructor.call(this, options);
+				this.__options = {
+					insertTags: options.insertTags || [],
+					readTags: options.readTags || [],
+					updateTags: options.updateTags || []
+				};
+			},
+
+			_insert: function (data, ctx) {
+				var model = this.__table.newModel({}, null, ctx);
+				model.setAllByTags(data, this.__options.insertTags);
+				return model.save().mapSuccess(function () {
+					return model.asRecord(this.__options.readTags);
+				}, this);
+			},
+
+			_remove: function (id, ctx) {
+				return this.__table.findById(id, ctx).mapSuccess(function (model) {
+					return model ? model.remove() : model;
+				}, this);
+			},
+
+			_get: function (id, ctx) {
+				return this.__table.findById(id, ctx).mapSuccess(function (model) {
+					return model ? model.asRecord(this.__options.readTags) : model;
+				}, this);
+			},
+
+			_update: function (id, data, ctx) {
+				return this.__table.findById(id, ctx).mapSuccess(function (model) {
+					if (!model)
+						return model;
+					model.setByTags(data, this.__options.updateTags);
+					return model.save().mapSuccess(function () {
+						return model.asRecord(this.__options.readTags);
+					}, this);
+				}, this);
+			},
+
+			_query: function (query, options, ctx) {
+				return this.__table.query(query, options, ctx).mapSuccess(function (models) {
+					return new MappedIterator(models, function (model) {
+						return model.asRecord(this.__options.readTags);
+					}, this);
+				}, this);
+			}
+
+		};
+	});
+});
+
 
 
 Scoped.define("module:Stores.TransformationStore", [
@@ -4465,12 +4614,13 @@ Scoped.define("module:Modelling.Model", [
 	return AssociatedProperties.extend({scoped: scoped}, function (inherited) {			
 		return {
 
-			constructor: function (attributes, table, options) {
+			constructor: function (attributes, table, options, ctx) {
 				this.__table = table;
 				this.__options = Objs.extend({
 					newModel: true,
 					removed: false
 				}, options);
+				this.__ctx = ctx;
 				this.__silent = 1;
 				inherited.constructor.call(this, attributes);
 				this.__silent = 0;
@@ -4562,7 +4712,7 @@ Scoped.define("module:Modelling.Model", [
 							return Promise.create(attrs);
 					}
 					var wasNew = this.isNew();
-					var promise = this.isNew() ? this.__table.store().insert(attrs) : this.__table.store().update(this.id(), attrs);
+					var promise = this.isNew() ? this.__table.store().insert(attrs, this.__ctx) : this.__table.store().update(this.id(), attrs, this.__ctx);
 					return promise.mapCallback(function (err, result) {
 						if (err) {
 							if (err.data) {
@@ -4589,7 +4739,7 @@ Scoped.define("module:Modelling.Model", [
 			remove: function () {
 				if (this.isNew() || this.isRemoved())
 					return Promise.create(true);
-				return this.__table.store().remove(this.id()).mapSuccess(function (result) {
+				return this.__table.store().remove(this.id(), this.__ctx).mapSuccess(function (result) {
 					this.trigger("remove");		
 					this.__options.removed = true;
 					return result;
@@ -4911,19 +5061,19 @@ Scoped.define("module:Modelling.Table", [
 				return Types.is_string(cls) ? Scoped.getGlobal(cls) : cls;
 			},
 
-			newModel: function (attributes, cls) {
+			newModel: function (attributes, cls, ctx) {
 				cls = this.modelClass(cls);
-				var model = new cls(attributes, this);
+				var model = new cls(attributes, this, {}, ctx);
 				if (this.__options.auto_create)
 					model.save();
 				return model;
 			},
 
-			materialize: function (obj) {
+			materialize: function (obj, ctx) {
 				if (!obj)
 					return null;
 				var cls = this.modelClass(this.__options.type_column && obj[this.__options.type_column] ? this.__options.type_column : null);
-				return new cls(obj, this, {newModel: false});
+				return new cls(obj, this, {newModel: false}, ctx);
 			},
 
 			options: function () {
@@ -4934,20 +5084,22 @@ Scoped.define("module:Modelling.Table", [
 				return this.__store;
 			},
 
-			findById: function (id) {
-				return this.__store.get(id).mapSuccess(this.materialize, this);
+			findById: function (id, ctx) {
+				return this.__store.get(id, ctx).mapSuccess(function (obj) {
+					return this.materialize(obj, ctx);
+				}, this);
 			},
 
-			findBy: function (query) {
-				return this.allBy(query, {limit: 1}).mapSuccess(function (iter) {
+			findBy: function (query, ctx) {
+				return this.allBy(query, {limit: 1}, ctx).mapSuccess(function (iter) {
 					return iter.next();
 				});
 			},
 
-			allBy: function (query, options) {
-				return this.__store.query(query, options).mapSuccess(function (iterator) {
+			allBy: function (query, options, ctx) {
+				return this.__store.query(query, options, ctx).mapSuccess(function (iterator) {
 					return new MappedIterator(iterator, function (obj) {
-						return this.materialize(obj);
+						return this.materialize(obj, ctx);
 					}, this);
 				}, this);
 			},
@@ -4956,8 +5108,8 @@ Scoped.define("module:Modelling.Table", [
 				return (Types.is_string(this.__model_type) ? Scoped.getGlobal(this.__model_type) : this.__model_type).primary_key();
 			},
 
-			all: function (options) {
-				return this.allBy({}, options);
+			all: function (options, ctx) {
+				return this.allBy({}, options, ctx);
 			},
 
 			query: function () {

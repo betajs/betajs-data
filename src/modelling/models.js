@@ -9,12 +9,13 @@ Scoped.define("module:Modelling.Model", [
 	return AssociatedProperties.extend({scoped: scoped}, function (inherited) {			
 		return {
 
-			constructor: function (attributes, table, options) {
+			constructor: function (attributes, table, options, ctx) {
 				this.__table = table;
 				this.__options = Objs.extend({
 					newModel: true,
 					removed: false
 				}, options);
+				this.__ctx = ctx;
 				this.__silent = 1;
 				inherited.constructor.call(this, attributes);
 				this.__silent = 0;
@@ -106,7 +107,7 @@ Scoped.define("module:Modelling.Model", [
 							return Promise.create(attrs);
 					}
 					var wasNew = this.isNew();
-					var promise = this.isNew() ? this.__table.store().insert(attrs) : this.__table.store().update(this.id(), attrs);
+					var promise = this.isNew() ? this.__table.store().insert(attrs, this.__ctx) : this.__table.store().update(this.id(), attrs, this.__ctx);
 					return promise.mapCallback(function (err, result) {
 						if (err) {
 							if (err.data) {
@@ -133,7 +134,7 @@ Scoped.define("module:Modelling.Model", [
 			remove: function () {
 				if (this.isNew() || this.isRemoved())
 					return Promise.create(true);
-				return this.__table.store().remove(this.id()).mapSuccess(function (result) {
+				return this.__table.store().remove(this.id(), this.__ctx).mapSuccess(function (result) {
 					this.trigger("remove");		
 					this.__options.removed = true;
 					return result;
