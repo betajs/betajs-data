@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.4 - 2015-11-11
+betajs-data - v1.0.5 - 2015-11-12
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -560,7 +560,7 @@ Public.exports();
 }).call(this);
 
 /*!
-betajs-data - v1.0.4 - 2015-11-11
+betajs-data - v1.0.5 - 2015-11-12
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -575,7 +575,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '48.1447272762968'
+		version: '49.1447385314419'
 	};
 });
 
@@ -1687,7 +1687,7 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 		},
 
 		query: function (query, options, ctx) {
-			query = Objs.clone(query, -1);
+			query = Objs.clone(query || {}, -1);
 			options = Objs.clone(options, -1);
 			if (options) {
 				if (options.limit)
@@ -2138,15 +2138,20 @@ Scoped.define("module:Stores.MultiplexerStore", [
 				this.__context = options.context || this;
 				this.__acquireStore = options.acquireStore;
 				this.__releaseStore = options.releaseStore;
+				this.__mapContext = options.mapContext;
 			},
 			
 			_acquireStore: function (ctx) {
-				return this.__acquireStore ? this.__acquireStore.call(this.__context, ctx) : ctx;
+				return Promise.value(this.__acquireStore ? this.__acquireStore.call(this.__context, ctx) : ctx);
 			},
 			
 			_releaseStore: function (ctx, store) {
 				if (this.__releaseStore)
 					this.__releaseStore.call(this.__context, ctx, store);
+			},
+			
+			_mapContext: function (ctx) {
+				return this.__mapContext ? this.__mapContext.call(this.__context, ctx) : null;
 			},
 
 			_query_capabilities: function () {
@@ -2155,7 +2160,7 @@ Scoped.define("module:Stores.MultiplexerStore", [
 
 			_insert: function (data, ctx) {
 				return this._acquireStore(ctx).mapSuccess(function (store) {
-					return store.insert(data).callback(function () {
+					return store.insert(data, this._mapContext(ctx)).callback(function () {
 						this._releaseStore(ctx, store);
 					}, this);
 				}, this);
@@ -2163,7 +2168,7 @@ Scoped.define("module:Stores.MultiplexerStore", [
 			
 			_remove: function (id, ctx) {
 				return this._acquireStore(ctx).mapSuccess(function (store) {
-					return store.remove(id).callback(function () {
+					return store.remove(id, this._mapContext(ctx)).callback(function () {
 						this._releaseStore(ctx, store);
 					}, this);
 				}, this);
@@ -2171,7 +2176,7 @@ Scoped.define("module:Stores.MultiplexerStore", [
 
 			_update: function (id, data, ctx) {
 				return this._acquireStore(ctx).mapSuccess(function (store) {
-					return store.update(id, data).callback(function () {
+					return store.update(id, data, this._mapContext(ctx)).callback(function () {
 						this._releaseStore(ctx, store);
 					}, this);
 				}, this);
@@ -2179,15 +2184,15 @@ Scoped.define("module:Stores.MultiplexerStore", [
 
 			_get: function (id, ctx) {
 				return this._acquireStore(ctx).mapSuccess(function (store) {
-					return store.get(id).callback(function () {
+					return store.get(id, this._mapContext(ctx)).callback(function () {
 						this._releaseStore(ctx, store);
 					}, this);
 				}, this);
 			},
-
+			
 			_query: function (query, options, ctx) {
 				return this._acquireStore(ctx).mapSuccess(function (store) {
-					return store.query(query, options).callback(function () {
+					return store.query(query, options, this._mapContext(ctx)).callback(function () {
 						this._releaseStore(ctx, store);
 					}, this);
 				}, this);
@@ -2455,8 +2460,9 @@ Scoped.define("module:Stores.SimulatorStore", [
 
 Scoped.define("module:Stores.TableStore", [
     "module:Stores.BaseStore",
-    "base:Iterators.MappedIterator"
-], function (BaseStore, MappedIterator, scoped) {
+    "base:Iterators.MappedIterator",
+    "module:Queries.Constrained"
+], function (BaseStore, MappedIterator, Constrained, scoped) {
 	return BaseStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -2470,6 +2476,10 @@ Scoped.define("module:Stores.TableStore", [
 					readTags: options.readTags || [],
 					updateTags: options.updateTags || []
 				};
+			},
+
+			_query_capabilities: function () {
+				return Constrained.fullConstrainedQueryCapabilities();
 			},
 
 			_insert: function (data, ctx) {
@@ -2885,14 +2895,14 @@ Scoped.define("module:Stores.Invokers.StoreInvokee", [], function () {
 
 Scoped.define("module:Stores.Invokers.RestInvokee", [], function () {
 	return {
-		restInvoke: function (method, uri, post, get) {}
+		restInvoke: function (method, uri, post, get, ctx) {}
 	};
 });
 
 
 Scoped.define("module:Stores.Invokers.RouteredRestInvokee", [], function () {
 	return {
-		routeredRestInvoke: function (member, uriData, post, get) {}
+		routeredRestInvoke: function (member, uriData, post, get, ctx) {}
 	};
 });
 
@@ -3089,22 +3099,22 @@ Scoped.define("module:Stores.Invokers.RouteredRestInvokeeStoreInvoker", [
 				this.__storeInvokee = storeInvokee;
 				this.__options = Objs.tree_extend({
 					dataMap: {
-						"insert": function (member, uriData, post, get) {
+						"insert": function (member, uriData, post, get, ctx) {
 							return post;
 						},
-						"update": function (member, uriData, post, get) {
+						"update": function (member, uriData, post, get, ctx) {
 							return {
 								id: uriData.id,
 								data: post
 							};
 						},
-						"get": function (member, uriData, post, get) {
+						"get": function (member, uriData, post, get, ctx) {
 							return uriData.id;
 						},
-						"remove": function (member, uriData, post, get) {
+						"remove": function (member, uriData, post, get, ctx) {
 							return uriData.id;
 						},
-						"query": function (member, uriData, post, get) {
+						"query": function (member, uriData, post, get, ctx) {
 							var result = {};
 							if (get.query)
 								result.query = JSON.parse(get.query);
@@ -3117,31 +3127,33 @@ Scoped.define("module:Stores.Invokers.RouteredRestInvokeeStoreInvoker", [
 					},
 					toData: null,
 					contextMap: {},
-					toContext: null,
+					toContext: function (member, uriData, post, get, ctx) {
+						return ctx;
+					},
 					context: this
 				}, options);
 			},
 			
-			routeredRestInvoke: function (member, uriData, post, get) {
+			routeredRestInvoke: function (member, uriData, post, get, ctx) {
 				return this.__storeInvokee.storeInvoke(
 					member,
-					this._toData(member, uriData, post, get),
-					this._toContext(member, uriData, post, get)
+					this._toData(member, uriData, post, get, ctx),
+					this._toContext(member, uriData, post, get, ctx)
 				);
  			},
  			
- 			_toData: function (member, uriData, post, get) {
+ 			_toData: function (member, uriData, post, get, ctx) {
 				var data = null;
 				if (this.__options.toData)
-					data = this.__options.toData.call(this.__options.context, member, uriData, post, get);
-				return data || (member in this.__options.dataMap ? this.__options.dataMap[member].call(this.__options.context, member, uriData, post, get) : null);
+					data = this.__options.toData.call(this.__options.context, member, uriData, post, get, ctx);
+				return data || (member in this.__options.dataMap ? this.__options.dataMap[member].call(this.__options.context, member, uriData, post, get, ctx) : null);
  			},
  			
- 			_toContext: function (member, uriData, post, get) {
+ 			_toContext: function (member, uriData, post, get, ctx) {
 				var data = null;
 				if (this.__options.toContext)
-					data = this.__options.toContext.call(this.__options.context, member, uriData, post, get);
-				return data || (member in this.__options.contextMap ? this.__options.contextMap[member].call(this.__options.context, member, uriData, post, get) : null);
+					data = this.__options.toContext.call(this.__options.context, member, uriData, post, get, ctx);
+				return data || (member in this.__options.contextMap ? this.__options.contextMap[member].call(this.__options.context, member, uriData, post, get, ctx) : null);
  			}
  		
 		};
@@ -3193,9 +3205,9 @@ Scoped.define("module:Stores.Invokers.RestInvokeeStoreInvoker", [
 				this.__routeParser = this.auto_destroy(new RouteParser(this.__routes));
 			},
 			
- 			restInvoke: function (method, uri, post, get) {
+ 			restInvoke: function (method, uri, post, get, ctx) {
  				var routed = this.__routeParser.parse(method + " " + uri);
- 				return this.routeredRestInvoke(routed.name, routed.args, post, get);
+ 				return this.routeredRestInvoke(routed.name, routed.args, post, get, ctx);
  			}
 			
 		};

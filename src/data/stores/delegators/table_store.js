@@ -1,8 +1,9 @@
 
 Scoped.define("module:Stores.TableStore", [
     "module:Stores.BaseStore",
-    "base:Iterators.MappedIterator"
-], function (BaseStore, MappedIterator, scoped) {
+    "base:Iterators.MappedIterator",
+    "module:Queries.Constrained"
+], function (BaseStore, MappedIterator, Constrained, scoped) {
 	return BaseStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -16,6 +17,10 @@ Scoped.define("module:Stores.TableStore", [
 					readTags: options.readTags || [],
 					updateTags: options.updateTags || []
 				};
+			},
+
+			_query_capabilities: function () {
+				return Constrained.fullConstrainedQueryCapabilities();
 			},
 
 			_insert: function (data, ctx) {

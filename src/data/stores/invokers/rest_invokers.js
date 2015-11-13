@@ -107,22 +107,22 @@ Scoped.define("module:Stores.Invokers.RouteredRestInvokeeStoreInvoker", [
 				this.__storeInvokee = storeInvokee;
 				this.__options = Objs.tree_extend({
 					dataMap: {
-						"insert": function (member, uriData, post, get) {
+						"insert": function (member, uriData, post, get, ctx) {
 							return post;
 						},
-						"update": function (member, uriData, post, get) {
+						"update": function (member, uriData, post, get, ctx) {
 							return {
 								id: uriData.id,
 								data: post
 							};
 						},
-						"get": function (member, uriData, post, get) {
+						"get": function (member, uriData, post, get, ctx) {
 							return uriData.id;
 						},
-						"remove": function (member, uriData, post, get) {
+						"remove": function (member, uriData, post, get, ctx) {
 							return uriData.id;
 						},
-						"query": function (member, uriData, post, get) {
+						"query": function (member, uriData, post, get, ctx) {
 							var result = {};
 							if (get.query)
 								result.query = JSON.parse(get.query);
@@ -135,31 +135,33 @@ Scoped.define("module:Stores.Invokers.RouteredRestInvokeeStoreInvoker", [
 					},
 					toData: null,
 					contextMap: {},
-					toContext: null,
+					toContext: function (member, uriData, post, get, ctx) {
+						return ctx;
+					},
 					context: this
 				}, options);
 			},
 			
-			routeredRestInvoke: function (member, uriData, post, get) {
+			routeredRestInvoke: function (member, uriData, post, get, ctx) {
 				return this.__storeInvokee.storeInvoke(
 					member,
-					this._toData(member, uriData, post, get),
-					this._toContext(member, uriData, post, get)
+					this._toData(member, uriData, post, get, ctx),
+					this._toContext(member, uriData, post, get, ctx)
 				);
  			},
  			
- 			_toData: function (member, uriData, post, get) {
+ 			_toData: function (member, uriData, post, get, ctx) {
 				var data = null;
 				if (this.__options.toData)
-					data = this.__options.toData.call(this.__options.context, member, uriData, post, get);
-				return data || (member in this.__options.dataMap ? this.__options.dataMap[member].call(this.__options.context, member, uriData, post, get) : null);
+					data = this.__options.toData.call(this.__options.context, member, uriData, post, get, ctx);
+				return data || (member in this.__options.dataMap ? this.__options.dataMap[member].call(this.__options.context, member, uriData, post, get, ctx) : null);
  			},
  			
- 			_toContext: function (member, uriData, post, get) {
+ 			_toContext: function (member, uriData, post, get, ctx) {
 				var data = null;
 				if (this.__options.toContext)
-					data = this.__options.toContext.call(this.__options.context, member, uriData, post, get);
-				return data || (member in this.__options.contextMap ? this.__options.contextMap[member].call(this.__options.context, member, uriData, post, get) : null);
+					data = this.__options.toContext.call(this.__options.context, member, uriData, post, get, ctx);
+				return data || (member in this.__options.contextMap ? this.__options.contextMap[member].call(this.__options.context, member, uriData, post, get, ctx) : null);
  			}
  		
 		};
@@ -211,9 +213,9 @@ Scoped.define("module:Stores.Invokers.RestInvokeeStoreInvoker", [
 				this.__routeParser = this.auto_destroy(new RouteParser(this.__routes));
 			},
 			
- 			restInvoke: function (method, uri, post, get) {
+ 			restInvoke: function (method, uri, post, get, ctx) {
  				var routed = this.__routeParser.parse(method + " " + uri);
- 				return this.routeredRestInvoke(routed.name, routed.args, post, get);
+ 				return this.routeredRestInvoke(routed.name, routed.args, post, get, ctx);
  			}
 			
 		};

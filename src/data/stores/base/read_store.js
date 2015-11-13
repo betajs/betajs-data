@@ -44,7 +44,7 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 		},
 
 		query: function (query, options, ctx) {
-			query = Objs.clone(query, -1);
+			query = Objs.clone(query || {}, -1);
 			options = Objs.clone(options, -1);
 			if (options) {
 				if (options.limit)

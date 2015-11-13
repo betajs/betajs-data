@@ -7,14 +7,14 @@ Scoped.define("module:Stores.Invokers.StoreInvokee", [], function () {
 
 Scoped.define("module:Stores.Invokers.RestInvokee", [], function () {
 	return {
-		restInvoke: function (method, uri, post, get) {}
+		restInvoke: function (method, uri, post, get, ctx) {}
 	};
 });
 
 
 Scoped.define("module:Stores.Invokers.RouteredRestInvokee", [], function () {
 	return {
-		routeredRestInvoke: function (member, uriData, post, get) {}
+		routeredRestInvoke: function (member, uriData, post, get, ctx) {}
 	};
 });
 
