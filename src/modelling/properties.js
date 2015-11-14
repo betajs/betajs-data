@@ -240,6 +240,10 @@ Scoped.define("module:Modelling.AssociatedProperties", [
 			id: function () {
 				return this.get(this.cls.primary_key());
 			},
+			
+			pid: function () {
+				return this.id();
+			},
 
 			hasId: function () {
 				return this.has(this.cls.primary_key());
