@@ -1,1 +1,3 @@
-TODO.
+Different query systems have different query capabilities. For instance, one system might not be able to skip search results while another system might not be able to sort. The query engine solves the following problem: given a constrained query, a query system with well-known query capabilities, compute the most efficient super query that the underlying query system can perform, perform the super query and map the super query to the actual query at hand.
+
+It is used internally by the stores.
