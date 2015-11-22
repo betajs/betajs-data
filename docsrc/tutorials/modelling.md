@@ -9,7 +9,7 @@ A ``Model`` class is a sub class of ``Properties``. When you define your own mod
    }, function (inherited) {
         return {
             _initializeScheme: function () {
-                var scheme = inherited._initializeScheme.call(this;
+                var scheme = inherited._initializeScheme.call(this);
                 scheme.first_name = {
                     type: "string"
                 };

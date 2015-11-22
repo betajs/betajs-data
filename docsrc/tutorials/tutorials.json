@@ -20,9 +20,6 @@
 			"delegator-stores": {
 				"title": "Delegator Stores"
 			},
-			"partial-stores": {
-				"title": "Partial Stores"
-			},
 			"indices": {
 				"title": "Store Indices"
 			}
@@ -34,9 +31,6 @@
 		"children": {
 			"validations": {
 				"title": "Model Attribute Validations"
-			},
-			"associations": {
-				"title": "Cross Model Associations"
 			}
 		}
 	},
