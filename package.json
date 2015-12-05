@@ -1,6 +1,6 @@
 {
 	"name": "betajs-data",
-	"version": "1.0.6",
+	"version": "1.0.7",
 	"description": "BetaJS-Data is a general-purpose JavaScript framework for handling RESTful operations and ActiveRecord abstractions.",
 	"homepage": "http://betajs.com",
 	"contributors": ["Oliver Friedmann"],
@@ -48,10 +48,10 @@
 			"Test Suite": "http://rawgit.com/betajs/betajs-data/master/tests/tests.html"
 		},
 		"cdn": {
-			"beta.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/beta-data.js",
-			"beta.min.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/beta-data.min.js",
-			"beta-noscoped.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/beta-data-noscoped.js",
-			"beta-noscoped.min.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/beta-data-noscoped.min.js"
+			"betajs-data.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data.js",
+			"betajs-data.min.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data.min.js",
+			"betajs-data-noscoped.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data-noscoped.js",
+			"betajs-data-noscoped.min.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data-noscoped.min.js"
 		}
 	} 
 }

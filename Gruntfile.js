@@ -16,7 +16,7 @@ module.exports = function(grunt) {
 						banner : module.banner
 					},
 					dist_raw : {
-						dest : 'dist/beta-data-raw.js',
+						dest : 'dist/betajs-data-raw.js',
 						src : [ 'src/fragments/begin.js-fragment',
 								'src/data/queries/*.js',
 								'src/data/stores/**/*.js',
@@ -29,9 +29,9 @@ module.exports = function(grunt) {
 								'src/fragments/end.js-fragment' ]
 					},
 					dist_scoped : {
-						dest : 'dist/beta-data.js',
+						dest : 'dist/betajs-data.js',
 						src : [ 'vendors/scoped.js',
-								'dist/beta-data-noscoped.js' ]
+								'dist/betajs-data-noscoped.js' ]
 					}
 				},
 				preprocess : {
@@ -42,13 +42,13 @@ module.exports = function(grunt) {
 						}
 					},
 					dist : {
-						src : 'dist/beta-data-raw.js',
-						dest : 'dist/beta-data-noscoped.js'
+						src : 'dist/betajs-data-raw.js',
+						dest : 'dist/betajs-data-noscoped.js'
 					}
 				},
 				clean : {
-					raw: "dist/beta-data-raw.js", 
-					closure: "dist/beta-data-closure.js",
+					raw: "dist/betajs-data-raw.js", 
+					closure: "dist/betajs-data-closure.js",
 					browserstack : [ "./browserstack.json", "BrowserStackLocal" ],
 					jsdoc : ['./jsdoc.conf.json']
 				},
@@ -58,8 +58,8 @@ module.exports = function(grunt) {
 					},
 					dist : {
 						files : {
-							'dist/beta-data-noscoped.min.js' : [ 'dist/beta-data-noscoped.js' ],
-							'dist/beta-data.min.js' : [ 'dist/beta-data.js' ]
+							'dist/betajs-data-noscoped.min.js' : [ 'dist/betajs-data-noscoped.js' ],
+							'dist/betajs-data.min.js' : [ 'dist/betajs-data.js' ]
 						}
 					}
 				},
@@ -85,8 +85,8 @@ module.exports = function(grunt) {
 						}
 					},
 					dist : {
-						src : ["./vendors/beta.js", "./dist/beta-data-noscoped.js"],
-						dest : "./dist/beta-data-closure.js"
+						src : ["./vendors/beta.js", "./dist/betajs-data-noscoped.js"],
+						dest : "./dist/betajs-data-closure.js"
 					}
 				},
 				jshint : {
@@ -96,7 +96,7 @@ module.exports = function(grunt) {
 						smarttabs: true
 					},
 					source : [ "./src/**/*.js" ],
-					dist : [ "./dist/beta-data-noscoped.js", "./dist/beta-data.js" ],
+					dist : [ "./dist/betajs-data-noscoped.js", "./dist/betajs-data.js" ],
 					gruntfile : [ "./Gruntfile.js" ],
 					tests : [ "./tests/*/*.js" ]
 				},
@@ -114,7 +114,7 @@ module.exports = function(grunt) {
 				'node-qunit' : {
 					dist : {
 						deps: './vendors/beta.js',
-						code : './dist/beta-data.js',
+						code : './dist/betajs-data.js',
 						tests : grunt.file.expand("./tests/*/*.js"),
 						done : function(err, res) {
 							publishResults("node", res, this.async());

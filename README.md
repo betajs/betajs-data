@@ -1,4 +1,4 @@
-# betajs-data 1.0.0
+# betajs-data 1.0.7
 
 BetaJS-Data is a general-purpose JavaScript framework for handling RESTful operations and ActiveRecord abstractions.
 
@@ -31,10 +31,10 @@ Active, Production ready
 ## CDN
 | Resource | URL |
 | :----- | -------: |
-| beta.js | [http://cdn.rawgit.com/betajs/betajs-data/master/dist/beta-data.js](http://cdn.rawgit.com/betajs/betajs-data/master/dist/beta-data.js) |
-| beta.min.js | [http://cdn.rawgit.com/betajs/betajs-data/master/dist/beta-data.min.js](http://cdn.rawgit.com/betajs/betajs-data/master/dist/beta-data.min.js) |
-| beta-noscoped.js | [http://cdn.rawgit.com/betajs/betajs-data/master/dist/beta-data-noscoped.js](http://cdn.rawgit.com/betajs/betajs-data/master/dist/beta-data-noscoped.js) |
-| beta-noscoped.min.js | [http://cdn.rawgit.com/betajs/betajs-data/master/dist/beta-data-noscoped.min.js](http://cdn.rawgit.com/betajs/betajs-data/master/dist/beta-data-noscoped.min.js) |
+| betajs-data.js | [http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data.js](http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data.js) |
+| betajs-data.min.js | [http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data.min.js](http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data.min.js) |
+| betajs-data-noscoped.js | [http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data-noscoped.js](http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data-noscoped.js) |
+| betajs-data-noscoped.min.js | [http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data-noscoped.min.js](http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data-noscoped.min.js) |
 
 
 ## Unit Tests
