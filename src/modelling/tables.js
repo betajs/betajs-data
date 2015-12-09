@@ -70,8 +70,8 @@ Scoped.define("module:Modelling.Table", [
 				}, this);
 			},
 
-			findBy: function (query, ctx) {
-				return this.allBy(query, {limit: 1}, ctx).mapSuccess(function (iter) {
+			findBy: function (query, options, ctx) {
+				return this.allBy(query, Objs.extend({limit: 1}, options), ctx).mapSuccess(function (iter) {
 					return iter.next();
 				});
 			},

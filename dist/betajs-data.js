@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.7 - 2015-12-05
+betajs-data - v1.0.7 - 2015-12-09
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -560,7 +560,7 @@ Public.exports();
 }).call(this);
 
 /*!
-betajs-data - v1.0.7 - 2015-12-05
+betajs-data - v1.0.7 - 2015-12-09
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -575,7 +575,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '53.1449325779182'
+		version: '54.1449690029152'
 	};
 });
 
@@ -5667,8 +5667,8 @@ Scoped.define("module:Modelling.Table", [
 				}, this);
 			},
 
-			findBy: function (query, ctx) {
-				return this.allBy(query, {limit: 1}, ctx).mapSuccess(function (iter) {
+			findBy: function (query, options, ctx) {
+				return this.allBy(query, Objs.extend({limit: 1}, options), ctx).mapSuccess(function (iter) {
 					return iter.next();
 				});
 			},
