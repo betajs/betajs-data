@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.7 - 2015-12-09
+betajs-data - v1.0.9 - 2015-12-11
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -560,7 +560,7 @@ Public.exports();
 }).call(this);
 
 /*!
-betajs-data - v1.0.7 - 2015-12-09
+betajs-data - v1.0.9 - 2015-12-11
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -575,7 +575,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '54.1449690029152'
+		version: '55.1449878855558'
 	};
 });
 
@@ -2045,8 +2045,9 @@ Scoped.define("module:Stores.ContextualizedStore", [
 Scoped.define("module:Stores.DecontextualizedSelectStore", [
 	"module:Stores.BaseStore",
 	"base:Iterators.MappedIterator",
-	"base:Promise"
-], function (BaseStore, MappedIterator, Promise, scoped) {
+	"base:Promise",
+	"base:Objs"
+], function (BaseStore, MappedIterator, Promise, Objs, scoped) {
    	return BaseStore.extend({scoped: scoped}, function (inherited) {			
    		return {
 

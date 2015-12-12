@@ -92,8 +92,9 @@ Scoped.define("module:Stores.ContextualizedStore", [
 Scoped.define("module:Stores.DecontextualizedSelectStore", [
 	"module:Stores.BaseStore",
 	"base:Iterators.MappedIterator",
-	"base:Promise"
-], function (BaseStore, MappedIterator, Promise, scoped) {
+	"base:Promise",
+	"base:Objs"
+], function (BaseStore, MappedIterator, Promise, Objs, scoped) {
    	return BaseStore.extend({scoped: scoped}, function (inherited) {			
    		return {
 
