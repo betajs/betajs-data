@@ -1,4 +1,4 @@
-# betajs-data 1.0.7
+# betajs-data 1.0.10
 
 BetaJS-Data is a general-purpose JavaScript framework for handling RESTful operations and ActiveRecord abstractions.
 

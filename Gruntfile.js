@@ -85,7 +85,7 @@ module.exports = function(grunt) {
 						}
 					},
 					dist : {
-						src : ["./vendors/beta.js", "./dist/betajs-data-noscoped.js"],
+						src : ["./vendors/scoped.js", "./vendors/beta-noscoped.js", "./dist/betajs-data-noscoped.js"],
 						dest : "./dist/betajs-data-closure.js"
 					}
 				},
@@ -107,13 +107,13 @@ module.exports = function(grunt) {
 						},
 						files : {
 							"./vendors/scoped.js" : "https://raw.githubusercontent.com/betajs/betajs-scoped/master/dist/scoped.js",
-							"./vendors/beta.js" : "https://raw.githubusercontent.com/betajs/betajs/master/dist/beta.js"
+							"./vendors/beta-noscoped.js" : "https://raw.githubusercontent.com/betajs/betajs/master/dist/beta-noscoped.js"
 						}
 					}
 				},
 				'node-qunit' : {
 					dist : {
-						deps: './vendors/beta.js',
+						deps: ['./vendors/scoped.js', './vendors/beta-noscoped.js'],
 						code : './dist/betajs-data.js',
 						tests : grunt.file.expand("./tests/*/*.js"),
 						done : function(err, res) {
