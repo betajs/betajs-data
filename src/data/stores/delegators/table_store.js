@@ -25,7 +25,7 @@ Scoped.define("module:Stores.TableStore", [
 
 			_insert: function (data, ctx) {
 				var model = this.__table.newModel({}, null, ctx);
-				model.setAllByTags(data, this.__options.insertTags);
+				model.setByTags(data, this.__options.insertTags);
 				return model.save().mapSuccess(function () {
 					return model.asRecord(this.__options.readTags);
 				}, this);
