@@ -1,9 +1,10 @@
 test("test cached stores", function() {
+	// Cached Stores assumes for now that id_keys match.
 	var remoteStore = new BetaJS.Data.Stores.MemoryStore({id_key: "token"});
 	for (var i = 0; i <= 4; ++i)
 		for (var j = 0; j <= 9; ++j)
 			remoteStore.insert({i:i,j:j});
-	var itemCache = new BetaJS.Data.Stores.MemoryStore({id_key: "tokenx"});
+	var itemCache = new BetaJS.Data.Stores.MemoryStore({id_key: "token"});
 	var queryCache = new BetaJS.Data.Stores.MemoryStore();
 	var globalTime = 0;
 	var strategy = new BetaJS.Data.Stores.CacheStrategies.ExpiryCacheStrategy({
