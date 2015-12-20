@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.11 - 2015-12-16
+betajs-data - v1.0.11 - 2015-12-20
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -14,7 +14,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '57.1450308943993'
+		version: '59.1450643497490'
 	};
 });
 
@@ -317,7 +317,7 @@ Scoped.define("module:Queries", [
 		},
 
 		is_query_atom: function (value) {
-			return value === null || !Types.is_object(value) || Objs.all(value, function (v, key) {
+			return value === null || !Types.is_object(value) || value.toString() !== "[object Object]" || Objs.all(value, function (v, key) {
 				return !(key in this.SYNTAX_CONDITION_KEYS);
 			}, this);
 		},
@@ -1987,6 +1987,10 @@ Scoped.define("module:Stores.TransformationStore", [
 				return data;
 			},
 			
+			_encodeSort: function (sort) {
+				return this._encodeData(sort);
+			},
+			
 			_encodeId: function (id) {
 				return this.id_of(this._encodeData(Objs.objectBy(this.id_key(), id)));
 			},
@@ -1998,7 +2002,7 @@ Scoped.define("module:Stores.TransformationStore", [
 			_encodeQuery: function (query, options) {
 				var opts = Objs.clone(options);
 				if (opts.sort)
-					opts.sort = Types.is_object(opts.sort) ? this._encodeData(opts.sort) : {};
+					opts.sort = Types.is_object(opts.sort) ? this._encodeSort(opts.sort) : {};
 				return {
 					query: Queries.mapKeyValue(query, function (key, value) {
 						return this._encodeData(Objs.objectBy(key, value)); 
@@ -2349,13 +2353,20 @@ Scoped.define("module:Stores.Invokers.RouteredRestInvokee", [], function () {
 
 
 
-Scoped.define("module:Stores.Invokers.InvokerStore", ["module:Stores.BaseStore"], function (BaseStore, scoped) {
+Scoped.define("module:Stores.Invokers.InvokerStore", [
+    "module:Stores.BaseStore",
+    "module:Queries.Constrained"
+], function (BaseStore, Constrained, scoped) {
 	return BaseStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 			
 			constructor: function (storeInvokee, options) {
 				inherited.constructor.call(this, options);
 				this.__storeInvokee = storeInvokee;
+			},
+			
+			_query_capabilities: function () {
+				return Constrained.fullConstrainedQueryCapabilities();
 			},
 			
 			__invoke: function (member, data, context) {
@@ -2464,6 +2475,8 @@ Scoped.define("module:Stores.Invokers.StoreInvokeeRestInvoker", [
 							if (data.query && !Types.is_empty(data.query))
 								result.query = JSON.stringify(data.query);
 							result = Objs.extend(result, data.options);
+							if (result.sort)
+								result.sort = JSON.stringify(result.sort);
 							return result;
 						}
 					},
@@ -2557,12 +2570,18 @@ Scoped.define("module:Stores.Invokers.RouteredRestInvokeeStoreInvoker", [
 						},
 						"query": function (member, uriData, post, get, ctx) {
 							var result = {};
-							if (get.query)
-								result.query = JSON.parse(get.query);
+							try {
+								if (get.query)
+									result.query = JSON.parse(get.query);
+							} catch (e) {}
 							var opts = Objs.clone(get, 1);
 							delete opts.query;
 							if (!Types.is_empty(opts))
 								result.options = opts;
+							try {
+								if (result.options.sort)
+									result.options.sort = JSON.parse(result.options.sort);
+							} catch (e) {}
 							return result;
 						}
 					},
@@ -3649,12 +3668,12 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 				options.id_key = store.id_key();
 				inherited.constructor.call(this, options);
 				this._store = store;
-				options = options || {};
 				this.__itemCache = {};
 				this.__lastKey = null;
 				this.__lastKeyIds = {};
 				this.__insertsCount = 0;
 				this.__increasingKey = options.increasing_key || this.id_key;
+				this.__ignoreUpdates = options.ignore_updates;
 				if (options.auto_poll) {
 					this.auto_destroy(new Timer({
 						fire: this.poll,
@@ -3702,21 +3721,25 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 			},
 
 			poll: function () {
-				Objs.iter(this.__itemCache, function (value, id) {
-					this._store.get(id).success(function (data) {
-						if (!data) 
-							this._removedItem(id);
-						else {
-							this.__itemCache[id] = Objs.clone(data, 1);
-							if (value && !Comparators.deepEqual(value, data, -1))
-								this._updatedItem(data, data);
-						}
+				if (!this.__ignoreUpdates) {
+					Objs.iter(this.__itemCache, function (value, id) {
+						this._store.get(id).success(function (data) {
+							if (!data) 
+								this._removedItem(id);
+							else {
+								this.__itemCache[id] = Objs.clone(data, 1);
+								if (value && !Comparators.deepEqual(value, data, -1))
+									this._updatedItem(data, data);
+							}
+						}, this);
 					}, this);
-				}, this);
+				}
 				if (this.__lastKey) {
-					this.insertsIterator().iterate(function (query) {
+					this.insertsIterator().iterate(function (q) {
+						var query = q.query;
+						var options = q.options;
 						var keyQuery = Objs.objectBy(this.__increasingKey, {"$gte": this.__lastKey});
-						this._store.query({"$and": [keyQuery, query]}).success(function (result) {
+						this._store.query({"$and": [keyQuery, query]}, options).success(function (result) {
 							while (result.hasNext()) {
 								var item = result.next();
 								var id = this._store.id_of(item);
@@ -3854,7 +3877,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				var trig = false;
 				var iter = this.__inserts.iterator();
 				while (!trig && iter.hasNext())
-					trig = Queries.evaluate(iter.next(), data);
+					trig = Queries.evaluate(iter.next().query, data);
 				if (!trig)
 					return;
 				this._insertedWatchedInsert(data);
@@ -4169,15 +4192,14 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 						sort: null
 					}
 				};
-				query = query || {};
-				this.update(query.query ? query : {
-					query: query,
+				this.update(Objs.tree_extend({
+					query: {},
 					options: {
 						skip: options.skip || 0,
 						limit: options.limit || options.range || null,
 						sort: options.sort || null
 					}
-				});
+				}, query ? (query.query || query.options ? query : {query: query}) : {}));
 				if (options.auto)
 					this.enable();
 			},
@@ -4355,13 +4377,14 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 			refresh: function (clear) {
 				if (clear)
 					this.clear();
-				if (this._query.options.sort && !Types.is_empty(this._query.options.sort))
+				if (this._query.options.sort && !Types.is_empty(this._query.options.sort)) {
 					this.set_compare(Comparators.byObject(this._query.options.sort));
-				else
+				} else {
 					this.set_compare(null);
+				}
 				this._unwatchInsert();
 				if (this._active)
-					this._watchInsert(this._query.query);
+					this._watchInsert(this._query);
 				return this._execute(this._query);
 			},
 

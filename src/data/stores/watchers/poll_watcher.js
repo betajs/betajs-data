@@ -12,12 +12,12 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 				options.id_key = store.id_key();
 				inherited.constructor.call(this, options);
 				this._store = store;
-				options = options || {};
 				this.__itemCache = {};
 				this.__lastKey = null;
 				this.__lastKeyIds = {};
 				this.__insertsCount = 0;
 				this.__increasingKey = options.increasing_key || this.id_key;
+				this.__ignoreUpdates = options.ignore_updates;
 				if (options.auto_poll) {
 					this.auto_destroy(new Timer({
 						fire: this.poll,
@@ -65,21 +65,25 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 			},
 
 			poll: function () {
-				Objs.iter(this.__itemCache, function (value, id) {
-					this._store.get(id).success(function (data) {
-						if (!data) 
-							this._removedItem(id);
-						else {
-							this.__itemCache[id] = Objs.clone(data, 1);
-							if (value && !Comparators.deepEqual(value, data, -1))
-								this._updatedItem(data, data);
-						}
+				if (!this.__ignoreUpdates) {
+					Objs.iter(this.__itemCache, function (value, id) {
+						this._store.get(id).success(function (data) {
+							if (!data) 
+								this._removedItem(id);
+							else {
+								this.__itemCache[id] = Objs.clone(data, 1);
+								if (value && !Comparators.deepEqual(value, data, -1))
+									this._updatedItem(data, data);
+							}
+						}, this);
 					}, this);
-				}, this);
+				}
 				if (this.__lastKey) {
-					this.insertsIterator().iterate(function (query) {
+					this.insertsIterator().iterate(function (q) {
+						var query = q.query;
+						var options = q.options;
 						var keyQuery = Objs.objectBy(this.__increasingKey, {"$gte": this.__lastKey});
-						this._store.query({"$and": [keyQuery, query]}).success(function (result) {
+						this._store.query({"$and": [keyQuery, query]}, options).success(function (result) {
 							while (result.hasNext()) {
 								var item = result.next();
 								var id = this._store.id_of(item);

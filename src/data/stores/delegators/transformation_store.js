@@ -18,6 +18,10 @@ Scoped.define("module:Stores.TransformationStore", [
 				return data;
 			},
 			
+			_encodeSort: function (sort) {
+				return this._encodeData(sort);
+			},
+			
 			_encodeId: function (id) {
 				return this.id_of(this._encodeData(Objs.objectBy(this.id_key(), id)));
 			},
@@ -29,7 +33,7 @@ Scoped.define("module:Stores.TransformationStore", [
 			_encodeQuery: function (query, options) {
 				var opts = Objs.clone(options);
 				if (opts.sort)
-					opts.sort = Types.is_object(opts.sort) ? this._encodeData(opts.sort) : {};
+					opts.sort = Types.is_object(opts.sort) ? this._encodeSort(opts.sort) : {};
 				return {
 					query: Queries.mapKeyValue(query, function (key, value) {
 						return this._encodeData(Objs.objectBy(key, value)); 

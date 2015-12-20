@@ -31,6 +31,8 @@ Scoped.define("module:Stores.Invokers.StoreInvokeeRestInvoker", [
 							if (data.query && !Types.is_empty(data.query))
 								result.query = JSON.stringify(data.query);
 							result = Objs.extend(result, data.options);
+							if (result.sort)
+								result.sort = JSON.stringify(result.sort);
 							return result;
 						}
 					},
@@ -124,12 +126,18 @@ Scoped.define("module:Stores.Invokers.RouteredRestInvokeeStoreInvoker", [
 						},
 						"query": function (member, uriData, post, get, ctx) {
 							var result = {};
-							if (get.query)
-								result.query = JSON.parse(get.query);
+							try {
+								if (get.query)
+									result.query = JSON.parse(get.query);
+							} catch (e) {}
 							var opts = Objs.clone(get, 1);
 							delete opts.query;
 							if (!Types.is_empty(opts))
 								result.options = opts;
+							try {
+								if (result.options.sort)
+									result.options.sort = JSON.parse(result.options.sort);
+							} catch (e) {}
 							return result;
 						}
 					},

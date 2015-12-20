@@ -56,7 +56,7 @@ test("test query collection", function() {
 		for (var j = 1; j < 3; ++j)
 			for (var k = 1; k < 3; ++k)
 				store.insert({i:i,j:j,k:k});
-	var coll = new BetaJS.Data.Collections.StoreQueryCollection(store, {query: {i:1, j:1}}, {
+	var coll = new BetaJS.Data.Collections.StoreQueryCollection(store, {query: {i:1, j:1}, options: {sort: {k: -1}}}, {
 		active: true,
 		auto: true
 	});
@@ -64,6 +64,7 @@ test("test query collection", function() {
 		item.set("marker", true);
 	});
 	QUnit.equal(coll.count(), 2);
+	QUnit.equal(coll.getByIndex(0).get("k"), 2);
 	coll.update({query: {i:1, k:1}});
 	QUnit.equal(coll.count(), 2);
 	var marker_count = 0;
@@ -73,7 +74,6 @@ test("test query collection", function() {
 	});
 	QUnit.equal(marker_count, 1);
 });
-
 
 
 test("test query collection pagination", function() {
@@ -141,3 +141,4 @@ test("test query collection increasing", function() {
 	coll.increase_forwards();
 	QUnit.deepEqual(it(), "4-0,4-1,4-2,4-3,4-4,4-5,4-6,4-7,4-8,4-9,3-0,3-1,3-2,3-3,3-4,3-5,3-6,3-7,3-8,3-9");
 });
+

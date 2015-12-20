@@ -20,13 +20,20 @@ Scoped.define("module:Stores.Invokers.RouteredRestInvokee", [], function () {
 
 
 
-Scoped.define("module:Stores.Invokers.InvokerStore", ["module:Stores.BaseStore"], function (BaseStore, scoped) {
+Scoped.define("module:Stores.Invokers.InvokerStore", [
+    "module:Stores.BaseStore",
+    "module:Queries.Constrained"
+], function (BaseStore, Constrained, scoped) {
 	return BaseStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 			
 			constructor: function (storeInvokee, options) {
 				inherited.constructor.call(this, options);
 				this.__storeInvokee = storeInvokee;
+			},
+			
+			_query_capabilities: function () {
+				return Constrained.fullConstrainedQueryCapabilities();
 			},
 			
 			__invoke: function (member, data, context) {

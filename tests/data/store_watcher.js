@@ -40,7 +40,7 @@ test("test watcher items read store polling", function() {
 	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 1});
 	watcherItems.unwatchItem(item2_id);
 	
-	watcherItems.watchInsert({"first": "foobar"});
+	watcherItems.watchInsert({query: {"first": "foobar"}});
 	watcherItems.poll();
 	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 1});
 	store.insert({"first":"testtest"});

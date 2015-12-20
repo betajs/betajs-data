@@ -110,7 +110,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				var trig = false;
 				var iter = this.__inserts.iterator();
 				while (!trig && iter.hasNext())
-					trig = Queries.evaluate(iter.next(), data);
+					trig = Queries.evaluate(iter.next().query, data);
 				if (!trig)
 					return;
 				this._insertedWatchedInsert(data);

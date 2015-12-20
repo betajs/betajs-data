@@ -132,7 +132,7 @@ Scoped.define("module:Queries", [
 		},
 
 		is_query_atom: function (value) {
-			return value === null || !Types.is_object(value) || Objs.all(value, function (v, key) {
+			return value === null || !Types.is_object(value) || value.toString() !== "[object Object]" || Objs.all(value, function (v, key) {
 				return !(key in this.SYNTAX_CONDITION_KEYS);
 			}, this);
 		},

@@ -7,4 +7,7 @@ test("test invoker stores", function() {
 	var obj = top.insert({foo: "bar"}).value();
 	QUnit.equal(obj.foo, "bar");
 	QUnit.equal(top.get(obj.id).value().foo, "bar");
+	top.insert({foo: "baz"});
+	QUnit.equal(top.query({}, {sort: {foo: 1}, limit: 1}).value().next().foo, "bar");
+	QUnit.equal(top.query({}, {sort: {foo: -1}, limit: 1}).value().next().foo, "baz");
 });

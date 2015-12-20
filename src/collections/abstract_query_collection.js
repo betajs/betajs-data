@@ -65,15 +65,14 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 						sort: null
 					}
 				};
-				query = query || {};
-				this.update(query.query ? query : {
-					query: query,
+				this.update(Objs.tree_extend({
+					query: {},
 					options: {
 						skip: options.skip || 0,
 						limit: options.limit || options.range || null,
 						sort: options.sort || null
 					}
-				});
+				}, query ? (query.query || query.options ? query : {query: query}) : {}));
 				if (options.auto)
 					this.enable();
 			},
@@ -251,13 +250,14 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 			refresh: function (clear) {
 				if (clear)
 					this.clear();
-				if (this._query.options.sort && !Types.is_empty(this._query.options.sort))
+				if (this._query.options.sort && !Types.is_empty(this._query.options.sort)) {
 					this.set_compare(Comparators.byObject(this._query.options.sort));
-				else
+				} else {
 					this.set_compare(null);
+				}
 				this._unwatchInsert();
 				if (this._active)
-					this._watchInsert(this._query.query);
+					this._watchInsert(this._query);
 				return this._execute(this._query);
 			},
 
