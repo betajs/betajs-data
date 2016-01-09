@@ -465,7 +465,7 @@ Scoped.define("module:Queries", [
 			Objs.iter(value, function (condition_value, condition_key) {
 				result[condition_key] = this.mapKeyValueCondition(condition_value, key, callback, context);
 			}, this);
-			return Obj.objectBy(key, result);
+			return Objs.objectBy(key, result);
 		},
 
 		mapKeyValueCondition: function (condition_value, key, callback, context) {

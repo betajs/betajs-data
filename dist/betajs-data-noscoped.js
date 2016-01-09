@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.11 - 2015-12-20
+betajs-data - v1.0.13 - 2016-01-08
 Copyright (c) Oliver Friedmann
 MIT Software License.
 */
@@ -14,7 +14,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '59.1450643497490'
+		version: '60.1452301010446'
 	};
 });
 
@@ -650,7 +650,7 @@ Scoped.define("module:Queries", [
 			Objs.iter(value, function (condition_value, condition_key) {
 				result[condition_key] = this.mapKeyValueCondition(condition_value, key, callback, context);
 			}, this);
-			return Obj.objectBy(key, result);
+			return Objs.objectBy(key, result);
 		},
 
 		mapKeyValueCondition: function (condition_value, key, callback, context) {
