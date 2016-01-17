@@ -476,8 +476,22 @@ Scoped.define("module:Queries", [
 				return Objs.peek(callback.call(context, key, value));
 			}, this);
 			return is_array ? result : result[0];
+		},
+
+		queryDeterminedByAttrs: function (query, attributes) {
+			return Objs.exists(query, function (value, key) {
+				if (key === "$and") {
+					return Objs.exists(value, function (q) {
+						return this.queryDeterminedByAttrs(q, attributes);
+					}, this);
+				} else if (key === "$or") {
+					return Objs.all(value, function (q) {
+						return this.queryDeterminedByAttrs(q, attributes);
+					}, this);
+				} else
+					return attributes[key];
+			}, this);
 		}
-		
 		
 	}; 
 });

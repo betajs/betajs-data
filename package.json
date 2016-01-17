@@ -1,10 +1,10 @@
 {
 	"name": "betajs-data",
-	"version": "1.0.13",
+	"version": "1.0.14",
 	"description": "BetaJS-Data is a general-purpose JavaScript framework for handling RESTful operations and ActiveRecord abstractions.",
 	"homepage": "http://betajs.com",
 	"contributors": ["Oliver Friedmann"],
-	"license": "MIT",
+	"license": "Apache 2.0",
 	"devDependencies": {
 		"grunt": "",
 		"grunt-contrib-jshint": "",

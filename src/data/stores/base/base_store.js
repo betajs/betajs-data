@@ -1,10 +1,11 @@
 Scoped.define("module:Stores.BaseStore", [
-                                          "base:Class",
-                                          "base:Events.EventsMixin",
-                                          "module:Stores.ReadStoreMixin",
-                                          "module:Stores.WriteStoreMixin",
-                                          "base:Promise"
-                                          ], function (Class, EventsMixin, ReadStoreMixin, WriteStoreMixin, Promise, scoped) {
+  "base:Class",
+  "base:Events.EventsMixin",
+  "module:Stores.ReadStoreMixin",
+  "module:Stores.WriteStoreMixin",
+  "base:Promise",
+  "base:Objs"
+], function (Class, EventsMixin, ReadStoreMixin, WriteStoreMixin, Promise, Objs, scoped) {
 	return Class.extend({scoped: scoped}, [EventsMixin, ReadStoreMixin, WriteStoreMixin, function (inherited) {			
 		return {
 
@@ -19,6 +20,14 @@ Scoped.define("module:Stores.BaseStore", [
 
 			ensure_index: function (key) {
 				return this._ensure_index(key);
+			},
+
+			getBy: function (key, value, ctx) {
+				if (key === this.id_key())
+					return this.get(value, ctx);
+				return this.query(Objs.objectBy(key, value), {limit: 1}).mapSuccess(function (iter) {
+					return iter.next();
+				});
 			},
 
 			clear: function (ctx) {
