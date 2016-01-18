@@ -131,6 +131,7 @@ Scoped.define("module:Stores.CachedStore", [
 			 *   - accessMeta: boolean
 			 *   - refreshMeta: boolean
 			 *   - foreignKey: boolean (default false)
+			 *   - unlockItem: boolean (default false)
 			 */
 
 			cacheUpdate: function (id, data, options) {
@@ -142,6 +143,10 @@ Scoped.define("module:Stores.CachedStore", [
 					if (!item)
 						return null;
 					var meta = this.readItemMeta(item);
+					if (options.unlockItem) {
+						meta.lockedItem = false;
+						meta.lockedAttrs = {};
+					}
 					data = Objs.filter(data, function (value, key) {
 						return options.ignoreLock || (!meta.lockedItem && !meta.lockedAttrs[key]);
 					}, this);
@@ -428,6 +433,14 @@ Scoped.define("module:Stores.CachedStore", [
 							(!this.cacheStrategy.validItemRefreshMeta(meta.refreshMeta) || !this.cacheStrategy.validItemAccessMeta(meta.accessMeta)))
 							this.itemCache.remove(this.itemCache.id_of(item));
 					}
+				}, this);
+			},
+
+			cachedIdToRemoteId: function (cachedId) {
+				if (!this._foreignKey)
+					return Promise.value(cachedId);
+				return this.itemCache.get(cachedId).mapSuccess(function (item) {
+					return item ? this.remoteStore.id_of(item) : null;
 				}, this);
 			}
 

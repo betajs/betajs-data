@@ -15,8 +15,8 @@ Scoped.define("module:Stores.StoreHistory", [
 					combine_insert_remove: false,
 					combine_update_remove: false,
 					source_id_key: sourceStore ? sourceStore.id_key() : "id",
-							row_data: {},
-							filter_data: {}
+					row_data: {},
+					filter_data: {}
 				}, options);
 				this.historyStore = historyStore || new MemoryStore();
 				this.commitId = 1;
@@ -71,7 +71,7 @@ Scoped.define("module:Stores.StoreHistory", [
 				}, this._options.row_data));
 			},
 
-			sourceRemove: function (id) {
+			sourceRemove: function (id, data) {
 				this.commitId++;
 				if (this._options.combine_insert_remove) {
 					if (this.historyStore.query(Objs.extend({
@@ -97,6 +97,7 @@ Scoped.define("module:Stores.StoreHistory", [
 				this.historyStore.insert(Objs.extend({
 					type: "remove",
 					row_id: id,
+					row: data,
 					commit_id: this.commitId
 				}, this._options.row_data));
 			}

@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.14 - 2016-01-17
+betajs-data - v1.0.15 - 2016-01-18
 Copyright (c) Oliver Friedmann
 Apache 2.0 Software License.
 */
@@ -670,7 +670,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.14 - 2016-01-17
+betajs-data - v1.0.15 - 2016-01-18
 Copyright (c) Oliver Friedmann
 Apache 2.0 Software License.
 */
@@ -685,7 +685,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '61.1453071958259'
+		version: '62.1453156645654'
 	};
 });
 
@@ -1881,8 +1881,8 @@ Scoped.define("module:Stores.StoreHistory", [
 					combine_insert_remove: false,
 					combine_update_remove: false,
 					source_id_key: sourceStore ? sourceStore.id_key() : "id",
-							row_data: {},
-							filter_data: {}
+					row_data: {},
+					filter_data: {}
 				}, options);
 				this.historyStore = historyStore || new MemoryStore();
 				this.commitId = 1;
@@ -1937,7 +1937,7 @@ Scoped.define("module:Stores.StoreHistory", [
 				}, this._options.row_data));
 			},
 
-			sourceRemove: function (id) {
+			sourceRemove: function (id, data) {
 				this.commitId++;
 				if (this._options.combine_insert_remove) {
 					if (this.historyStore.query(Objs.extend({
@@ -1963,6 +1963,7 @@ Scoped.define("module:Stores.StoreHistory", [
 				this.historyStore.insert(Objs.extend({
 					type: "remove",
 					row_id: id,
+					row: data,
 					commit_id: this.commitId
 				}, this._options.row_data));
 			}
@@ -3501,6 +3502,7 @@ Scoped.define("module:Stores.CachedStore", [
 			 *   - accessMeta: boolean
 			 *   - refreshMeta: boolean
 			 *   - foreignKey: boolean (default false)
+			 *   - unlockItem: boolean (default false)
 			 */
 
 			cacheUpdate: function (id, data, options) {
@@ -3512,6 +3514,10 @@ Scoped.define("module:Stores.CachedStore", [
 					if (!item)
 						return null;
 					var meta = this.readItemMeta(item);
+					if (options.unlockItem) {
+						meta.lockedItem = false;
+						meta.lockedAttrs = {};
+					}
 					data = Objs.filter(data, function (value, key) {
 						return options.ignoreLock || (!meta.lockedItem && !meta.lockedAttrs[key]);
 					}, this);
@@ -3799,6 +3805,14 @@ Scoped.define("module:Stores.CachedStore", [
 							this.itemCache.remove(this.itemCache.id_of(item));
 					}
 				}, this);
+			},
+
+			cachedIdToRemoteId: function (cachedId) {
+				if (!this._foreignKey)
+					return Promise.value(cachedId);
+				return this.itemCache.get(cachedId).mapSuccess(function (item) {
+					return item ? this.remoteStore.id_of(item) : null;
+				}, this);
 			}
 
 		};
@@ -4027,25 +4041,29 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
 				}, this);
 			},
 
-			remove: function (id) {
-				return this.partialStore.remoteStore.remove(id).mapSuccess(function () {
-					return this.partialStore.cachedStore.cacheRemove(id, {
-						ignoreLock: true,
-						silent: true
+			remove: function (cachedId) {
+				return this.partialStore.cachedStore.cachedIdToRemoteId(cachedId).mapSuccess(function (remoteId) {
+					return this.partialStore.remoteStore.remove(remoteId).mapSuccess(function () {
+						return this.partialStore.cachedStore.cacheRemove(cachedId, {
+							ignoreLock: true,
+							silent: true
+						}, this);
 					}, this);
 				}, this);
 			},
 
-			update: function (id, data) {
-				return this.partialStore.remoteStore.update(id, data).mapSuccess(function () {
-					return this.partialStore.cachedStore.cacheUpdate(id, data, {
-						ignoreLock: false,
-						lockAttrs: false,
-						silent: true,
-						refreshMeta: true,
-						accessMeta: true
+			update: function (cachedId, data) {
+				return this.partialStore.cachedStore.cachedIdToRemoteId(cachedId).mapSuccess(function (remoteId) {
+					return this.partialStore.remoteStore.update(remoteId, data).mapSuccess(function () {
+						return this.partialStore.cachedStore.cacheUpdate(cachedId, data, {
+							ignoreLock: false,
+							lockAttrs: false,
+							silent: true,
+							refreshMeta: true,
+							accessMeta: true
+						}, this);
 					}, this);
-				}, this);
+				});
 			}
 
 		};
@@ -4066,8 +4084,11 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
 					refreshMeta: true,
 					accessMeta: true
 				}).success(function (data) {
-					this.partialStore.remoteStore.insert(data).success(function () {
-						this.partialStore.cachedStore.unlockItem(this.partialStore.cachedStore.id_of(data));
+					this.partialStore.remoteStore.insert(data).success(function (remoteData) {
+						this.partialStore.cachedStore.cacheUpdate(this.partialStore.cachedStore.id_of(data), remoteData, {
+							silent: true,
+							unlockItem: true
+						});
 					}, this).error(function () {
 						this.partialStore.cachedStore.cacheRemove(this.partialStore.cachedStore.id_of(data), {
 							ignoreLock: true,
@@ -4077,25 +4098,29 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
 				}, this);
 			},
 
-			remove: function (id) {
-				return this.partialStore.cachedStore.cacheRemove(id, {
-					ignoreLock: true,
-					silent: true
-				}).success(function () {
-					this.partialStore.remoteStore.remove(id);
+			remove: function (cachedId) {
+				return this.partialStore.cachedStore.cachedIdToRemoteId(cachedId).mapSuccess(function (remoteId) {
+					return this.partialStore.cachedStore.cacheRemove(cachedId, {
+						ignoreLock: true,
+						silent: true
+					}).success(function () {
+						this.partialStore.remoteStore.remove(remoteId);
+					}, this);
 				}, this);
 			},
 
-			update: function (id, data) {
-				return this.partialStore.cachedStore.cacheUpdate(id, data, {
-					lockAttrs: true,
-					ignoreLock: false,
-					silent: true,
-					refreshMeta: false,
-					accessMeta: true
-				}).success(function (data) {
-					this.partialStore.remoteStore.update(id, data).success(function () {
-						this.partialStore.cachedStore.unlockItem(this.partialStore.cachedStore.id_of(data));
+			update: function (cachedId, data) {
+				return this.partialStore.cachedStore.cachedIdToRemoteId(cachedId).mapSuccess(function (remoteId) {
+					return this.partialStore.cachedStore.cacheUpdate(cachedId, data, {
+						lockAttrs: true,
+						ignoreLock: false,
+						silent: true,
+						refreshMeta: false,
+						accessMeta: true
+					}).success(function (data) {
+						this.partialStore.remoteStore.update(remoteId, data).success(function () {
+							this.partialStore.cachedStore.unlockItem(cachedId);
+						}, this);
 					}, this);
 				}, this);
 			}
@@ -4119,8 +4144,12 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 				inherited.constructor.call(this);
 				this._options = options || {};
 				this.historyStore = this._options.historyStore || this.auto_destroy(new MemoryStore());
+			},
+			
+			init: function (partialStore) {
+				inherited.init.call(this, partialStore);
 				this.storeHistory = this.auto_destroy(new StoreHistory(null, this.historyStore, {
-					source_id_key: this._options.source_id_key || "id",
+					source_id_key: partialStore.cachedStore.itemCache.id_key(),
 					row_data: {
 						pushed: false,
 						success: false
@@ -4129,10 +4158,6 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 						pushed: false
 					}
 				}));
-			},
-			
-			init: function (partialStore) {
-				inherited.init.call(this, partialStore);
 				if (this._options.auto_push) {
 					this.auto_destroy(new Timer({
 						fire: function () {
@@ -4157,11 +4182,13 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 			},
 
 			remove: function (id) {
-				return this.partialStore.cachedStore.cacheRemove(id, {
-					ignoreLock: true,
-					silent: true
-				}).success(function () {
-					this.storeHistory.sourceRemove(id);
+				return this.partialStore.cachedStore.cachedIdToRemoteId(id).mapSuccess(function (remoteId) {
+					return this.partialStore.cachedStore.cacheRemove(id, {
+						ignoreLock: true,
+						silent: true
+					}).success(function () {
+						this.storeHistory.sourceRemove(id, this.partialStore.remoteStore.id_row(remoteId));
+					}, this);
 				}, this);
 			},
 
@@ -4188,8 +4215,16 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					if (!iter.hasNext()) {
 						this.pushing = false;
 						Objs.iter(unlockIds, function (value, id) {
-							if (value) 
-								this.partialStore.cachedStore.unlockItem(id);
+							if (value) {
+								if (value === true) {
+									this.partialStore.cachedStore.unlockItem(id);
+								} else {
+									this.partialStore.cachedStore.cacheUpdate(id, value, {
+										unlockItem: true,
+										silent: true
+									});
+								}
+							}
 						}, this);
 						return;
 					}
@@ -4203,19 +4238,26 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 						next.apply(this);
 					} else {
 						var promise = null;
-						if (commit.type === "insert")
+						if (commit.type === "insert") {
 							promise = this.partialStore.remoteStore.insert(commit.row);
-						else if (commit.type === "update")
-							promise = this.partialStore.remoteStore.update(commit.row_id, commit.row);
-						else if (commit.type === "remove")
-							promise = this.partialStore.remoteStore.remove(commit.row_id);
-						promise.success(function () {
+						} else if (commit.type === "update") {
+							promise = this.partialStore.cachedStore.cachedIdToRemoteId(commit.row_id).mapSuccess(function (remoteId) {
+								return this.partialStore.remoteStore.update(remoteId, commit.row);
+							}, this);
+						} else if (commit.type === "remove") {
+							return this.partialStore.remoteStore.remove(commit.row ? this.partialStore.remoteStore.id_of(commit.row) : commit.row_id);
+						}
+						promise.success(function (ret) {
 							hs.update(commit_id, {
 								pushed: true,
 								success: true
 							});
-							if (!(commit.row_id in unlockIds))
+							if (!(commit.row_id in unlockIds)) {
 								unlockIds[commit.row_id] = true;
+								if (commit.type === "insert") {
+									unlockIds[commit.row_id] = ret;
+								}
+							}
 							next.apply(this);
 						}, this).error(function () {
 							hs.update(commit_id, {
