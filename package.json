@@ -26,6 +26,9 @@
 		"type": "git",
 		"url": "git://github.com/betajs/betajs-data.git"
 	},
+	"scripts": {
+		"test": "grunt check"
+	},
 	"meta": {
 		"status": "Active, Production ready",
 		"compatability": {
