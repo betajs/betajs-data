@@ -8,7 +8,7 @@ Scoped.binding("json", "global:JSON");
 
 Scoped.define("module:", function () {
 	return {
-		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
+		guid: "/* @echo GUID */",
 		version: '/* @echo MAJOR_VERSION */./* @echo MINOR_VERSION */'
 	};
 });

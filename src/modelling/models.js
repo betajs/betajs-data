@@ -115,7 +115,7 @@ Scoped.define("module:Modelling.Model", [
 									this.setError(key, value);
 								}, this);
 							}
-							return Exceptions.ensure(new ModalInvalidException(this));
+							return Exceptions.ensure(new ModelInvalidException(this));
 						}
 						this.__silent++;
 						this.setAll(result);
@@ -126,7 +126,7 @@ Scoped.define("module:Modelling.Model", [
 							this.__options.newModel = false;
 							this._registerEvents();
 						}
-						return result;
+						return this;
 					}, this);
 				}, this);
 			},
