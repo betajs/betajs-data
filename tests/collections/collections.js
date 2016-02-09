@@ -83,7 +83,7 @@ test("test query collection pagination", function() {
 			store.insert({i:i,j:j});
 	var coll = new BetaJS.Data.Collections.StoreQueryCollection(store, {}, {
 		range: 10,
-		auto: 10,
+		auto: true,
 		sort: {
 			i: -1,
 			j: 1
@@ -124,7 +124,7 @@ test("test query collection increasing", function() {
 	var coll = new BetaJS.Data.Collections.StoreQueryCollection(store, {}, {
 		limit: 10,
 		forward_steps: 10,
-		auto: 10,
+		auto: true,
 		sort: {
 			i: -1,
 			j: 1

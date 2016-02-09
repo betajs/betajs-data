@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.16 - 2016-02-07
+betajs-data - v1.0.17 - 2016-02-08
 Copyright (c) Oliver Friedmann
 Apache 2.0 Software License.
 */
@@ -693,7 +693,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.16 - 2016-02-07
+betajs-data - v1.0.17 - 2016-02-08
 Copyright (c) Oliver Friedmann
 Apache 2.0 Software License.
 */
@@ -708,7 +708,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '66.1454866789359'
+		version: '67.1454981001612'
 	};
 });
 
@@ -5123,6 +5123,62 @@ Scoped.define("module:Stores.Watchers.ProducerWatcher", [
 				this._receiver.off(null, null, this);
 				this._watcher.off(null, null, this);
 				inherited.destroy.apply(this);
+			}
+
+		};
+	});
+});
+
+Scoped.define("module:Stores.Watchers.ListWatcher", [
+    "module:Stores.Watchers.StoreWatcher",
+    "base:Objs"
+], function(StoreWatcher, Objs, scoped) {
+	return StoreWatcher.extend({scoped: scoped}, function (inherited) {
+		return {
+
+			constructor: function (store, watchers, options) {
+				options = options || {};
+				options.id_key = store.id_key();
+				this.__watchers = watchers;
+				inherited.constructor.call(this, options);
+				this.__forEachWatcher(function (watcher) {
+					this.delegateEvents(["insert", "update", "remove"], watcher);
+				});
+			},
+			
+			__forEachWatcher: function (f) {
+				Objs.iter(this.__watchers, f, this);
+			},
+
+			destroy: function () {
+				this.__forEachWatcher(function (watcher) {
+					watcher.off(null, null, this);
+				});
+				inherited.destroy.apply(this);
+			},
+			
+			_watchItem : function(id) {
+				this.__forEachWatcher(function (watcher) {
+					watcher.watchItem(id);
+				});
+			},
+
+			_unwatchItem : function(id) {
+				this.__forEachWatcher(function (watcher) {
+					watcher.unwatchItem(id);
+				});
+			},
+
+			_watchInsert : function(query) {
+				this.__forEachWatcher(function (watcher) {
+					watcher.watchInsert(query);
+				});
+			},
+
+			_unwatchInsert : function(query) {
+				this.__forEachWatcher(function (watcher) {
+					watcher.unwatchInsert(query);
+				});
 			}
 
 		};
