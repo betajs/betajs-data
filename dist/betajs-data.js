@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.17 - 2016-02-08
+betajs-data - v1.0.18 - 2016-02-10
 Copyright (c) Oliver Friedmann
 Apache 2.0 Software License.
 */
@@ -693,7 +693,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.17 - 2016-02-08
+betajs-data - v1.0.18 - 2016-02-10
 Copyright (c) Oliver Friedmann
 Apache 2.0 Software License.
 */
@@ -708,7 +708,7 @@ Scoped.binding("json", "global:JSON");
 Scoped.define("module:", function () {
 	return {
 		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '67.1454981001612'
+		version: '68.1455129829907'
 	};
 });
 
@@ -1636,7 +1636,7 @@ Scoped.define("module:Queries", [
 	Objs.iter(Objs.clone(SYNTAX_CONDITION_KEYS, 1), function (value, key) {
 		var valueic = Objs.clone(value, 1);
 		valueic.evaluate_single = function (object_value, condition_value) {
-			return value.evaluate_single(object_value.toLowerCase(), condition_value.toLowerCase());
+			return value.evaluate_single(Types.is_string(object_value) ? object_value.toLowerCase() : object_value, Types.is_string(condition_value) ? condition_value.toLowerCase() : condition_value);
 		};
 		valueic.ignore_case = true;
 		SYNTAX_CONDITION_KEYS[key + "ic"] = valueic;

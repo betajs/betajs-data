@@ -69,7 +69,7 @@ Scoped.define("module:Queries", [
 	Objs.iter(Objs.clone(SYNTAX_CONDITION_KEYS, 1), function (value, key) {
 		var valueic = Objs.clone(value, 1);
 		valueic.evaluate_single = function (object_value, condition_value) {
-			return value.evaluate_single(object_value.toLowerCase(), condition_value.toLowerCase());
+			return value.evaluate_single(Types.is_string(object_value) ? object_value.toLowerCase() : object_value, Types.is_string(condition_value) ? condition_value.toLowerCase() : condition_value);
 		};
 		valueic.ignore_case = true;
 		SYNTAX_CONDITION_KEYS[key + "ic"] = valueic;
