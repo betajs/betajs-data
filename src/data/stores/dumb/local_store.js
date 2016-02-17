@@ -1,9 +1,6 @@
 //Stores everything permanently in the browser's local storage
 
-Scoped.define("module:Stores.LocalStore", [
-                                           "module:Stores.AssocDumbStore",
-                                           "json:"
-                                           ], function (AssocDumbStore, JSON, scoped) {
+Scoped.define("module:Stores.LocalStore", ["module:Stores.AssocDumbStore"], function (AssocDumbStore, scoped) {
 	return AssocDumbStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 

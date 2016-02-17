@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.18 - 2016-02-10
+betajs-data - v1.0.19 - 2016-02-16
 Copyright (c) Oliver Friedmann
 Apache 2.0 Software License.
 */
@@ -692,27 +692,19 @@ Public = Public.upgrade();
 Public.exports();
 	return Public;
 }).call(this);
-/*!
-betajs-data - v1.0.18 - 2016-02-10
-Copyright (c) Oliver Friedmann
-Apache 2.0 Software License.
-*/
 (function () {
-
 var Scoped = this.subScope();
-
-Scoped.binding("module", "global:BetaJS.Data");
-Scoped.binding("base", "global:BetaJS");
-Scoped.binding("json", "global:JSON");
-
+Scoped.binding('module', 'global:BetaJS.Data');
+Scoped.binding('base', 'global:BetaJS');
+Scoped.binding('jquery', 'global:jQuery');
+Scoped.binding('resumablejs', 'global:Resumable');
 Scoped.define("module:", function () {
 	return {
-		guid: "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		version: '68.1455129829907'
-	};
+    "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
+    "version": "69.1455672216034"
+};
 });
-
-Scoped.assumeVersion("base:version", 444);
+Scoped.assumeVersion('base:version', 474);
 /**
  * @class AbstractQueryCollection
  *
@@ -896,6 +888,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 		       * collectionQuery.update({query: {'queryField': 'queryValue'}, options: {skip: 10}});
 		       */
 			update: function (constrainedQuery) {
+				var hasQuery = !!constrainedQuery.query;
 				constrainedQuery = Constrained.rectify(constrainedQuery);
 				var currentSkip = this._query.options.skip || 0;
 				var currentLimit = this._query.options.limit || null;
@@ -904,15 +897,15 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 				this._query.options = Objs.extend(this._query.options, constrainedQuery.options);
 				if (!this._enabled)
 					return Promise.create(true);
-				if (constrainedQuery.query || "sort" in constrainedQuery.options || !this._incremental)					
-					return this.refresh();
+				if (hasQuery || "sort" in constrainedQuery.options || !this._incremental)					
+					return this.refresh(true);
 				var nextSkip = "skip" in constrainedQuery.options ? constrainedQuery.options.skip || 0 : currentSkip;
 				var nextLimit = "limit" in constrainedQuery.options ? constrainedQuery.options.limit || null : currentLimit;
 				if (nextSkip === currentSkip && nextLimit === currentLimit)
 					return Promise.create(true);
 				// No overlap
 				if ((nextLimit && nextSkip + nextLimit <= currentSkip) || (currentLimit && currentSkip + currentLimit <= nextSkip))
-					return this.refresh();
+					return this.refresh(true);
 				// Make sure that currentSkip >= nextSkip
 				while (currentSkip < nextSkip && (currentLimit === null || currentLimit > 0)) {
 					this.remove(this.getByIndex(0));
@@ -925,10 +918,10 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 					var leftLimit = currentSkip - nextSkip;
 					if (nextLimit !== null)
 						leftLimit = Math.min(leftLimit, nextLimit);
-					promise = this._execute(Objs.tree_extend({options: {
+					promise = this._execute(Objs.tree_extend(Objs.clone(this._query, 2), {options: {
 						skip: nextSkip,
 						limit: leftLimit    
-					}}, this._query, 2));
+					}}, 2), true);
 					nextSkip += leftLimit;
 					if (nextLimit !== null)
 						nextLimit -= leftLimit;
@@ -939,12 +932,12 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 							this.remove(this.getByIndex(this.count() - 1));
 					return promise;
 				}
-				return promise.and(this._execute(Objs.tree_extend({
+				return promise.and(this._execute(Objs.tree_extend(Objs.clone(this._query, 2), {
 					options: {
 						skip: currentSkip + currentLimit,
 						limit: !nextLimit ? null : nextLimit - currentLimit
 					}
-				}, this._query, 2)));
+				}, 2), true));
 			},
 
 			enable: function () {
@@ -963,7 +956,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 			},
 
 			refresh: function (clear) {
-				if (clear)
+				if (clear && !this._incremental)
 					this.clear();
 				if (this._query.options.sort && !Types.is_empty(this._query.options.sort)) {
 					this.set_compare(Comparators.byObject(this._query.options.sort));
@@ -973,7 +966,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 				this._unwatchInsert();
 				if (this._active)
 					this._watchInsert(this._query);
-				return this._execute(this._query);
+				return this._execute(this._query, !(clear && this._incremental));
 			},
 
 			isEnabled: function () {
@@ -992,12 +985,12 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 		       *
 		       * @return {Promise} Promise from executing query.
 		       */
-			_execute: function (constrainedQuery) {
+			_execute: function (constrainedQuery, keep_others) {
 				var limit = constrainedQuery.options.limit;
 				return this._subExecute(constrainedQuery.query, constrainedQuery.options).mapSuccess(function (iter) {
 					var result = iter.asArray();
 					this._complete = limit === null || result.length < limit;
-					this.replace_objects(result);
+					this.replace_objects(result, keep_others);
 					return true;
 				}, this);
 			},
@@ -1402,13 +1395,12 @@ Scoped.define("module:Stores.MemoryIndex", [
 });
 
 Scoped.define("module:Queries.Constrained", [
-                                             "json:",
                                              "module:Queries",
                                              "base:Types",
                                              "base:Objs",
                                              "base:Tokens",
                                              "base:Comparators"
-                                             ], function (JSON, Queries, Types, Objs, Tokens, Comparators) {
+                                             ], function (Queries, Types, Objs, Tokens, Comparators) {
 	return {
 
 		/*
@@ -1566,7 +1558,6 @@ Scoped.define("module:Queries.Constrained", [
 	}; 
 });
 Scoped.define("module:Queries", [
-                                 "json:",
                                  "base:Types",
                                  "base:Sort",
                                  "base:Objs",
@@ -1576,7 +1567,7 @@ Scoped.define("module:Queries", [
                                  "base:Iterators.FilteredIterator",
                                  "base:Strings",
                                  "base:Comparators"
-                                 ], function (JSON, Types, Sort, Objs, Class, Tokens, ArrayIterator, FilteredIterator, Strings, Comparators) {
+                                 ], function (Types, Sort, Objs, Class, Tokens, ArrayIterator, FilteredIterator, Strings, Comparators) {
 
 	var SYNTAX_PAIR_KEYS = {
 			"$or": {
@@ -1951,6 +1942,11 @@ Scoped.define("module:Queries", [
 			}, this);
 			return result;
 		},
+		
+		simplifiedDNF: function (query, mergeKeys) {
+			query = this.simplifyQuery(this.disjunctiveNormalForm(query, true));
+			return !Types.is_empty(query) ? query : {"$or": [{}]};
+		},
 
 		simplifyConditions: function (conditions) {
 			var result = {};
@@ -2295,16 +2291,16 @@ Scoped.define("module:Queries.Engine", [
 			indices = indices || {};
 			if (this.queryPartially(constrainedQuery, constrainedQueryCapabilities) || Types.is_empty(indices))
 				return this.compileQuery(constrainedQuery, constrainedQueryCapabilities, constrainedQueryFunction, constrainedQueryContext);
+			var dnf = Queries.simplifiedDNF(constrainedQuery.query, true);
 			if (constrainedQuery.options.sort) {
 				var first = Objs.ithKey(constrainedQuery.options.sort, 0);
 				if (indices[first]) {
 					return this.compileIndexQuery({
-						query: Queries.simplifyQuery(Queries.disjunctiveNormalForm(constrainedQuery.query, true)),
+						query: dnf,
 						options: constrainedQuery.options
 					}, first, indices[first]);
 				}
 			}
-			var dnf = Queries.simplifyQuery(Queries.disjunctiveNormalForm(constrainedQuery.query, true));
 			var smallestSize = null;
 			var smallestKey = null;
 			Objs.iter(indices, function (index, key) {
@@ -3672,10 +3668,7 @@ Scoped.define("module:Stores.DumbStore", [
 
 //Stores everything permanently in the browser's local storage
 
-Scoped.define("module:Stores.LocalStore", [
-                                           "module:Stores.AssocDumbStore",
-                                           "json:"
-                                           ], function (AssocDumbStore, JSON, scoped) {
+Scoped.define("module:Stores.LocalStore", ["module:Stores.AssocDumbStore"], function (AssocDumbStore, scoped) {
 	return AssocDumbStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -3852,9 +3845,8 @@ Scoped.define("module:Stores.Invokers.StoreInvokeeRestInvoker", [
     "base:Class",
     "base:Objs",
     "base:Types",
-    "json:",
     "module:Stores.Invokers.StoreInvokee"
-], function (Class, Objs, Types, JSON, Invokee, scoped) {
+], function (Class, Objs, Types, Invokee, scoped) {
 	return Class.extend({scoped: scoped}, [Invokee, function (inherited) {
 		return {
 			
@@ -3948,9 +3940,8 @@ Scoped.define("module:Stores.Invokers.RouteredRestInvokeeStoreInvoker", [
      "base:Class",
      "base:Objs",
      "base:Types",
-     "json:",
      "module:Stores.Invokers.RouteredRestInvokee"
- ], function (Class, Objs, Types, JSON, Invokee, scoped) {
+ ], function (Class, Objs, Types, Invokee, scoped) {
  	return Class.extend({scoped: scoped}, [Invokee, function (inherited) {
  		return {
 

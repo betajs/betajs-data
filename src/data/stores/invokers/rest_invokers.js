@@ -2,9 +2,8 @@ Scoped.define("module:Stores.Invokers.StoreInvokeeRestInvoker", [
     "base:Class",
     "base:Objs",
     "base:Types",
-    "json:",
     "module:Stores.Invokers.StoreInvokee"
-], function (Class, Objs, Types, JSON, Invokee, scoped) {
+], function (Class, Objs, Types, Invokee, scoped) {
 	return Class.extend({scoped: scoped}, [Invokee, function (inherited) {
 		return {
 			
@@ -98,9 +97,8 @@ Scoped.define("module:Stores.Invokers.RouteredRestInvokeeStoreInvoker", [
      "base:Class",
      "base:Objs",
      "base:Types",
-     "json:",
      "module:Stores.Invokers.RouteredRestInvokee"
- ], function (Class, Objs, Types, JSON, Invokee, scoped) {
+ ], function (Class, Objs, Types, Invokee, scoped) {
  	return Class.extend({scoped: scoped}, [Invokee, function (inherited) {
  		return {
 

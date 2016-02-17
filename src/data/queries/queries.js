@@ -1,5 +1,4 @@
 Scoped.define("module:Queries", [
-                                 "json:",
                                  "base:Types",
                                  "base:Sort",
                                  "base:Objs",
@@ -9,7 +8,7 @@ Scoped.define("module:Queries", [
                                  "base:Iterators.FilteredIterator",
                                  "base:Strings",
                                  "base:Comparators"
-                                 ], function (JSON, Types, Sort, Objs, Class, Tokens, ArrayIterator, FilteredIterator, Strings, Comparators) {
+                                 ], function (Types, Sort, Objs, Class, Tokens, ArrayIterator, FilteredIterator, Strings, Comparators) {
 
 	var SYNTAX_PAIR_KEYS = {
 			"$or": {
@@ -383,6 +382,11 @@ Scoped.define("module:Queries", [
 				}
 			}, this);
 			return result;
+		},
+		
+		simplifiedDNF: function (query, mergeKeys) {
+			query = this.simplifyQuery(this.disjunctiveNormalForm(query, true));
+			return !Types.is_empty(query) ? query : {"$or": [{}]};
 		},
 
 		simplifyConditions: function (conditions) {

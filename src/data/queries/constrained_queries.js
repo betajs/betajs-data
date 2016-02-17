@@ -1,11 +1,10 @@
 Scoped.define("module:Queries.Constrained", [
-                                             "json:",
                                              "module:Queries",
                                              "base:Types",
                                              "base:Objs",
                                              "base:Tokens",
                                              "base:Comparators"
-                                             ], function (JSON, Queries, Types, Objs, Tokens, Comparators) {
+                                             ], function (Queries, Types, Objs, Tokens, Comparators) {
 	return {
 
 		/*

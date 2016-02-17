@@ -231,16 +231,16 @@ Scoped.define("module:Queries.Engine", [
 			indices = indices || {};
 			if (this.queryPartially(constrainedQuery, constrainedQueryCapabilities) || Types.is_empty(indices))
 				return this.compileQuery(constrainedQuery, constrainedQueryCapabilities, constrainedQueryFunction, constrainedQueryContext);
+			var dnf = Queries.simplifiedDNF(constrainedQuery.query, true);
 			if (constrainedQuery.options.sort) {
 				var first = Objs.ithKey(constrainedQuery.options.sort, 0);
 				if (indices[first]) {
 					return this.compileIndexQuery({
-						query: Queries.simplifyQuery(Queries.disjunctiveNormalForm(constrainedQuery.query, true)),
+						query: dnf,
 						options: constrainedQuery.options
 					}, first, indices[first]);
 				}
 			}
-			var dnf = Queries.simplifyQuery(Queries.disjunctiveNormalForm(constrainedQuery.query, true));
 			var smallestSize = null;
 			var smallestKey = null;
 			Objs.iter(indices, function (index, key) {

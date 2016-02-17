@@ -49,3 +49,17 @@ test("test index performance", function () {
 	});
 
 });
+
+
+test("test index queries", function() {
+	var store = new BetaJS.Data.Stores.MemoryStore();
+	store.indices.i = new BetaJS.Data.Stores.MemoryIndex(store, "i");
+	var c = 4;
+	for (var i = 0; i < c; ++i)
+		for (var j = 0; j < c; ++j)
+			store.insert({i:i,j:j});
+
+	for (i = 0; i < c; ++i) {
+		QUnit.equal(store.query({}, {skip: i * c, limit: c, sort: {i: -1}}).value().asArray().length, c, i);
+	}
+});

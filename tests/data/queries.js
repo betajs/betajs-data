@@ -8,3 +8,8 @@ test("simple conditional queries", function () {
 test("disjunctive normal form", function () {
 	QUnit.deepEqual(BetaJS.Data.Queries.disjunctiveNormalForm({key: 1234}, true), {"$or": [{key: 1234}]});
 });
+
+test("disjunctive normal form default", function () {
+	QUnit.deepEqual(BetaJS.Data.Queries.simplifiedDNF({}, true), {"$or": [{}]});
+});
+

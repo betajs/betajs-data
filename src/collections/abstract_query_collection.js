@@ -181,6 +181,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 		       * collectionQuery.update({query: {'queryField': 'queryValue'}, options: {skip: 10}});
 		       */
 			update: function (constrainedQuery) {
+				var hasQuery = !!constrainedQuery.query;
 				constrainedQuery = Constrained.rectify(constrainedQuery);
 				var currentSkip = this._query.options.skip || 0;
 				var currentLimit = this._query.options.limit || null;
@@ -189,15 +190,15 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 				this._query.options = Objs.extend(this._query.options, constrainedQuery.options);
 				if (!this._enabled)
 					return Promise.create(true);
-				if (constrainedQuery.query || "sort" in constrainedQuery.options || !this._incremental)					
-					return this.refresh();
+				if (hasQuery || "sort" in constrainedQuery.options || !this._incremental)					
+					return this.refresh(true);
 				var nextSkip = "skip" in constrainedQuery.options ? constrainedQuery.options.skip || 0 : currentSkip;
 				var nextLimit = "limit" in constrainedQuery.options ? constrainedQuery.options.limit || null : currentLimit;
 				if (nextSkip === currentSkip && nextLimit === currentLimit)
 					return Promise.create(true);
 				// No overlap
 				if ((nextLimit && nextSkip + nextLimit <= currentSkip) || (currentLimit && currentSkip + currentLimit <= nextSkip))
-					return this.refresh();
+					return this.refresh(true);
 				// Make sure that currentSkip >= nextSkip
 				while (currentSkip < nextSkip && (currentLimit === null || currentLimit > 0)) {
 					this.remove(this.getByIndex(0));
@@ -210,10 +211,10 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 					var leftLimit = currentSkip - nextSkip;
 					if (nextLimit !== null)
 						leftLimit = Math.min(leftLimit, nextLimit);
-					promise = this._execute(Objs.tree_extend({options: {
+					promise = this._execute(Objs.tree_extend(Objs.clone(this._query, 2), {options: {
 						skip: nextSkip,
 						limit: leftLimit    
-					}}, this._query, 2));
+					}}, 2), true);
 					nextSkip += leftLimit;
 					if (nextLimit !== null)
 						nextLimit -= leftLimit;
@@ -224,12 +225,12 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 							this.remove(this.getByIndex(this.count() - 1));
 					return promise;
 				}
-				return promise.and(this._execute(Objs.tree_extend({
+				return promise.and(this._execute(Objs.tree_extend(Objs.clone(this._query, 2), {
 					options: {
 						skip: currentSkip + currentLimit,
 						limit: !nextLimit ? null : nextLimit - currentLimit
 					}
-				}, this._query, 2)));
+				}, 2), true));
 			},
 
 			enable: function () {
@@ -248,7 +249,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 			},
 
 			refresh: function (clear) {
-				if (clear)
+				if (clear && !this._incremental)
 					this.clear();
 				if (this._query.options.sort && !Types.is_empty(this._query.options.sort)) {
 					this.set_compare(Comparators.byObject(this._query.options.sort));
@@ -258,7 +259,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 				this._unwatchInsert();
 				if (this._active)
 					this._watchInsert(this._query);
-				return this._execute(this._query);
+				return this._execute(this._query, !(clear && this._incremental));
 			},
 
 			isEnabled: function () {
@@ -277,12 +278,12 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 		       *
 		       * @return {Promise} Promise from executing query.
 		       */
-			_execute: function (constrainedQuery) {
+			_execute: function (constrainedQuery, keep_others) {
 				var limit = constrainedQuery.options.limit;
 				return this._subExecute(constrainedQuery.query, constrainedQuery.options).mapSuccess(function (iter) {
 					var result = iter.asArray();
 					this._complete = limit === null || result.length < limit;
-					this.replace_objects(result);
+					this.replace_objects(result, keep_others);
 					return true;
 				}, this);
 			},

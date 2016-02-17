@@ -142,3 +142,30 @@ test("test query collection increasing", function() {
 	QUnit.deepEqual(it(), "4-0,4-1,4-2,4-3,4-4,4-5,4-6,4-7,4-8,4-9,3-0,3-1,3-2,3-3,3-4,3-5,3-6,3-7,3-8,3-9");
 });
 
+
+
+
+
+
+test("test query collection increasing 2", function() {
+	var store = new BetaJS.Data.Stores.MemoryStore();
+	// store.indices.i = new BetaJS.Data.Stores.MemoryIndex(store, "i");
+	var c = 10;
+	for (var i = 0; i < c; ++i)
+		for (var j = 0; j < c; ++j)
+			store.insert({i:i,j:j});
+	var coll = new BetaJS.Data.Collections.StoreQueryCollection(store, {}, {
+		limit: c,
+		forward_steps: c,
+		auto: true,
+		sort: {
+			i: -1,
+			j: 1
+		}
+	});
+	
+	for (i = 0; i < c; ++i)
+		coll.increase_forwards();
+	QUnit.equal(coll.count(), c * c);
+});
+
