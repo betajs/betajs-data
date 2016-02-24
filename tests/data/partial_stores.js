@@ -190,7 +190,7 @@ test("test partial stores, commit write strategy, with watchers", function() {
 				new BetaJS.IdGenerators.TimedIdGenerator()
 			)
 		}),
-		watcher: remoteWatcher
+		remoteWatcher: remoteWatcher
 	});
 	store.insert({i: 5, j: 0});
 	QUnit.equal(remoteStore.query().value().asArray().length, 50);

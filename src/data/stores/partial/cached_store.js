@@ -327,17 +327,20 @@ Scoped.define("module:Stores.CachedStore", [
 							this._options.queryKey, queryString,
 							this._options.queryMetaKey, meta
 						));
+						var promises = [];
 						Objs.iter(items, function (item) {
-							this.cacheInsertUpdate(item, {
+							promises.push(this.cacheInsertUpdate(item, {
 								lockItem: false,
 								lockAttrs: false,
 								silent: options.silent,
 								accessMeta: options.accessMeta,
 								refreshMeta: options.refreshMeta,
 								foreignKey: true
-							});
+							}));
 						}, this);
-						return new MappedIterator(new ArrayIterator(items), this.addItemSupp, this);
+						return Promise.and(promises).mapSuccess(function (items) {
+							return new MappedIterator(new ArrayIterator(items), this.addItemSupp, this);
+						}, this);
 					}, this).mapError(function () {
 						this.offline();
 						return this.itemCache.query(query, options).mapSuccess(function (items) {

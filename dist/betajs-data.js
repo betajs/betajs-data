@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.19 - 2016-02-16
+betajs-data - v1.0.20 - 2016-02-23
 Copyright (c) Oliver Friedmann
 Apache 2.0 Software License.
 */
@@ -692,6 +692,12 @@ Public = Public.upgrade();
 Public.exports();
 	return Public;
 }).call(this);
+/*!
+betajs-data - v1.0.20 - 2016-02-23
+Copyright (c) Oliver Friedmann
+Apache 2.0 Software License.
+*/
+
 (function () {
 var Scoped = this.subScope();
 Scoped.binding('module', 'global:BetaJS.Data');
@@ -701,7 +707,7 @@ Scoped.binding('resumablejs', 'global:Resumable');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "69.1455672216034"
+    "version": "70.1456286394229"
 };
 });
 Scoped.assumeVersion('base:version', 474);
@@ -4400,17 +4406,20 @@ Scoped.define("module:Stores.CachedStore", [
 							this._options.queryKey, queryString,
 							this._options.queryMetaKey, meta
 						));
+						var promises = [];
 						Objs.iter(items, function (item) {
-							this.cacheInsertUpdate(item, {
+							promises.push(this.cacheInsertUpdate(item, {
 								lockItem: false,
 								lockAttrs: false,
 								silent: options.silent,
 								accessMeta: options.accessMeta,
 								refreshMeta: options.refreshMeta,
 								foreignKey: true
-							});
+							}));
 						}, this);
-						return new MappedIterator(new ArrayIterator(items), this.addItemSupp, this);
+						return Promise.and(promises).mapSuccess(function (items) {
+							return new MappedIterator(new ArrayIterator(items), this.addItemSupp, this);
+						}, this);
 					}, this).mapError(function () {
 						this.offline();
 						return this.itemCache.query(query, options).mapSuccess(function (items) {
@@ -4621,21 +4630,25 @@ Scoped.define("module:Stores.PartialStore", [
                                             "module:Stores.BaseStore",
                                             "module:Stores.CachedStore",
                                             "module:Stores.PartialStoreWriteStrategies.PostWriteStrategy",
+                                            "module:Stores.PartialStoreWatcher",
                                             "base:Objs"
-                                            ], function (Store, CachedStore, PostWriteStrategy, Objs, scoped) {
+                                            ], function (Store, CachedStore, PostWriteStrategy, PartialStoreWatcher, Objs, scoped) {
 	return Store.extend({scoped: scoped}, function (inherited) {			
 		return {
 
 			constructor: function (remoteStore, options) {
 				inherited.constructor.call(this, options);
 				this._options = Objs.extend({}, options);
+				if (this._options.remoteWatcher)
+					this.remoteWatcher = this._options.remoteWatcher;
 				this.remoteStore = remoteStore;
 				this.cachedStore = new CachedStore(remoteStore, this._options);
 				this.writeStrategy = this._options.writeStrategy || this.auto_destroy(new PostWriteStrategy());
-				if (this._watcher) {
-					this._watcher.on("insert", this._remoteInsert, this);
-					this._watcher.on("update", this._remoteUpdate, this);
-					this._watcher.on("remove", this._remoteRemove, this);
+				if (this.remoteWatcher) {
+					this.remoteWatcher.on("insert", this._remoteInsert, this);
+					this.remoteWatcher.on("update", this._remoteUpdate, this);
+					this.remoteWatcher.on("remove", this._remoteRemove, this);
+					this._watcher = new PartialStoreWatcher(this);
 				}
 				this.cachedStore.on("insert", this._inserted, this);
 				this.cachedStore.on("remove", this._removed, this);
@@ -4645,9 +4658,15 @@ Scoped.define("module:Stores.PartialStore", [
 				this.writeStrategy.init(this);
 			},
 			
+			id_key: function () {
+				return this.cachedStore.id_key();
+			},
+			
 			destroy: function () {
+				if (this.remoteWatcher)
+					this.remoteWatcher.off(null, null, this);
 				if (this._watcher)
-					this._watcher.off(null, null, this);
+					this._watcher.destroy();
 				this.cachedStore.destroy();
 				inherited.destroy.call(this);
 			},
@@ -4677,11 +4696,12 @@ Scoped.define("module:Stores.PartialStore", [
 			},
 			
 			_remoteInsert: function (data) {
-				this.cachedStore.cacheInsert(data, {
+				this.cachedStore.cacheInsertUpdate(data, {
 					lockItem: false,
 					silent: false,
 					refreshMeta: true,
-					accessMeta: true
+					accessMeta: true,
+					foreignKey: true
 				});
 			},
 			
@@ -4692,19 +4712,56 @@ Scoped.define("module:Stores.PartialStore", [
 					lockAttrs: false,
 					silent: false,
 					accessMeta: true,
-					refreshMeta: true
+					refreshMeta: true,
+					foreignKey: true
 				});
 			},
 			
 			_remoteRemove: function (id) {
 				this.cachedStore.cacheRemove(id, {
 					ignoreLock: false,
-					silent: false
+					silent: false,
+					foreignKey: true
 				});
 			}
 
 		};
 	});	
+});
+
+
+Scoped.define("module:Stores.PartialStoreWatcher", [
+    "module:Stores.Watchers.LocalWatcher"                                                    
+], function (StoreWatcher, scoped) {
+	return StoreWatcher.extend({scoped: scoped}, function (inherited) {
+		return {
+			
+			_watchItem : function(id) {
+				inherited.watchItem.call(this, id);
+				this._store.cachedStore.cachedIdToRemoteId(id).success(function (remoteId) {
+					this._store.remoteWatcher.watchItem(remoteId, this);
+				}, this);
+			},
+
+			_unwatchItem : function(id) {
+				inherited.unwatchItem.call(this, id);
+				this._store.cachedStore.cachedIdToRemoteId(id).success(function (remoteId) {
+					this._store.remoteWatcher.unwatchItem(remoteId, this);
+				}, this);
+			},
+
+			_watchInsert : function(query) {
+				inherited.watchInsert.call(this, query);
+				this._store.remoteWatcher.watchInsert(query, this);
+			},
+
+			_unwatchInsert : function(query) {
+				inherited.unwatchInsert.call(this, query);
+				this._store.remoteWatcher.unwatchInsert(query, this);
+			}			
+			
+		};
+	});
 });
 Scoped.define("module:Stores.PartialStoreWriteStrategies.WriteStrategy", [
                                                                           "base:Class"
