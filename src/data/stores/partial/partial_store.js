@@ -24,9 +24,7 @@ Scoped.define("module:Stores.PartialStore", [
 				}
 				this.cachedStore.on("insert", this._inserted, this);
 				this.cachedStore.on("remove", this._removed, this);
-				this.cachedStore.on("update", function (row, data) {
-					this._updated(this.cachedStore.id_of(row), data);
-				}, this);
+				this.cachedStore.on("update", this._updated, this);
 				this.writeStrategy.init(this);
 			},
 			

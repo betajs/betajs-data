@@ -103,7 +103,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				var id = row[this.id_key];
 				if (!this.__items.get(id))
 					return;
-				this._updatedWatchedItem(id);
+				this._updatedWatchedItem(row, data);
 			},
 
 			_insertedInsert : function(data) {

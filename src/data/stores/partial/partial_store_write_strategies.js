@@ -239,7 +239,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 								return this.partialStore.remoteStore.update(remoteId, commit.row);
 							}, this);
 						} else if (commit.type === "remove") {
-							return this.partialStore.remoteStore.remove(commit.row ? this.partialStore.remoteStore.id_of(commit.row) : commit.row_id);
+							promise = this.partialStore.remoteStore.remove(commit.row ? this.partialStore.remoteStore.id_of(commit.row) : commit.row_id);
 						}
 						promise.success(function (ret) {
 							hs.update(commit_id, {

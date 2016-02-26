@@ -1,7 +1,7 @@
 /*!
-betajs-data - v1.0.20 - 2016-02-23
+betajs-data - v1.0.21 - 2016-02-26
 Copyright (c) Oliver Friedmann
-Apache 2.0 Software License.
+Apache-2.0 Software License.
 */
 /** @flow **//*!
 betajs-scoped - v0.0.7 - 2016-02-06
@@ -693,9 +693,9 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.20 - 2016-02-23
+betajs-data - v1.0.21 - 2016-02-26
 Copyright (c) Oliver Friedmann
-Apache 2.0 Software License.
+Apache-2.0 Software License.
 */
 
 (function () {
@@ -707,7 +707,7 @@ Scoped.binding('resumablejs', 'global:Resumable');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "70.1456286394229"
+    "version": "71.1456505465948"
 };
 });
 Scoped.assumeVersion('base:version', 474);
@@ -4652,9 +4652,7 @@ Scoped.define("module:Stores.PartialStore", [
 				}
 				this.cachedStore.on("insert", this._inserted, this);
 				this.cachedStore.on("remove", this._removed, this);
-				this.cachedStore.on("update", function (row, data) {
-					this._updated(this.cachedStore.id_of(row), data);
-				}, this);
+				this.cachedStore.on("update", this._updated, this);
 				this.writeStrategy.init(this);
 			},
 			
@@ -5004,7 +5002,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 								return this.partialStore.remoteStore.update(remoteId, commit.row);
 							}, this);
 						} else if (commit.type === "remove") {
-							return this.partialStore.remoteStore.remove(commit.row ? this.partialStore.remoteStore.id_of(commit.row) : commit.row_id);
+							promise = this.partialStore.remoteStore.remove(commit.row ? this.partialStore.remoteStore.id_of(commit.row) : commit.row_id);
 						}
 						promise.success(function (ret) {
 							hs.update(commit_id, {
@@ -5478,7 +5476,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				var id = row[this.id_key];
 				if (!this.__items.get(id))
 					return;
-				this._updatedWatchedItem(id);
+				this._updatedWatchedItem(row, data);
 			},
 
 			_insertedInsert : function(data) {

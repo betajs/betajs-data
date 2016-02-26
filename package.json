@@ -1,72 +1,87 @@
 {
-	"name": "betajs-data",
-	"version": "1.0.20",
-	"description": "BetaJS-Data is a general-purpose JavaScript framework for handling RESTful operations and ActiveRecord abstractions.",
-	"homepage": "http://betajs.com",
-	"contributors": ["Oliver Friedmann"],
-	"license": "Apache 2.0",
-	"devDependencies": {
-		"grunt": "",
-		"grunt-contrib-jshint": "",
-		"grunt-contrib-nodeunit": "",
-		"grunt-contrib-concat": "",
-		"grunt-contrib-uglify": "",
-		"grunt-contrib-clean": "",
-		"grunt-preprocess": "",
-		"grunt-git-revision-count": "",
-		"grunt-closure-tools": "",
-		"grunt-node-qunit": "",
+    "homepage": "http://betajs.com",
+    "license": "Apache-2.0",
+    "licenses": [
+        {
+            "type": "Apache-2.0",
+            "url": "https://github.com/betajs/betajs-data/blob/master/LICENSE"
+        }
+    ],
+    "author": {
+        "name": "BetaJS",
+        "email": "info@betajs.com"
+    },
+    "bugs": {
+        "url": "https://github.com/betajs/betajs-data/issues"
+    },
+    "name": "betajs-data",
+    "version": "1.0.21",
+    "description": "BetaJS-Data is a general-purpose JavaScript framework for handling RESTful operations and ActiveRecord abstractions.",
+    "contributors": [
+        "Oliver Friedmann"
+    ],
+    "devDependencies": {
+        "grunt": "",
+        "grunt-contrib-jshint": "",
+        "grunt-contrib-concat": "",
+        "grunt-contrib-uglify": "",
+        "grunt-contrib-clean": "",
+        "grunt-preprocess": "",
+        "grunt-git-revision-count": "",
+        "grunt-closure-tools": "",
+        "grunt-node-qunit": "",
         "qunit": "",
-		"grunt-wget": "",
-		"grunt-jsdoc": "",
-		"grunt-shell": "",
-		"grunt-template": "",
-		"grunt-betajs-docs-compile": "",
-		"betajs-scoped": "",
-		"betajs-compile": "betajs/betajs-compile"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git://github.com/betajs/betajs-data.git"
-	},
-	"scripts": {
-		"test": "grunt check"
-	},
-	"meta": {
-		"guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-		"blog": "http://blog.betajs.com",
-		"twitter": "http://twitter.com/thebetajs",
-		"badges": {
-			"codeclimate": true,
-			"travis": true,
-			"npm": false
-		},
-		"status": "Active, Production ready",
-		"compatability": {
-			"Firefox": "4 - Latest",
-			"Chrome": "14 - Latest",
-			"Safari": "4 - Latest",
-			"Opera": "12 - Latest",
-			"Internet Explorer": "6 - Latest",
-			"Edge": "12 - Latest",
-			"iOS": "7.0 - Latest",
-			"Android": "4.0 - Latest",
-			"NodeJS": "0.10 - Latest" 
-		},
-		"weakDependencies": {
-			"betajs-scoped": "https://github.com/betajs/betajs-scoped"
-		},
-		"dependencies": {
-			"betajs": "https://github.com/betajs/betajs"
-		},
-		"tests": {
-			"Test Suite": "http://rawgit.com/betajs/betajs-data/master/tests/tests.html"
-		},
-		"cdn": {
-			"betajs-data.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data.js",
-			"betajs-data.min.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data.min.js",
-			"betajs-data-noscoped.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data-noscoped.js",
-			"betajs-data-noscoped.min.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data-noscoped.min.js"
-		}
-	} 
+        "grunt-wget": "",
+        "grunt-jsdoc": "",
+        "grunt-shell": "",
+        "grunt-template": "",
+        "grunt-betajs-docs-compile": "",
+        "betajs-scoped": "",
+        "betajs-compile": "betajs/betajs-compile"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/betajs/betajs-data.git"
+    },
+    "scripts": {
+        "test": "grunt check"
+    },
+    "meta": {
+        "blog": "http://blog.betajs.com",
+        "twitter": "http://twitter.com/thebetajs",
+        "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
+        "installdoc": "docsrc/common/install.md",
+        "summarydoc": "docsrc/common/summary.md",
+        "badges": {
+            "codeclimate": true,
+            "travis": true,
+            "npm": false
+        },
+        "compatability": {
+            "Firefox": "4 - Latest",
+            "Chrome": "15 - Latest",
+            "Safari": "4 - Latest",
+            "Opera": "12 - Latest",
+            "Internet Explorer": "6 - Latest",
+            "Edge": "12 - Latest",
+            "iOS": "7.0 - Latest",
+            "Android": "4.0 - Latest",
+            "NodeJS": "0.10 - Latest"
+        },
+        "weakDependencies": {
+            "betajs-scoped": "https://github.com/betajs/betajs-scoped"
+        },
+        "dependencies": {
+            "betajs": "https://github.com/betajs/betajs"
+        },
+        "tests": {
+            "Test Suite": "http://rawgit.com/betajs/betajs-data/master/tests/tests.html"
+        },
+        "cdn": {
+            "betajs-data.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data.js",
+            "betajs-data.min.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data.min.js",
+            "betajs-data-noscoped.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data-noscoped.js",
+            "betajs-data-noscoped.min.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data-noscoped.min.js"
+        }
+    }
 }
