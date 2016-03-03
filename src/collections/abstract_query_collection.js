@@ -37,7 +37,9 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 		       * @return {QueryCollection} A new instance of QueryCollection.
 		       */
 			constructor: function (source, query, options) {
-				inherited.constructor.call(this);
+				inherited.constructor.call(this, {
+					release_references: true
+				});
 				options = options || {};
 				this._id_key = this._id_key || options.id_key || "id";
 				this._source = source;

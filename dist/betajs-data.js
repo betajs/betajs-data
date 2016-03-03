@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.21 - 2016-02-26
+betajs-data - v1.0.22 - 2016-03-02
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -693,7 +693,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.21 - 2016-02-26
+betajs-data - v1.0.22 - 2016-03-02
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -707,7 +707,7 @@ Scoped.binding('resumablejs', 'global:Resumable');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "71.1456505465948"
+    "version": "72.1456966587066"
 };
 });
 Scoped.assumeVersion('base:version', 474);
@@ -750,7 +750,9 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 		       * @return {QueryCollection} A new instance of QueryCollection.
 		       */
 			constructor: function (source, query, options) {
-				inherited.constructor.call(this);
+				inherited.constructor.call(this, {
+					release_references: true
+				});
 				options = options || {};
 				this._id_key = this._id_key || options.id_key || "id";
 				this._source = source;
@@ -1735,7 +1737,7 @@ Scoped.define("module:Queries", [
 		},
 
 		dependencies: function (query) {
-			return Objs.keys(this.dependencies_query(query, {}));
+			return Object.keys(this.dependencies_query(query, {}));
 		},
 
 		dependencies_queries: function (queries, dep) {

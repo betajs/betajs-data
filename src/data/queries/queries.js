@@ -170,7 +170,7 @@ Scoped.define("module:Queries", [
 		},
 
 		dependencies: function (query) {
-			return Objs.keys(this.dependencies_query(query, {}));
+			return Object.keys(this.dependencies_query(query, {}));
 		},
 
 		dependencies_queries: function (queries, dep) {
