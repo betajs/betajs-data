@@ -51,6 +51,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 				this._range = options.range || null;
 				this._forward_steps = options.forward_steps || null;
 				this._backward_steps = options.backward_steps || null;
+				this._async = options.async || false;
 				if (this._active) {
 					this.on("add", function (object) {
 						this._watchItem(object.get(this._id_key));
@@ -281,11 +282,15 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 		       * @return {Promise} Promise from executing query.
 		       */
 			_execute: function (constrainedQuery, keep_others) {
-				var limit = constrainedQuery.options.limit;
 				return this._subExecute(constrainedQuery.query, constrainedQuery.options).mapSuccess(function (iter) {
-					var result = iter.asArray();
-					this._complete = limit === null || result.length < limit;
-					this.replace_objects(result, keep_others);
+					if (!iter.hasNext()) {
+						this._complete = true;
+						return true;
+					}
+					if (!keep_others || !this._async)
+						this.replace_objects(iter.asArray(), keep_others);
+					else
+						iter.asyncIterate(this.replace_object, this);
 					return true;
 				}, this);
 			},

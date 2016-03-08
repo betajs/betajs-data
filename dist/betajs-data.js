@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.22 - 2016-03-02
+betajs-data - v1.0.23 - 2016-03-07
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -693,7 +693,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.22 - 2016-03-02
+betajs-data - v1.0.23 - 2016-03-07
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -707,7 +707,7 @@ Scoped.binding('resumablejs', 'global:Resumable');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "72.1456966587066"
+    "version": "74.1457403339632"
 };
 });
 Scoped.assumeVersion('base:version', 474);
@@ -764,6 +764,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 				this._range = options.range || null;
 				this._forward_steps = options.forward_steps || null;
 				this._backward_steps = options.backward_steps || null;
+				this._async = options.async || false;
 				if (this._active) {
 					this.on("add", function (object) {
 						this._watchItem(object.get(this._id_key));
@@ -994,11 +995,15 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 		       * @return {Promise} Promise from executing query.
 		       */
 			_execute: function (constrainedQuery, keep_others) {
-				var limit = constrainedQuery.options.limit;
 				return this._subExecute(constrainedQuery.query, constrainedQuery.options).mapSuccess(function (iter) {
-					var result = iter.asArray();
-					this._complete = limit === null || result.length < limit;
-					this.replace_objects(result, keep_others);
+					if (!iter.hasNext()) {
+						this._complete = true;
+						return true;
+					}
+					if (!keep_others || !this._async)
+						this.replace_objects(iter.asArray(), keep_others);
+					else
+						iter.asyncIterate(this.replace_object, this);
 					return true;
 				}, this);
 			},
@@ -2408,35 +2413,55 @@ Scoped.define("module:Stores.AssocStore", [
 
 Scoped.define("module:Stores.MemoryStore", [
                                             "module:Stores.AssocStore",
-                                            "base:Iterators.ObjectValuesIterator",
+                                            //"base:Iterators.ObjectValuesIterator",
+                                            "base:Iterators.FilteredIterator",
+                                            "base:Iterators.ArrayIterator",
                                             "base:Objs"
-                                            ], function (AssocStore, ObjectValuesIterator, Objs, scoped) {
+                                            ], function (AssocStore, FilteredIterator, ArrayIterator, Objs, scoped) {
 	return AssocStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 
 			constructor: function (options) {
 				inherited.constructor.call(this, options);
-				this.__data = {};
+				// We reserve index 0.
+				this.__dataByIndex = [null];
+				this.__indexById = {};
+				this.__count = 0;
 			},
 
 			_read_key: function (key) {
-				return this.__data[key];
+				var i = this.__indexById[key];
+				return i ? this.__dataByIndex[i] : undefined;
 			},
 
 			_write_key: function (key, value) {
-				this.__data[key] = value;
+				var i = this.__indexById[key];
+				if (!i) {
+					i = this.__dataByIndex.length;
+					this.__indexById[key] = i;
+					this.__count++;
+				}
+				this.__dataByIndex[i] = value;
 			},
 
 			_remove_key: function (key) {
-				delete this.__data[key];
+				var i = this.__indexById[key];
+				if (i) {
+					delete this.__indexById[key];
+					delete this.__dataByIndex[i];
+					this.__count--;
+				}				
 			},
 
 			_iterate: function () {
-				return new ObjectValuesIterator(this.__data);
+				return new FilteredIterator(new ArrayIterator(this.__dataByIndex), function (item) {
+					return !!item;
+				});
+				//return new ObjectValuesIterator(this.__data);
 			},
 			
 			_count: function (query) {
-				return query ? inherited._count.call(this, query) : Objs.count(this.__data);
+				return query ? inherited._count.call(this, query) : this.__count;
 			}
 
 		};
