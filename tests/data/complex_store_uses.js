@@ -250,6 +250,8 @@ test("client server partial with different ids", function () {
 		"first_name": "First-13-B"
 	});
 	client.write_strategy.push();
-	QUnit.equal(server.store.query({"first_name": "First-13-B"}).value().asArray().length, 1);
+	var server_items = server.store.query({"first_name": "First-13-B"}).value().asArray(); 
+	QUnit.equal(server_items.length, 1);
+	QUnit.equal(!server_items[0].local_attr, true);
 	
 });

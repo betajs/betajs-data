@@ -66,8 +66,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
 
 
 Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
-                                                                             "module:Stores.PartialStoreWriteStrategies.WriteStrategy"
-                                                                             ], function (Class, scoped) {
+    "module:Stores.PartialStoreWriteStrategies.WriteStrategy",
+    "base:Objs"
+], function (Class, Objs, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -77,12 +78,15 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
 					silent: true,
 					refreshMeta: true,
 					accessMeta: true
-				}).success(function (data) {
-					this.partialStore.remoteStore.insert(data).success(function (remoteData) {
-						this.partialStore.cachedStore.cacheUpdate(this.partialStore.cachedStore.id_of(data), remoteData, {
+				}).mapSuccess(function (data) {
+					nosuppdata = this.partialStore.cachedStore.removeItemSupp(data);
+					return this.partialStore.remoteStore.insert(nosuppdata).mapSuccess(function (remoteData) {
+						return this.partialStore.cachedStore.cacheUpdate(this.partialStore.cachedStore.id_of(data), remoteData, {
 							silent: true,
 							unlockItem: true
-						});
+						}).mapSuccess(function (addedRemoteData) {
+							return Objs.extend(Objs.clone(data, 1), addedRemoteData);
+						}, this);
 					}, this).error(function () {
 						this.partialStore.cachedStore.cacheRemove(this.partialStore.cachedStore.id_of(data), {
 							ignoreLock: true,
@@ -112,6 +116,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
 						refreshMeta: false,
 						accessMeta: true
 					}).success(function (data) {
+						data = this.partialStore.cachedStore.removeItemSupp(data);
 						this.partialStore.remoteStore.update(remoteId, data).success(function () {
 							this.partialStore.cachedStore.unlockItem(cachedId);
 						}, this);
@@ -171,6 +176,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					refreshMeta: true,
 					accessMeta: true
 				}).success(function (data) {
+					data = this.partialStore.cachedStore.removeItemSupp(data);
 					this.storeHistory.sourceInsert(data);
 				}, this);
 			},
@@ -194,6 +200,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					refreshMeta: false,
 					accessMeta: true
 				}).success(function () {
+					data = this.partialStore.cachedStore.removeItemSupp(data);
 					this.storeHistory.sourceUpdate(id, data);
 				}, this);
 			},

@@ -379,6 +379,14 @@ Scoped.define("module:Stores.CachedStore", [
 			addItemSupp: function (data) {
 				return Objs.extend(Objs.clone(this._options.suppAttrs, 1), data);
 			},
+			
+			removeItemSupp: function (data) {
+				if (!this._options.suppAttrs)
+					return data;
+				return Objs.filter(data, function (value, key) {
+					return !(key in this._options.suppAttrs);
+				}, this);
+			},
 
 			addQueryMeta: function (data, meta) {
 				data = Objs.clone(data, 1);

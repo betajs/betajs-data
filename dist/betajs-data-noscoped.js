@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.23 - 2016-03-07
+betajs-data - v1.0.24 - 2016-03-14
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -13,7 +13,7 @@ Scoped.binding('resumablejs', 'global:Resumable');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "74.1457403339632"
+    "version": "75.1457992367555"
 };
 });
 Scoped.assumeVersion('base:version', 474);
@@ -301,15 +301,24 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 		       * @return {Promise} Promise from executing query.
 		       */
 			_execute: function (constrainedQuery, keep_others) {
+				if (this.__executePromise) {
+					return this.__executePromise.mapCallback(function () {
+						return this._execute(constrainedQuery, keep_others);
+					}, this);
+				}
 				return this._subExecute(constrainedQuery.query, constrainedQuery.options).mapSuccess(function (iter) {
 					if (!iter.hasNext()) {
 						this._complete = true;
 						return true;
 					}
-					if (!keep_others || !this._async)
+					if (!keep_others || !this._async) {
 						this.replace_objects(iter.asArray(), keep_others);
-					else
-						iter.asyncIterate(this.replace_object, this);
+						return true;
+					}
+					this.__executePromise = iter.asyncIterate(this.replace_object, this);
+					this.__executePromise.callback(function () {
+						this.__executePromise = null;
+					}, this);
 					return true;
 				}, this);
 			},
@@ -3791,6 +3800,14 @@ Scoped.define("module:Stores.CachedStore", [
 			addItemSupp: function (data) {
 				return Objs.extend(Objs.clone(this._options.suppAttrs, 1), data);
 			},
+			
+			removeItemSupp: function (data) {
+				if (!this._options.suppAttrs)
+					return data;
+				return Objs.filter(data, function (value, key) {
+					return !(key in this._options.suppAttrs);
+				}, this);
+			},
 
 			addQueryMeta: function (data, meta) {
 				data = Objs.clone(data, 1);
@@ -4162,8 +4179,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
 
 
 Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
-                                                                             "module:Stores.PartialStoreWriteStrategies.WriteStrategy"
-                                                                             ], function (Class, scoped) {
+    "module:Stores.PartialStoreWriteStrategies.WriteStrategy",
+    "base:Objs"
+], function (Class, Objs, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -4173,12 +4191,15 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
 					silent: true,
 					refreshMeta: true,
 					accessMeta: true
-				}).success(function (data) {
-					this.partialStore.remoteStore.insert(data).success(function (remoteData) {
-						this.partialStore.cachedStore.cacheUpdate(this.partialStore.cachedStore.id_of(data), remoteData, {
+				}).mapSuccess(function (data) {
+					nosuppdata = this.partialStore.cachedStore.removeItemSupp(data);
+					return this.partialStore.remoteStore.insert(nosuppdata).mapSuccess(function (remoteData) {
+						return this.partialStore.cachedStore.cacheUpdate(this.partialStore.cachedStore.id_of(data), remoteData, {
 							silent: true,
 							unlockItem: true
-						});
+						}).mapSuccess(function (addedRemoteData) {
+							return Objs.extend(Objs.clone(data, 1), addedRemoteData);
+						}, this);
 					}, this).error(function () {
 						this.partialStore.cachedStore.cacheRemove(this.partialStore.cachedStore.id_of(data), {
 							ignoreLock: true,
@@ -4208,6 +4229,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
 						refreshMeta: false,
 						accessMeta: true
 					}).success(function (data) {
+						data = this.partialStore.cachedStore.removeItemSupp(data);
 						this.partialStore.remoteStore.update(remoteId, data).success(function () {
 							this.partialStore.cachedStore.unlockItem(cachedId);
 						}, this);
@@ -4267,6 +4289,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					refreshMeta: true,
 					accessMeta: true
 				}).success(function (data) {
+					data = this.partialStore.cachedStore.removeItemSupp(data);
 					this.storeHistory.sourceInsert(data);
 				}, this);
 			},
@@ -4290,6 +4313,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					refreshMeta: false,
 					accessMeta: true
 				}).success(function () {
+					data = this.partialStore.cachedStore.removeItemSupp(data);
 					this.storeHistory.sourceUpdate(id, data);
 				}, this);
 			},

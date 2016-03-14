@@ -282,15 +282,24 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 		       * @return {Promise} Promise from executing query.
 		       */
 			_execute: function (constrainedQuery, keep_others) {
+				if (this.__executePromise) {
+					return this.__executePromise.mapCallback(function () {
+						return this._execute(constrainedQuery, keep_others);
+					}, this);
+				}
 				return this._subExecute(constrainedQuery.query, constrainedQuery.options).mapSuccess(function (iter) {
 					if (!iter.hasNext()) {
 						this._complete = true;
 						return true;
 					}
-					if (!keep_others || !this._async)
+					if (!keep_others || !this._async) {
 						this.replace_objects(iter.asArray(), keep_others);
-					else
-						iter.asyncIterate(this.replace_object, this);
+						return true;
+					}
+					this.__executePromise = iter.asyncIterate(this.replace_object, this);
+					this.__executePromise.callback(function () {
+						this.__executePromise = null;
+					}, this);
 					return true;
 				}, this);
 			},

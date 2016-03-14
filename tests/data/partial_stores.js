@@ -338,13 +338,14 @@ test("test partial stores, different ids, commit write strategy, no watchers", f
 	});
 
 	store.insert({foo: "bar"}).success(function (item) {
-		QUnit.equal(!!item.remote_id, false);
-		QUnit.equal(!!item.local_id, true);
+		QUnit.equal(!!item.remote_id, false, "has remote id");
+		QUnit.equal(!!item.local_id, true, "no local id");
 		QUnit.equal(item.foo, "bar");
 		QUnit.equal(itemCache.query({},{}).value().asArray().length, 1);
 		QUnit.equal(remoteStore.query({},{}).value().asArray().length, 0);
 		store.writeStrategy.push();
-		QUnit.equal(!!item.remote_id, true);
+		item = itemCache.query({},{}).value().next();
+		QUnit.equal(!!item.remote_id, true, "item should now have a remote id");
 		QUnit.equal(remoteStore.query({},{}).value().asArray().length, 1);
 		store.remove(item.local_id).success(function () {
 			QUnit.equal(remoteStore.query({},{}).value().asArray().length, 1);

@@ -1,4 +1,4 @@
-# betajs-data 1.0.23
+# betajs-data 1.0.24
 [![Build Status](https://api.travis-ci.org/betajs/betajs-data.svg?branch=master)](https://travis-ci.org/betajs/betajs-data)
 [![Code Climate](https://codeclimate.com/github/betajs/betajs-data/badges/gpa.svg)](https://codeclimate.com/github/betajs/betajs-data)
 
