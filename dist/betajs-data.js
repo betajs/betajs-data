@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.24 - 2016-03-14
+betajs-data - v1.0.25 - 2016-03-24
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -693,7 +693,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.24 - 2016-03-14
+betajs-data - v1.0.25 - 2016-03-24
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -707,7 +707,7 @@ Scoped.binding('resumablejs', 'global:Resumable');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "75.1457992367555"
+    "version": "76.1458828892266"
 };
 });
 Scoped.assumeVersion('base:version', 474);
@@ -3228,6 +3228,7 @@ Scoped.define("module:Stores.ReadyStore", [
 					stalling: stalling,
 					promise: promise
 				});
+				return stalling;
 			},
 
 			_preInsert: function () {
@@ -5399,7 +5400,7 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 						this._store.query({"$and": [keyQuery, query]}, options).success(function (result) {
 							while (result.hasNext()) {
 								var item = result.next();
-								var id = this._store.id_of(item);
+								var id = item[this.__increasingKey];
 								if (!this.__lastKeyIds[id])
 									this._insertedInsert(item);
 								this.__lastKeyIds[id] = true;
@@ -5928,7 +5929,7 @@ Scoped.define("module:Modelling.Model", [
 					this.__silent++;
 					for (var key in data) {
 						if (!this._properties_changed[key])
-							this.set(key, data);
+							this.set(key, data[key]);
 					}
 					this.__silent--;
 				}, this);

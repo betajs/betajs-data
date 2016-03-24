@@ -25,6 +25,7 @@ Scoped.define("module:Stores.ReadyStore", [
 					stalling: stalling,
 					promise: promise
 				});
+				return stalling;
 			},
 
 			_preInsert: function () {

@@ -86,7 +86,7 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 						this._store.query({"$and": [keyQuery, query]}, options).success(function (result) {
 							while (result.hasNext()) {
 								var item = result.next();
-								var id = this._store.id_of(item);
+								var id = item[this.__increasingKey];
 								if (!this.__lastKeyIds[id])
 									this._insertedInsert(item);
 								this.__lastKeyIds[id] = true;
