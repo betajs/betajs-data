@@ -83,8 +83,8 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 			destroy: function () {
 				this.disable();
 				if (this._watcher()) {
-					this._watcher()._unwatchInsert(null, this);
-					this._watcher()._unwatchItem(null, this);
+					this._watcher().unwatchInsert(null, this);
+					this._watcher().unwatchItem(null, this);
 				}
 				inherited.destroy.call(this);
 			},

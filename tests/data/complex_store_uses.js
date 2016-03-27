@@ -254,4 +254,7 @@ test("client server partial with different ids", function () {
 	QUnit.equal(server_items.length, 1);
 	QUnit.equal(!server_items[0].local_attr, true);
 	
+	// Release resources
+	client.collection.destroy();
+	
 });

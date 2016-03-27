@@ -78,8 +78,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			},
 
 			unwatchItem : function(id, context) {
-				if (this.__items.unregister(id, context))
-					this._unwatchItem(id);
+				this.__items.unregister(id, context).forEach(this._unwatchItem, this);
 			},
 
 			watchInsert : function(query, context) {
@@ -88,14 +87,14 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			},
 
 			unwatchInsert : function(query, context) {
-				if (this.__inserts.unregister(query, context))
-					this._unwatchInsert(query);
+				this.__inserts.unregister(query, context).forEach(this._unwatchInsert, this);
 			},
 
 			_removedItem : function(id) {
 				if (!this.__items.get(id))
 					return;
-				//this.unwatchItem(id, null);
+				// @Oliver: I am not sure why this is commented out, but tests fail if we comment it in.
+				// this.unwatchItem(id, null);
 				this._removedWatchedItem(id);
 			},
 

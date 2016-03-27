@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.25 - 2016-03-24
+betajs-data - v1.0.26 - 2016-03-27
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -693,7 +693,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.25 - 2016-03-24
+betajs-data - v1.0.26 - 2016-03-27
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -707,7 +707,7 @@ Scoped.binding('resumablejs', 'global:Resumable');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "76.1458828892266"
+    "version": "77.1459099534483"
 };
 });
 Scoped.assumeVersion('base:version', 474);
@@ -796,8 +796,8 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 			destroy: function () {
 				this.disable();
 				if (this._watcher()) {
-					this._watcher()._unwatchInsert(null, this);
-					this._watcher()._unwatchItem(null, this);
+					this._watcher().unwatchInsert(null, this);
+					this._watcher().unwatchItem(null, this);
 				}
 				inherited.destroy.call(this);
 			},
@@ -5503,8 +5503,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			},
 
 			unwatchItem : function(id, context) {
-				if (this.__items.unregister(id, context))
-					this._unwatchItem(id);
+				this.__items.unregister(id, context).forEach(this._unwatchItem, this);
 			},
 
 			watchInsert : function(query, context) {
@@ -5513,14 +5512,14 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			},
 
 			unwatchInsert : function(query, context) {
-				if (this.__inserts.unregister(query, context))
-					this._unwatchInsert(query);
+				this.__inserts.unregister(query, context).forEach(this._unwatchInsert, this);
 			},
 
 			_removedItem : function(id) {
 				if (!this.__items.get(id))
 					return;
-				//this.unwatchItem(id, null);
+				// @Oliver: I am not sure why this is commented out, but tests fail if we comment it in.
+				// this.unwatchItem(id, null);
 				this._removedWatchedItem(id);
 			},
 
