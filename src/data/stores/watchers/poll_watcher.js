@@ -83,7 +83,7 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 						var query = q.query;
 						var options = q.options;
 						var keyQuery = Objs.objectBy(this.__increasingKey, {"$gte": this.__lastKey});
-						this._store.query({"$and": [keyQuery, query]}, options).success(function (result) {
+						this._store.query(Objs.extend(keyQuery, query), options).success(function (result) {
 							while (result.hasNext()) {
 								var item = result.next();
 								var id = item[this.__increasingKey];

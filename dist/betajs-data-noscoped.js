@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.26 - 2016-03-27
+betajs-data - v1.0.27 - 2016-04-05
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -13,7 +13,7 @@ Scoped.binding('resumablejs', 'global:Resumable');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "77.1459099534483"
+    "version": "78.1459861058546"
 };
 });
 Scoped.assumeVersion('base:version', 474);
@@ -4703,7 +4703,7 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 						var query = q.query;
 						var options = q.options;
 						var keyQuery = Objs.objectBy(this.__increasingKey, {"$gte": this.__lastKey});
-						this._store.query({"$and": [keyQuery, query]}, options).success(function (result) {
+						this._store.query(Objs.extend(keyQuery, query), options).success(function (result) {
 							while (result.hasNext()) {
 								var item = result.next();
 								var id = item[this.__increasingKey];
