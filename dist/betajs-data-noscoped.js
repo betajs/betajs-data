@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.27 - 2016-04-05
+betajs-data - v1.0.28 - 2016-04-19
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -13,7 +13,7 @@ Scoped.binding('resumablejs', 'global:Resumable');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "78.1459861058546"
+    "version": "79.1461098945568"
 };
 });
 Scoped.assumeVersion('base:version', 474);
@@ -5307,10 +5307,9 @@ Scoped.define("module:Modelling.Model", [
 			remove: function () {
 				if (this.isNew() || this.isRemoved())
 					return Promise.create(true);
-				return this.__table.store().remove(this.id(), this.__ctx).mapSuccess(function (result) {
-					this.trigger("remove");		
+				return this.__table.store().remove(this.id(), this.__ctx).success(function () {
 					this.__options.removed = true;
-					return result;
+					this.trigger("remove");		
 				}, this);
 			}	
 
