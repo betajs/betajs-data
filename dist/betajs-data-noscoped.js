@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.28 - 2016-04-19
+betajs-data - v1.0.29 - 2016-04-26
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -8,15 +8,13 @@ Apache-2.0 Software License.
 var Scoped = this.subScope();
 Scoped.binding('module', 'global:BetaJS.Data');
 Scoped.binding('base', 'global:BetaJS');
-Scoped.binding('jquery', 'global:jQuery');
-Scoped.binding('resumablejs', 'global:Resumable');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "79.1461098945568"
+    "version": "80.1461692120274"
 };
 });
-Scoped.assumeVersion('base:version', 474);
+Scoped.assumeVersion('base:version', 496);
 /**
  * @class AbstractQueryCollection
  *
@@ -5282,6 +5280,8 @@ Scoped.define("module:Modelling.Model", [
 					var wasNew = this.isNew();
 					var promise = this.isNew() ? this.__table.store().insert(attrs, this.__ctx) : this.__table.store().update(this.id(), attrs, this.__ctx);
 					return promise.mapCallback(function (err, result) {
+						if (this.destroyed())
+							return this;
 						if (err) {
 							if (err.data) {
 								Objs.iter(err.data, function (value, key) {

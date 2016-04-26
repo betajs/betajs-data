@@ -10,11 +10,9 @@ module.exports = function(grunt) {
     /* Compilation */    
 	.scopedclosurerevisionTask(null, "src/**/*.js", "dist/" + dist + "-noscoped.js", {
 		"module": "global:BetaJS.Data",
-		"base": "global:BetaJS",
-		"jquery": "global:jQuery",
-		"resumablejs": "global:Resumable"
+		"base": "global:BetaJS"
     }, {
-    	"base:version": 474
+    	"base:version": 496
     })	
     .concatTask('concat-scoped', ['vendors/scoped.js', 'dist/' + dist + '-noscoped.js'], 'dist/' + dist + '.js')
     .uglifyTask('uglify-noscoped', 'dist/' + dist + '-noscoped.js', 'dist/' + dist + '-noscoped.min.js')

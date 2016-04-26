@@ -109,6 +109,8 @@ Scoped.define("module:Modelling.Model", [
 					var wasNew = this.isNew();
 					var promise = this.isNew() ? this.__table.store().insert(attrs, this.__ctx) : this.__table.store().update(this.id(), attrs, this.__ctx);
 					return promise.mapCallback(function (err, result) {
+						if (this.destroyed())
+							return this;
 						if (err) {
 							if (err.data) {
 								Objs.iter(err.data, function (value, key) {

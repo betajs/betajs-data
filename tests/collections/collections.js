@@ -169,3 +169,28 @@ test("test query collection increasing 2", function() {
 	QUnit.equal(coll.count(), c * c);
 });
 
+
+
+test("test collection remove", function() {
+	var store = new BetaJS.Data.Stores.MemoryStore();
+	store.insert({archived: true});
+	var Model = BetaJS.Data.Modelling.Model.extend("Model", {}, {
+		_initializeScheme: function () {
+			var scheme = this._inherited(Model, "_initializeScheme");
+			scheme.archived = {
+				type: "boolean"
+			};
+			return scheme;
+		}
+	});
+	var table = new BetaJS.Data.Modelling.Table(store, Model);
+	var coll = new BetaJS.Data.Collections.TableQueryCollection(table, {archived: true}, {
+		active: true,
+		auto: true
+	});
+	QUnit.equal(coll.count(), 1);
+	var model0 = coll.getByIndex(0);
+	model0.set("archived", false);
+	QUnit.equal(coll.count(), 0);
+	QUnit.equal(model0.destroyed(), true);
+});
