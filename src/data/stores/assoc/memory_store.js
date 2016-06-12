@@ -1,12 +1,12 @@
 //Stores everything temporarily in the browser's memory
 
 Scoped.define("module:Stores.MemoryStore", [
-                                            "module:Stores.AssocStore",
-                                            //"base:Iterators.ObjectValuesIterator",
-                                            "base:Iterators.FilteredIterator",
-                                            "base:Iterators.ArrayIterator",
-                                            "base:Objs"
-                                            ], function (AssocStore, FilteredIterator, ArrayIterator, Objs, scoped) {
+    "module:Stores.AssocStore",
+    //"base:Iterators.ObjectValuesIterator",
+    "base:Iterators.FilteredIterator",
+    "base:Iterators.ArrayIterator",
+    "base:Objs"
+], function (AssocStore, FilteredIterator, ArrayIterator, Objs, scoped) {
 	return AssocStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 

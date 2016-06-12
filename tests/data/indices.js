@@ -50,6 +50,15 @@ test("test index performance", function () {
 
 });
 
+test("test index queries x", function () {
+	var store = new BetaJS.Data.Stores.MemoryStore();
+	store.indices.j = new BetaJS.Data.Stores.MemoryIndex(store, "j");
+	for (var i = 0; i < 100; ++i)
+		for (var j = 0; j < 100; ++j)
+			store.insert({i:i,j:j});
+	QUnit.equal(store.query({j: 50}).value().asArray().length, 100);
+	QUnit.equal(store.query({j: {"$eq": 50}}).value().asArray().length, 100);
+});
 
 test("test index queries", function() {
 	var store = new BetaJS.Data.Stores.MemoryStore();

@@ -154,10 +154,11 @@ Scoped.define("module:Queries.Engine", [
 					}
 					var add = ignoreCase ? "ic" : "";
 					var postfix = ignoreCase ? "_ic" : "";
-					if (conds["$eq" + add]) {
+					if (conds["$eq" + add] || !Types.is_object(conds)) {
 						var materialized = [];
-						index["itemIterate" + postfix](conds["$eq" + add], primarySortDirection, function (dataKey, data) {
-							if (dataKey !== conds["$eq" + add])
+						var value = Types.is_object(conds) ? conds["$eq" + add] : conds;
+						index["itemIterate" + postfix](value, primarySortDirection, function (dataKey, data) {
+							if (dataKey !== value)
 								return false;
 							materialized.push(data);
 						});
@@ -193,6 +194,7 @@ Scoped.define("module:Queries.Engine", [
 								if (Math.sign((index.comparator())(currentKey, lastKey)) === Math.sign(primarySortDirection))
 									return null;
 							}
+							var materialized = [];
 							index["itemIterate" + postfix](currentKey, primarySortDirection, function (dataKey, data) {
 								if (currentKey === null)
 									currentKey = dataKey;

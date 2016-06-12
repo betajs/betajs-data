@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.29 - 2016-04-26
+betajs-data - v1.0.30 - 2016-06-12
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "80.1461692120274"
+    "version": "81.1465771566884"
 };
 });
 Scoped.assumeVersion('base:version', 496);
@@ -609,8 +609,9 @@ Scoped.define("module:Stores.AbstractIndex", [
 Scoped.define("module:Stores.MemoryIndex", [
                                             "module:Stores.AbstractIndex",
                                             "base:Structures.TreeMap",
-                                            "base:Objs"
-                                            ], function (AbstractIndex, TreeMap, Objs, scoped) {
+                                            "base:Objs",
+                                            "base:Types"
+                                            ], function (AbstractIndex, TreeMap, Objs, Types, scoped) {
 	return AbstractIndex.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -642,7 +643,7 @@ Scoped.define("module:Stores.MemoryIndex", [
 			__remove: function (key, map, id) {
 				var value = TreeMap.find(key, map);
 				delete value[id];
-				if (Objs.is_empty(value))
+				if (Types.is_empty(value))
 					map = TreeMap.remove(key, map);
 				return map;
 			},
@@ -1260,11 +1261,12 @@ Scoped.define("module:Queries", [
 					}, this);
 					if ((key === "$and" && arr.length > 0) || (key === "$or" && !had_true))
 						result[key] = arr;
-				} else {
+				} else if (Types.is_object(value)) {
 					var conds = this.simplifyConditions(value);
 					if (!Types.is_empty(conds))
 						result[key] = conds;
-				}
+				} else
+					result[key] = value;
 			}, this);
 			return result;
 		},
@@ -1540,10 +1542,11 @@ Scoped.define("module:Queries.Engine", [
 					}
 					var add = ignoreCase ? "ic" : "";
 					var postfix = ignoreCase ? "_ic" : "";
-					if (conds["$eq" + add]) {
+					if (conds["$eq" + add] || !Types.is_object(conds)) {
 						var materialized = [];
-						index["itemIterate" + postfix](conds["$eq" + add], primarySortDirection, function (dataKey, data) {
-							if (dataKey !== conds["$eq" + add])
+						var value = Types.is_object(conds) ? conds["$eq" + add] : conds;
+						index["itemIterate" + postfix](value, primarySortDirection, function (dataKey, data) {
+							if (dataKey !== value)
 								return false;
 							materialized.push(data);
 						});
@@ -1579,6 +1582,7 @@ Scoped.define("module:Queries.Engine", [
 								if (Math.sign((index.comparator())(currentKey, lastKey)) === Math.sign(primarySortDirection))
 									return null;
 							}
+							var materialized = [];
 							index["itemIterate" + postfix](currentKey, primarySortDirection, function (dataKey, data) {
 								if (currentKey === null)
 									currentKey = dataKey;
@@ -1722,15 +1726,57 @@ Scoped.define("module:Stores.AssocStore", [
 	});
 });
 
+//Stores everything temporarily in the browser's memory using map
+
+Scoped.define("module:Stores.MemoryMapStore", [
+    "module:Stores.AssocStore",
+    "base:Iterators.FilteredIterator",
+    "base:Iterators.NativeMapIterator",
+    "base:Objs"
+], function (AssocStore, FilteredIterator, NativeMapIterator, Objs, scoped) {
+	return AssocStore.extend({scoped: scoped}, function (inherited) {			
+		return {
+
+			constructor: function (options) {
+				inherited.constructor.call(this, options);
+				this.__map = new Map();
+			},
+
+			_read_key: function (key) {
+				return this.__map.get(key + "");
+			},
+
+			_write_key: function (key, value) {
+				this.__map.set(key + "", value);
+			},
+
+			_remove_key: function (key) {
+				this.__map['delete'](key + "");
+			},
+
+			_iterate: function () {
+				return new FilteredIterator(new NativeMapIterator(this.__map), function (item) {
+					return !!item;
+				});
+			},
+			
+			_count: function (query) {
+				return query ? inherited._count.call(this, query) : this.__map.size;
+			}						
+
+		};
+	});
+});
+
 //Stores everything temporarily in the browser's memory
 
 Scoped.define("module:Stores.MemoryStore", [
-                                            "module:Stores.AssocStore",
-                                            //"base:Iterators.ObjectValuesIterator",
-                                            "base:Iterators.FilteredIterator",
-                                            "base:Iterators.ArrayIterator",
-                                            "base:Objs"
-                                            ], function (AssocStore, FilteredIterator, ArrayIterator, Objs, scoped) {
+    "module:Stores.AssocStore",
+    //"base:Iterators.ObjectValuesIterator",
+    "base:Iterators.FilteredIterator",
+    "base:Iterators.ArrayIterator",
+    "base:Objs"
+], function (AssocStore, FilteredIterator, ArrayIterator, Objs, scoped) {
 	return AssocStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -1787,8 +1833,9 @@ Scoped.define("module:Stores.BaseStore", [
   "module:Stores.ReadStoreMixin",
   "module:Stores.WriteStoreMixin",
   "base:Promise",
-  "base:Objs"
-], function (Class, EventsMixin, ReadStoreMixin, WriteStoreMixin, Promise, Objs, scoped) {
+  "base:Objs",
+  "module:Stores.MemoryIndex"
+], function (Class, EventsMixin, ReadStoreMixin, WriteStoreMixin, Promise, Objs, MemoryIndex, scoped) {
 	return Class.extend({scoped: scoped}, [EventsMixin, ReadStoreMixin, WriteStoreMixin, function (inherited) {			
 		return {
 
@@ -1799,7 +1846,9 @@ Scoped.define("module:Stores.BaseStore", [
 			},
 
 			_ensure_index: function (key) {
-			},
+				if (!(key in this.indices))
+					this.indices[key] = new MemoryIndex(this, key);
+			},	
 
 			ensure_index: function (key) {
 				return this._ensure_index(key);
@@ -2138,6 +2187,70 @@ Scoped.define("module:Stores.WriteStore", [
 		};
 	}]);
 });
+
+
+Scoped.define("module:Stores.AsyncStore", [
+                                                 "module:Stores.BaseStore",
+                                                 "base:Promise",
+                                                 "base:Async"
+                                                 ], function (BaseStore, Promise, Async, scoped) {
+	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+		return {
+
+			constructor: function (store, options) {
+				this.__store = store;
+				options = options || {};
+				options.id_key = store.id_key();
+				inherited.constructor.call(this, options);
+				this.__time = options.time || 0;
+				if (options.destroy_store)
+					this._auto_destroy(store);
+			},
+
+			_query_capabilities: function () {
+				return this.__store._query_capabilities();
+			},
+			
+			__async: function (f, args) {
+				var promise = Promise.create();
+				Async.eventually(function () {
+					f.apply(this.__store, args).forwardCallback(promise);
+				}, this, this.__time);
+				return promise;
+			},
+
+			_insert: function () {
+				return this.__async(this.__store.insert, arguments);
+			},
+
+			_remove: function () {
+				return this.__async(this.__store.remove, arguments);
+			},
+
+			_get: function () {
+				return this.__async(this.__store.get, arguments);
+			},
+
+			_update: function () {
+				return this.__async(this.__store.update, arguments);
+			},
+
+			_query: function () {
+				return this.__async(this.__store.query, arguments);
+			},
+
+			_ensure_index: function (key) {
+				return this.__store.ensure_index(key);
+			},
+
+			_store: function () {
+				return this.__store;
+			}
+
+		};
+	});
+});
+
 
 Scoped.define("module:Stores.ContextualizedStore", [
                                                  "module:Stores.BaseStore",
@@ -3449,7 +3562,8 @@ Scoped.define("module:Stores.CachedStore", [
 					queryMetaKey: "meta",
 					queryKey: "query",
 					cacheKey: null,
-					suppAttrs: {}
+					suppAttrs: {},
+					optimisticRead: false
 				}, options);
 				this._online = true;
 				this.itemCache = this._options.itemCache || this.auto_destroy(new MemoryStore({
@@ -3689,6 +3803,22 @@ Scoped.define("module:Stores.CachedStore", [
 					}, this);
 				}, this);
 			},
+			
+			__itemCacheQuery: function (query, options) {
+				return this.itemCache.query(query, options).mapSuccess(function (items) {
+					items = items.asArray();
+					Objs.iter(items, function (item) {
+						this.cacheUpdate(this.itemCache.id_of(item), {}, {
+							lockItem: false,
+							lockAttrs: false,
+							silent: true,
+							accessMeta: options.accessMeta,
+							refreshMeta: false
+						});
+					}, this);
+					return new MappedIterator(new ArrayIterator(items), this.removeItemMeta, this);
+				}, this);
+			},
 
 			/*
 			 * options:
@@ -3717,26 +3847,14 @@ Scoped.define("module:Stores.CachedStore", [
 								meta.accessMeta = this.cacheStrategy.queryAccessMeta(meta.accessMeta);
 								this.queryCache.update(query_id, this.addQueryMeta({}, meta));
 							}
-							return this.itemCache.query(query, options).mapSuccess(function (items) {
-								items = items.asArray();
-								Objs.iter(items, function (item) {
-									this.cacheUpdate(this.itemCache.id_of(item), {}, {
-										lockItem: false,
-										lockAttrs: false,
-										silent: true,
-										accessMeta: options.accessMeta,
-										refreshMeta: false
-									});
-								}, this);
-								return new MappedIterator(new ArrayIterator(items), this.removeItemMeta, this);
-							}, this);
+							return this.__itemCacheQuery(query, options);
 						}
 						this.queryCache.remove(query_id);
 					}
 					// Note: This is probably not good enough in the most general cases.
 					if (Queries.queryDeterminedByAttrs(query, this._options.suppAttrs))
 						return this.itemCache.query(query, options);
-					return this.remoteStore.query(query, queryOptions).mapSuccess(function (items) {
+					var remotePromise = this.remoteStore.query(query, queryOptions).mapSuccess(function (items) {
 						this.online();
 						items = items.asArray();
 						var meta = {
@@ -3752,7 +3870,7 @@ Scoped.define("module:Stores.CachedStore", [
 							promises.push(this.cacheInsertUpdate(item, {
 								lockItem: false,
 								lockAttrs: false,
-								silent: options.silent,
+								silent: options.silent && !this._options.optimisticRead,
 								accessMeta: options.accessMeta,
 								refreshMeta: options.refreshMeta,
 								foreignKey: true
@@ -3763,20 +3881,11 @@ Scoped.define("module:Stores.CachedStore", [
 						}, this);
 					}, this).mapError(function () {
 						this.offline();
-						return this.itemCache.query(query, options).mapSuccess(function (items) {
-							items = items.asArray();
-							Objs.iter(items, function (item) {
-								this.cacheUpdate(this.itemCache.id_of(item), {}, {
-									lockItem: false,
-									lockAttrs: false,
-									silent: true,
-									accessMeta: options.accessMeta,
-									refreshMeta: false
-								});
-							}, this);
-							return new MappedIterator(new ArrayIterator(items), this.removeItemMeta, this);
-						}, this);
+						if (!this._options.optimisticRead) {
+							return this.__itemCacheQuery(query, options);
+						}
 					}, this);
+					return this._options.optimisticRead ? this.__itemCacheQuery(query, options) : remotePromise;
 				}, this);
 			},
 

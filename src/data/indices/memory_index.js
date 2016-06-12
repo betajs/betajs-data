@@ -1,8 +1,9 @@
 Scoped.define("module:Stores.MemoryIndex", [
                                             "module:Stores.AbstractIndex",
                                             "base:Structures.TreeMap",
-                                            "base:Objs"
-                                            ], function (AbstractIndex, TreeMap, Objs, scoped) {
+                                            "base:Objs",
+                                            "base:Types"
+                                            ], function (AbstractIndex, TreeMap, Objs, Types, scoped) {
 	return AbstractIndex.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -34,7 +35,7 @@ Scoped.define("module:Stores.MemoryIndex", [
 			__remove: function (key, map, id) {
 				var value = TreeMap.find(key, map);
 				delete value[id];
-				if (Objs.is_empty(value))
+				if (Types.is_empty(value))
 					map = TreeMap.remove(key, map);
 				return map;
 			},

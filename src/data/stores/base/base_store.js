@@ -4,8 +4,9 @@ Scoped.define("module:Stores.BaseStore", [
   "module:Stores.ReadStoreMixin",
   "module:Stores.WriteStoreMixin",
   "base:Promise",
-  "base:Objs"
-], function (Class, EventsMixin, ReadStoreMixin, WriteStoreMixin, Promise, Objs, scoped) {
+  "base:Objs",
+  "module:Stores.MemoryIndex"
+], function (Class, EventsMixin, ReadStoreMixin, WriteStoreMixin, Promise, Objs, MemoryIndex, scoped) {
 	return Class.extend({scoped: scoped}, [EventsMixin, ReadStoreMixin, WriteStoreMixin, function (inherited) {			
 		return {
 
@@ -16,7 +17,9 @@ Scoped.define("module:Stores.BaseStore", [
 			},
 
 			_ensure_index: function (key) {
-			},
+				if (!(key in this.indices))
+					this.indices[key] = new MemoryIndex(this, key);
+			},	
 
 			ensure_index: function (key) {
 				return this._ensure_index(key);

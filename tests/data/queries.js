@@ -13,3 +13,7 @@ test("disjunctive normal form default", function () {
 	QUnit.deepEqual(BetaJS.Data.Queries.simplifiedDNF({}, true), {"$or": [{}]});
 });
 
+test("disjunctive normal form 2", function () {
+	QUnit.deepEqual(BetaJS.Data.Queries.simplifiedDNF({foobar: 42}, true), {"$or": [{foobar: 42}]});
+});
+

@@ -375,11 +375,12 @@ Scoped.define("module:Queries", [
 					}, this);
 					if ((key === "$and" && arr.length > 0) || (key === "$or" && !had_true))
 						result[key] = arr;
-				} else {
+				} else if (Types.is_object(value)) {
 					var conds = this.simplifyConditions(value);
 					if (!Types.is_empty(conds))
 						result[key] = conds;
-				}
+				} else
+					result[key] = value;
 			}, this);
 			return result;
 		},
