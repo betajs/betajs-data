@@ -143,5 +143,11 @@ Scoped.define("module:Modelling.Model", [
 			}	
 
 		};
+	}, {
+		
+		createTable: function (store, options) {
+			return new Table(store, this, options);
+		}
+
 	});
 });

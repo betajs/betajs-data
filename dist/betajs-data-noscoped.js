@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.30 - 2016-06-12
+betajs-data - v1.0.31 - 2016-06-19
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,10 +11,10 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "81.1465771566884"
+    "version": "82.1466392887657"
 };
 });
-Scoped.assumeVersion('base:version', 496);
+Scoped.assumeVersion('base:version', 501);
 /**
  * @class AbstractQueryCollection
  *
@@ -5423,6 +5423,12 @@ Scoped.define("module:Modelling.Model", [
 			}	
 
 		};
+	}, {
+		
+		createTable: function (store, options) {
+			return new Table(store, this, options);
+		}
+
 	});
 });
 Scoped.define("module:Modelling.SchemedProperties", [
@@ -5703,8 +5709,9 @@ Scoped.define("module:Modelling.Table", [
                                          "base:Events.EventsMixin",
                                          "base:Objs",
                                          "base:Types",
-                                         "base:Iterators.MappedIterator"
-                                         ], function (Class, EventsMixin, Objs, Types, MappedIterator, scoped) {
+                                         "base:Iterators.MappedIterator",
+                                         "base:Classes.ObjectCache"
+                                         ], function (Class, EventsMixin, Objs, Types, MappedIterator, ObjectCache, scoped) {
 	return Class.extend({scoped: scoped}, [EventsMixin, function (inherited) {			
 		return {
 
@@ -5720,7 +5727,9 @@ Scoped.define("module:Modelling.Table", [
 					// Update options
 					auto_update: true,
 					// Save invalid
-					save_invalid: false
+					save_invalid: false,
+					// Cache Models
+					cache_models: false
 				}, options || {});
 				this.__store.on("insert", function (obj) {
 					this.trigger("create", obj);
@@ -5734,6 +5743,11 @@ Scoped.define("module:Modelling.Table", [
 					this.trigger("remove", id);
 					this.trigger("remove:" + id);
 				}, this);
+				if (this.__options.cache_models) {
+					this.model_cache = this.auto_destroy(new ObjectCache(function (model) {
+						return model.id();
+					}));
+				}
 			},
 
 			modelClass: function (cls) {
@@ -5746,6 +5760,15 @@ Scoped.define("module:Modelling.Table", [
 				var model = new cls(attributes, this, {}, ctx);
 				if (this.__options.auto_create)
 					model.save();
+				if (this.model_cache) {
+					if (model.hasId())
+						this.model_cache.register(model);
+					else {
+						model.once("save", function () {
+							this.model_cache.register(model);
+						}, this);
+					}
+				}
 				return model;
 			},
 
@@ -5753,7 +5776,17 @@ Scoped.define("module:Modelling.Table", [
 				if (!obj)
 					return null;
 				var cls = this.modelClass(this.__options.type_column && obj[this.__options.type_column] ? this.__options.type_column : null);
-				return new cls(obj, this, {newModel: false}, ctx);
+				if (this.model_cache) {
+					var cachedModel = this.model_cache.get(obj[this.primary_key()]);
+					if (cachedModel) {
+						cachedModel.setAll(obj);
+						return cachedModel;
+					}
+				}
+				var model = new cls(obj, this, {newModel: false}, ctx);
+				if (this.model_cache)
+					this.model_cache.register(model);
+				return model;
 			},
 
 			options: function () {
