@@ -4,8 +4,9 @@ Scoped.define("module:Modelling.Model", [
                                          "base:Objs",
                                          "base:Promise",
                                          "base:Types",
-                                         "base:Exceptions"
-                                         ], function (AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Exceptions, scoped) {
+                                         "base:Exceptions",
+                                         "module:Modelling.Table"
+                                         ], function (AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Exceptions, Table, scoped) {
 	return AssociatedProperties.extend({scoped: scoped}, function (inherited) {			
 		return {
 
