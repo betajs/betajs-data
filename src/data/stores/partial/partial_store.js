@@ -93,6 +93,14 @@ Scoped.define("module:Stores.PartialStore", [
 					silent: false,
 					foreignKey: true
 				});
+			},
+			
+			serialize: function () {
+				return this.cachedStore.serialize();
+			},
+			
+			unserialize: function (data) {
+				return this.cachedStore.unserialize(data);
 			}
 
 		};

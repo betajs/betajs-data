@@ -6,7 +6,6 @@ Scoped.define("module:Stores.ReadyStore", [
 	return PassthroughStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 			
-			__promises: [],
 			__ready: false,
 			
 			ready: function () {
@@ -14,13 +13,14 @@ Scoped.define("module:Stores.ReadyStore", [
 				Objs.iter(this.__promises, function (rec) {
 					rec.promise.forwardCallback(rec.stalling);
 				});
-				this.__promises = [];
+				delete this.__promises;
 			},
 			
 			__execute: function (promise) {
 				if (this.__ready)
 					return promise;
 				var stalling = Promise.create();
+				this.__promises = this.__promises || [];
 				this.__promises.push({
 					stalling: stalling,
 					promise: promise

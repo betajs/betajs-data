@@ -13,6 +13,7 @@ Scoped.define("module:Stores.PassthroughStore", [
 				inherited.constructor.call(this, options);
 				if (options.destroy_store)
 					this._auto_destroy(store);
+				this.delegateEvents(["insert", "update", "remove"], this.__store);
 			},
 
 			_query_capabilities: function () {
@@ -68,43 +69,43 @@ Scoped.define("module:Stores.PassthroughStore", [
 			},
 
 			_preInsert: function (data) {
-				return Promise.create(data);
+				return Promise.value(data);
 			},
 			
 			_postInsert: function (data) {
-				return Promise.create(data);
+				return Promise.value(data);
 			},
 			
 			_preRemove: function (id) {
-				return Promise.create(id);
+				return Promise.value(id);
 			},
 			
 			_postRemove: function (id) {
-				return Promise.create(true);
+				return Promise.value(true);
 			},
 			
 			_preGet: function (id) {
-				return Promise.create(id);
+				return Promise.value(id);
 			},
 			
 			_postGet: function (data) {
-				return Promise.create(data);
+				return Promise.value(data);
 			},
 
 			_preUpdate: function (id, data) {
-				return Promise.create({id: id, data: data});
+				return Promise.value({id: id, data: data});
 			},
 			
 			_postUpdate: function (row) {
-				return Promise.create(row);
+				return Promise.value(row);
 			},
 			
 			_preQuery: function (query, options) {
-				return Promise.create({query: query, options: options});
+				return Promise.value({query: query, options: options});
 			},
 			
 			_postQuery: function (results) {
-				return Promise.create(results);
+				return Promise.value(results);
 			}
 
 		};

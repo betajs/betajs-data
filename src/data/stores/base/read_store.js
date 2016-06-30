@@ -60,6 +60,12 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 					},
 					this,
 					this.indices);
+		},
+		
+		serialize: function (ctx) {
+			return this.query({}, {}, ctx).mapSuccess(function (iter) {
+				return iter.asArray();
+			});
 		}
 
 	};

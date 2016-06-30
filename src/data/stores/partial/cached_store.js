@@ -449,6 +449,23 @@ Scoped.define("module:Stores.CachedStore", [
 				return this.itemCache.get(cachedId).mapSuccess(function (item) {
 					return item ? this.remoteStore.id_of(item) : null;
 				}, this);
+			},
+			
+			serialize: function () {
+				return this.itemCache.serialize().mapSuccess(function (itemCacheSerialized) {
+					return this.queryCache.serialize().mapSuccess(function (queryCacheSerialized) {
+						return {
+							items: itemCacheSerialized,
+							queries: queryCacheSerialized
+						};
+					}, this);
+				}, this);
+			},
+			
+			unserialize: function (data) {
+				return this.itemCache.unserialize(data.items).mapSuccess(function () {
+					return this.queryCache.unserialize(data.queries);
+				}, this);
 			}
 
 		};

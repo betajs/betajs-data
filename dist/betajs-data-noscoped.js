@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.32 - 2016-06-21
+betajs-data - v1.0.33 - 2016-06-30
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "83.1466497422393"
+    "version": "84.1467314992477"
 };
 });
 Scoped.assumeVersion('base:version', 501);
@@ -1939,6 +1939,12 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 					},
 					this,
 					this.indices);
+		},
+		
+		serialize: function (ctx) {
+			return this.query({}, {}, ctx).mapSuccess(function (iter) {
+				return iter.asArray();
+			});
 		}
 
 	};
@@ -2158,6 +2164,10 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			return this._update(id, data, ctx).success(function (row) {
 				this._updated(row, data, ctx);
 			}, this);
+		},
+		
+		unserialize: function (arr, ctx) {
+			return this.insert_all(arr, ctx);
 		}
 
 	};
@@ -2519,6 +2529,7 @@ Scoped.define("module:Stores.PassthroughStore", [
 				inherited.constructor.call(this, options);
 				if (options.destroy_store)
 					this._auto_destroy(store);
+				this.delegateEvents(["insert", "update", "remove"], this.__store);
 			},
 
 			_query_capabilities: function () {
@@ -2574,43 +2585,43 @@ Scoped.define("module:Stores.PassthroughStore", [
 			},
 
 			_preInsert: function (data) {
-				return Promise.create(data);
+				return Promise.value(data);
 			},
 			
 			_postInsert: function (data) {
-				return Promise.create(data);
+				return Promise.value(data);
 			},
 			
 			_preRemove: function (id) {
-				return Promise.create(id);
+				return Promise.value(id);
 			},
 			
 			_postRemove: function (id) {
-				return Promise.create(true);
+				return Promise.value(true);
 			},
 			
 			_preGet: function (id) {
-				return Promise.create(id);
+				return Promise.value(id);
 			},
 			
 			_postGet: function (data) {
-				return Promise.create(data);
+				return Promise.value(data);
 			},
 
 			_preUpdate: function (id, data) {
-				return Promise.create({id: id, data: data});
+				return Promise.value({id: id, data: data});
 			},
 			
 			_postUpdate: function (row) {
-				return Promise.create(row);
+				return Promise.value(row);
 			},
 			
 			_preQuery: function (query, options) {
-				return Promise.create({query: query, options: options});
+				return Promise.value({query: query, options: options});
 			},
 			
 			_postQuery: function (results) {
-				return Promise.create(results);
+				return Promise.value(results);
 			}
 
 		};
@@ -2626,7 +2637,6 @@ Scoped.define("module:Stores.ReadyStore", [
 	return PassthroughStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 			
-			__promises: [],
 			__ready: false,
 			
 			ready: function () {
@@ -2634,13 +2644,14 @@ Scoped.define("module:Stores.ReadyStore", [
 				Objs.iter(this.__promises, function (rec) {
 					rec.promise.forwardCallback(rec.stalling);
 				});
-				this.__promises = [];
+				delete this.__promises;
 			},
 			
 			__execute: function (promise) {
 				if (this.__ready)
 					return promise;
 				var stalling = Promise.create();
+				this.__promises = this.__promises || [];
 				this.__promises.push({
 					stalling: stalling,
 					promise: promise
@@ -3982,6 +3993,23 @@ Scoped.define("module:Stores.CachedStore", [
 				return this.itemCache.get(cachedId).mapSuccess(function (item) {
 					return item ? this.remoteStore.id_of(item) : null;
 				}, this);
+			},
+			
+			serialize: function () {
+				return this.itemCache.serialize().mapSuccess(function (itemCacheSerialized) {
+					return this.queryCache.serialize().mapSuccess(function (queryCacheSerialized) {
+						return {
+							items: itemCacheSerialized,
+							queries: queryCacheSerialized
+						};
+					}, this);
+				}, this);
+			},
+			
+			unserialize: function (data) {
+				return this.itemCache.unserialize(data.items).mapSuccess(function () {
+					return this.queryCache.unserialize(data.queries);
+				}, this);
 			}
 
 		};
@@ -4179,6 +4207,14 @@ Scoped.define("module:Stores.PartialStore", [
 					silent: false,
 					foreignKey: true
 				});
+			},
+			
+			serialize: function () {
+				return this.cachedStore.serialize();
+			},
+			
+			unserialize: function (data) {
+				return this.cachedStore.unserialize(data);
 			}
 
 		};

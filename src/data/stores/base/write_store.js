@@ -82,6 +82,10 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			return this._update(id, data, ctx).success(function (row) {
 				this._updated(row, data, ctx);
 			}, this);
+		},
+		
+		unserialize: function (arr, ctx) {
+			return this.insert_all(arr, ctx);
 		}
 
 	};
