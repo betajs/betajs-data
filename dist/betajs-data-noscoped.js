@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.33 - 2016-06-30
+betajs-data - v1.0.34 - 2016-07-06
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "84.1467314992477"
+    "version": "85.1467803530201"
 };
 });
 Scoped.assumeVersion('base:version', 501);
@@ -2576,6 +2576,22 @@ Scoped.define("module:Stores.PassthroughStore", [
 				}, this);
 			},
 
+			unserialize: function (data) {
+				return this._preUnserialize(data).mapSuccess(function (data) {
+					return this.__store.unserialize(data).mapSuccess(function (data) {
+						return this._postUnserialize(data);
+					}, this);
+				}, this);
+			},
+
+			serialize: function (data) {
+				return this._preSerialize(data).mapSuccess(function (data) {
+					return this.__store.serialize(data).mapSuccess(function (data) {
+						return this._postSerialize(data);
+					}, this);
+				}, this);
+			},
+
 			_ensure_index: function (key) {
 				return this.__store.ensure_index(key);
 			},
@@ -2622,7 +2638,23 @@ Scoped.define("module:Stores.PassthroughStore", [
 			
 			_postQuery: function (results) {
 				return Promise.value(results);
-			}
+			},
+			
+			_preSerialize: function (data) {
+				return Promise.value(data);
+			},
+			
+			_postSerialize: function (data) {
+				return Promise.value(data);
+			},
+			
+			_preUnserialize: function (data) {
+				return Promise.value(data);
+			},
+			
+			_postUnserialize: function (data) {
+				return Promise.value(data);
+			}			
 
 		};
 	});
@@ -2677,6 +2709,14 @@ Scoped.define("module:Stores.ReadyStore", [
 			
 			_preQuery: function () {
 				return this.__execute(inherited._preQuery.apply(this, arguments));
+			},
+			
+			_preSerialize: function () {
+				return this.__execute(inherited._preSerialize.apply(this, arguments));
+			},
+			
+			_preUnserialize: function () {
+				return this.__execute(inherited._preUnserialize.apply(this, arguments));
 			}
 			
 		};
@@ -4007,8 +4047,11 @@ Scoped.define("module:Stores.CachedStore", [
 			},
 			
 			unserialize: function (data) {
-				return this.itemCache.unserialize(data.items).mapSuccess(function () {
-					return this.queryCache.unserialize(data.queries);
+				return this.itemCache.unserialize(data.items).mapSuccess(function (items) {
+					this.queryCache.unserialize(data.queries);
+					return items.map(function (item) {
+						return this.removeItemMeta(item);
+					}, this);
 				}, this);
 			}
 
@@ -4214,7 +4257,11 @@ Scoped.define("module:Stores.PartialStore", [
 			},
 			
 			unserialize: function (data) {
-				return this.cachedStore.unserialize(data);
+				return this.cachedStore.unserialize(data).success(function (items) {
+					items.forEach(function (item) {
+						this._inserted(item);
+					}, this);
+				}, this);
 			}
 
 		};

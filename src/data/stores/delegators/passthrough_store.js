@@ -60,6 +60,22 @@ Scoped.define("module:Stores.PassthroughStore", [
 				}, this);
 			},
 
+			unserialize: function (data) {
+				return this._preUnserialize(data).mapSuccess(function (data) {
+					return this.__store.unserialize(data).mapSuccess(function (data) {
+						return this._postUnserialize(data);
+					}, this);
+				}, this);
+			},
+
+			serialize: function (data) {
+				return this._preSerialize(data).mapSuccess(function (data) {
+					return this.__store.serialize(data).mapSuccess(function (data) {
+						return this._postSerialize(data);
+					}, this);
+				}, this);
+			},
+
 			_ensure_index: function (key) {
 				return this.__store.ensure_index(key);
 			},
@@ -106,7 +122,23 @@ Scoped.define("module:Stores.PassthroughStore", [
 			
 			_postQuery: function (results) {
 				return Promise.value(results);
-			}
+			},
+			
+			_preSerialize: function (data) {
+				return Promise.value(data);
+			},
+			
+			_postSerialize: function (data) {
+				return Promise.value(data);
+			},
+			
+			_preUnserialize: function (data) {
+				return Promise.value(data);
+			},
+			
+			_postUnserialize: function (data) {
+				return Promise.value(data);
+			}			
 
 		};
 	});

@@ -100,7 +100,11 @@ Scoped.define("module:Stores.PartialStore", [
 			},
 			
 			unserialize: function (data) {
-				return this.cachedStore.unserialize(data);
+				return this.cachedStore.unserialize(data).success(function (items) {
+					items.forEach(function (item) {
+						this._inserted(item);
+					}, this);
+				}, this);
 			}
 
 		};

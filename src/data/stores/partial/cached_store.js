@@ -463,8 +463,11 @@ Scoped.define("module:Stores.CachedStore", [
 			},
 			
 			unserialize: function (data) {
-				return this.itemCache.unserialize(data.items).mapSuccess(function () {
-					return this.queryCache.unserialize(data.queries);
+				return this.itemCache.unserialize(data.items).mapSuccess(function (items) {
+					this.queryCache.unserialize(data.queries);
+					return items.map(function (item) {
+						return this.removeItemMeta(item);
+					}, this);
 				}, this);
 			}
 

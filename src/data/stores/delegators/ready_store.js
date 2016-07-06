@@ -46,6 +46,14 @@ Scoped.define("module:Stores.ReadyStore", [
 			
 			_preQuery: function () {
 				return this.__execute(inherited._preQuery.apply(this, arguments));
+			},
+			
+			_preSerialize: function () {
+				return this.__execute(inherited._preSerialize.apply(this, arguments));
+			},
+			
+			_preUnserialize: function () {
+				return this.__execute(inherited._preUnserialize.apply(this, arguments));
 			}
 			
 		};
