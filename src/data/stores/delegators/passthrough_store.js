@@ -138,7 +138,11 @@ Scoped.define("module:Stores.PassthroughStore", [
 			
 			_postUnserialize: function (data) {
 				return Promise.value(data);
-			}			
+			},
+			
+			watcher: function () {
+				return this.__store.watcher();
+			}
 
 		};
 	});
