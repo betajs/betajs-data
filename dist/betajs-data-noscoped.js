@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.34 - 2016-07-25
+betajs-data - v1.0.36 - 2016-07-26
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "86.1469474555852"
+    "version": "87.1469558040745"
 };
 });
 Scoped.assumeVersion('base:version', 501);
@@ -5535,7 +5535,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
 				this.__errors = {};
 				for (var key in scheme) {
 					if ("def" in scheme[key]) 
-						this.set(key, Types.is_function(scheme[key].def) ? scheme[key].def() : scheme[key].def);
+						this.set(key, Types.is_function(scheme[key].def) ? scheme[key].def(attributes) : scheme[key].def);
 					else if (scheme[key].auto_create)
 						this.set(key, scheme[key].auto_create(this));
 					else
@@ -5654,7 +5654,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
 				var rec = {};
 				var scheme = this.cls.scheme();
 				var props = this.get_all_properties();
-				tags = tags || {};
+				tags = tags || [];
 				var asInner = function (key) {
 					var target = scheme[key].tags || [];
 					var tarobj = {};

@@ -14,7 +14,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
 				this.__errors = {};
 				for (var key in scheme) {
 					if ("def" in scheme[key]) 
-						this.set(key, Types.is_function(scheme[key].def) ? scheme[key].def() : scheme[key].def);
+						this.set(key, Types.is_function(scheme[key].def) ? scheme[key].def(attributes) : scheme[key].def);
 					else if (scheme[key].auto_create)
 						this.set(key, scheme[key].auto_create(this));
 					else
@@ -133,7 +133,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
 				var rec = {};
 				var scheme = this.cls.scheme();
 				var props = this.get_all_properties();
-				tags = tags || {};
+				tags = tags || [];
 				var asInner = function (key) {
 					var target = scheme[key].tags || [];
 					var tarobj = {};
