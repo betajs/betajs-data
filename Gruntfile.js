@@ -12,7 +12,7 @@ module.exports = function(grunt) {
 		"module": "global:BetaJS.Data",
 		"base": "global:BetaJS"
     }, {
-    	"base:version": 501
+    	"base:version": 526
     })	
     .concatTask('concat-scoped', ['vendors/scoped.js', 'dist/' + dist + '-noscoped.js'], 'dist/' + dist + '.js')
     .uglifyTask('uglify-noscoped', 'dist/' + dist + '-noscoped.js', 'dist/' + dist + '-noscoped.min.js')

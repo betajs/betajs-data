@@ -9,7 +9,7 @@ Scoped.define("module:Stores.PassthroughStore", [
 			constructor: function (store, options) {
 				this.__store = store;
 				options = options || {};
-				options.id_key = store.id_key();
+				options.id_key = options.id_key || store.id_key();
 				inherited.constructor.call(this, options);
 				if (options.destroy_store)
 					this._auto_destroy(store);

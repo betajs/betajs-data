@@ -55,50 +55,50 @@ Scoped.define("module:Stores.CachedStore", [
 				return Constrained.fullConstrainedQueryCapabilities();
 			},
 
-			_insert: function (data) {
+			_insert: function (data, ctx) {
 				return this.cacheInsert(data, {
 					lockItem: true,
 					silent: true,
 					refreshMeta: false,
 					accessMeta: true
-				});
+				}, ctx);
 			},
 
-			_update: function (id, data) {
+			_update: function (id, data, ctx) {
 				return this.cacheUpdate(id, data, {
 					ignoreLock: false,
 					silent: true,
 					lockAttrs: true,
 					refreshMeta: false,
 					accessMeta: true
-				});
+				}, ctx);
 			},
 
-			_remove: function (id) {
+			_remove: function (id, ctx) {
 				return this.cacheRemove(id, {
 					ignoreLock: true,
 					silent: true
-				});
+				}, ctx);
 			},
 
-			_get: function (id) {
+			_get: function (id, ctx) {
 				return this.cacheGet(id, {
 					silentInsert: true,
 					silentUpdate: true,
 					silentRemove: true,
 					refreshMeta: true,
 					accessMeta: true
-				});
+				}, ctx);
 			},
 
-			_query: function (query, options) {
+			_query: function (query, options, ctx) {
 				return this.cacheQuery(query, options, {
 					silent: true,
 					queryRefreshMeta: true,
 					queryAccessMeta: true,
 					refreshMeta: true,
 					accessMeta: true
-				});
+				}, ctx);
 			},
 
 			/*
@@ -109,17 +109,17 @@ Scoped.define("module:Stores.CachedStore", [
 			 *   - accessMeta: boolean
 			 */
 
-			cacheInsert: function (data, options) {
+			cacheInsert: function (data, options, ctx) {
 				var meta = {
 					lockedItem: options.lockItem,
 					lockedAttrs: {},
 					refreshMeta: options.refreshMeta ? this.cacheStrategy.itemRefreshMeta() : null,
 					accessMeta: options.accessMeta ? this.cacheStrategy.itemAccessMeta() : null
 				};
-				return this.itemCache.insert(this.addItemSupp(this.addItemMeta(data, meta))).mapSuccess(function (result) {
+				return this.itemCache.insert(this.addItemSupp(this.addItemMeta(data, meta)), ctx).mapSuccess(function (result) {
 					data = this.removeItemMeta(result);
 					if (!options.silent)
-						this._inserted(data);
+						this._inserted(data, ctx);
 					return data;
 				}, this);
 			},
@@ -135,11 +135,11 @@ Scoped.define("module:Stores.CachedStore", [
 			 *   - unlockItem: boolean (default false)
 			 */
 
-			cacheUpdate: function (id, data, options) {
+			cacheUpdate: function (id, data, options, ctx) {
 				var foreignKey = options.foreignKey && this._foreignKey;
 				var itemPromise = foreignKey ?
-					              this.itemCache.getBy(this.remoteStore.id_key(), id)
-					            : this.itemCache.get(id);
+					              this.itemCache.getBy(this.remoteStore.id_key(), id, ctx)
+					            : this.itemCache.get(id, ctx);
 				return itemPromise.mapSuccess(function (item) {
 					if (!item)
 						return null;
@@ -162,23 +162,23 @@ Scoped.define("module:Stores.CachedStore", [
 						meta.refreshMeta = this.cacheStrategy.itemRefreshMeta(meta.refreshMeta);
 					if (options.accessMeta)
 						meta.accessMeta = this.cacheStrategy.itemAccessMeta(meta.accessMeta);
-					return this.itemCache.update(this.itemCache.id_of(item), this.addItemMeta(data, meta)).mapSuccess(function (result) {
+					return this.itemCache.update(this.itemCache.id_of(item), this.addItemMeta(data, meta), ctx).mapSuccess(function (result) {
 						result = this.removeItemMeta(result);
 						if (!options.silent)
-							this._updated(result, data);
+							this._updated(result, data, ctx);
 						return result;
 					}, this);
 				}, this);
 			},
 
-			cacheInsertUpdate: function (data, options) {
+			cacheInsertUpdate: function (data, options, ctx) {
 				var foreignKey = options.foreignKey && this._foreignKey;
 				var itemPromise = foreignKey ?
-					              this.itemCache.getBy(this.remoteStore.id_key(), this.remoteStore.id_of(data))
-					            : this.itemCache.get(this.itemCache.id_of(data));
+					              this.itemCache.getBy(this.remoteStore.id_key(), this.remoteStore.id_of(data), ctx)
+					            : this.itemCache.get(this.itemCache.id_of(data), ctx);
 				return itemPromise.mapSuccess(function (item) {
 					options.foreignKey = false;
-					return item ? this.cacheUpdate(this.itemCache.id_of(item), data, options) : this.cacheInsert(data, options);
+					return item ? this.cacheUpdate(this.itemCache.id_of(item), data, options, ctx) : this.cacheInsert(data, options, ctx);
 				}, this);
 			},
 
@@ -188,11 +188,11 @@ Scoped.define("module:Stores.CachedStore", [
 			 *   - silent: boolean
 			 *   - foreignKey: boolean
 			 */
-			cacheRemove: function (id, options) {
+			cacheRemove: function (id, options, ctx) {
 				var foreignKey = options.foreignKey && this._foreignKey;
 				var itemPromise = foreignKey ?
-					  this.itemCache.getBy(this.remoteStore.id_key(), id)
-					: this.itemCache.get(id);
+					  this.itemCache.getBy(this.remoteStore.id_key(), id, ctx)
+					: this.itemCache.get(id, ctx);
 				return itemPromise.mapSuccess(function (data) {
 					if (!data)
 						return data;
@@ -200,9 +200,9 @@ Scoped.define("module:Stores.CachedStore", [
 					if (!options.ignoreLock && (meta.lockedItem || !Types.is_empty(meta.lockedAttrs)))
 						return Promise.error("locked item");
 					var cached_id = this.itemCache.id_of(data);
-					return this.itemCache.remove(cached_id).success(function () {
+					return this.itemCache.remove(cached_id, ctx).success(function () {
 						if (!options.silent)
-							this._removed(cached_id);
+							this._removed(cached_id, ctx);
 					}, this);
 				}, this);
 			},
@@ -216,16 +216,16 @@ Scoped.define("module:Stores.CachedStore", [
 			 *   - accessMeta: boolean
 			 *   - foreignKey: boolean
 			 */
-			cacheGet: function (id, options) {
+			cacheGet: function (id, options, ctx) {
 				var foreignKey = options.foreignKey && this._foreignKey;
 				var itemPromise = foreignKey ?
-					  this.itemCache.getBy(this.remoteStore.id_key(), id)
-					: this.itemCache.get(id);
+					  this.itemCache.getBy(this.remoteStore.id_key(), id, ctx)
+					: this.itemCache.get(id, ctx);
 				return itemPromise.mapSuccess(function (data) {
 					if (!data) {
 						if (!foreignKey && this._foreignKey)
 							return data;
-						return this.remoteStore.get(id).mapSuccess(function (data) {
+						return this.remoteStore.get(id, ctx).mapSuccess(function (data) {
 							this.online();
 							if (data) {
 								return this.cacheInsert(data, {
@@ -233,7 +233,7 @@ Scoped.define("module:Stores.CachedStore", [
 									silent: options.silentInsert,
 									accessMeta: true,
 									refreshMeta: true
-								});
+								}, ctx);
 							} else
 								return data;
 						}, this);
@@ -244,11 +244,11 @@ Scoped.define("module:Stores.CachedStore", [
 					if (this.cacheStrategy.validItemRefreshMeta(meta.refreshMeta) || meta.lockedItem) {
 						if (options.accessMeta) {
 							meta.accessMeta = this.cacheStrategy.itemAccessMeta(meta.accessMeta);
-							this.itemCache.update(cached_id, this.addItemMeta({}, meta));
+							this.itemCache.update(cached_id, this.addItemMeta({}, meta), ctx);
 						}
 						return this.removeItemMeta(data);
 					}
-					return this.remoteStore.get(remote_id).mapSuccess(function (data) {
+					return this.remoteStore.get(remote_id, ctx).mapSuccess(function (data) {
 						this.online();
 						if (data) {
 							return this.cacheUpdate(cached_id, data, {
@@ -257,12 +257,12 @@ Scoped.define("module:Stores.CachedStore", [
 								silent: options.silentUpdate,
 								accessMeta: true,
 								refreshMeta: true
-							});
+							}, ctx);
 						} else {
 							return this.cacheRemove(cached_id, {
 								ignoreLock: false,
 								silent: options.silentRemove
-							});
+							}, ctx);
 						}
 					}, this).mapError(function () {
 						this.offline();
@@ -271,8 +271,8 @@ Scoped.define("module:Stores.CachedStore", [
 				}, this);
 			},
 			
-			__itemCacheQuery: function (query, options) {
-				return this.itemCache.query(query, options).mapSuccess(function (items) {
+			__itemCacheQuery: function (query, options, ctx) {
+				return this.itemCache.query(query, options, ctx).mapSuccess(function (items) {
 					items = items.asArray();
 					Objs.iter(items, function (item) {
 						this.cacheUpdate(this.itemCache.id_of(item), {}, {
@@ -281,7 +281,7 @@ Scoped.define("module:Stores.CachedStore", [
 							silent: true,
 							accessMeta: options.accessMeta,
 							refreshMeta: false
-						});
+						}, ctx);
 					}, this);
 					return new MappedIterator(new ArrayIterator(items), this.removeItemMeta, this);
 				}, this);
@@ -295,7 +295,7 @@ Scoped.define("module:Stores.CachedStore", [
 			 *   - refreshMeta: boolean
 			 *   - accessMeta: boolean
 			 */
-			cacheQuery: function (query, queryOptions, options) {
+			cacheQuery: function (query, queryOptions, options, ctx) {
 				var queryString = Constrained.serialize({
 					query: query,
 					options: queryOptions
@@ -304,7 +304,7 @@ Scoped.define("module:Stores.CachedStore", [
 					this._options.queryKey,
 					queryString
 				);
-				return this.queryCache.query(localQuery, {limit : 1}).mapSuccess(function (result) {
+				return this.queryCache.query(localQuery, {limit : 1}, ctx).mapSuccess(function (result) {
 					result = result.hasNext() ? result.next() : null;
 					if (result) {
 						var meta = this.readQueryMeta(result);
@@ -312,16 +312,16 @@ Scoped.define("module:Stores.CachedStore", [
 						if (this.cacheStrategy.validQueryRefreshMeta(meta.refreshMeta)) {
 							if (options.queryAccessMeta) {
 								meta.accessMeta = this.cacheStrategy.queryAccessMeta(meta.accessMeta);
-								this.queryCache.update(query_id, this.addQueryMeta({}, meta));
+								this.queryCache.update(query_id, this.addQueryMeta({}, meta), ctx);
 							}
-							return this.__itemCacheQuery(query, options);
+							return this.__itemCacheQuery(query, options, ctx);
 						}
-						this.queryCache.remove(query_id);
+						this.queryCache.remove(query_id, ctx);
 					}
 					// Note: This is probably not good enough in the most general cases.
 					if (Queries.queryDeterminedByAttrs(query, this._options.suppAttrs))
-						return this.itemCache.query(query, options);
-					var remotePromise = this.remoteStore.query(query, queryOptions).mapSuccess(function (items) {
+						return this.itemCache.query(query, options, ctx);
+					var remotePromise = this.remoteStore.query(query, queryOptions, ctx).mapSuccess(function (items) {
 						this.online();
 						items = items.asArray();
 						var meta = {
@@ -331,7 +331,7 @@ Scoped.define("module:Stores.CachedStore", [
 						this.queryCache.insert(Objs.objectBy(
 							this._options.queryKey, queryString,
 							this._options.queryMetaKey, meta
-						));
+						), ctx);
 						var promises = [];
 						Objs.iter(items, function (item) {
 							promises.push(this.cacheInsertUpdate(item, {
@@ -341,7 +341,7 @@ Scoped.define("module:Stores.CachedStore", [
 								accessMeta: options.accessMeta,
 								refreshMeta: options.refreshMeta,
 								foreignKey: true
-							}));
+							}, ctx));
 						}, this);
 						return Promise.and(promises).mapSuccess(function (items) {
 							return new MappedIterator(new ArrayIterator(items), this.addItemSupp, this);
@@ -349,10 +349,10 @@ Scoped.define("module:Stores.CachedStore", [
 					}, this).mapError(function () {
 						this.offline();
 						if (!this._options.optimisticRead) {
-							return this.__itemCacheQuery(query, options);
+							return this.__itemCacheQuery(query, options, ctx);
 						}
 					}, this);
-					return this._options.optimisticRead ? this.__itemCacheQuery(query, options) : remotePromise;
+					return this._options.optimisticRead ? this.__itemCacheQuery(query, options, ctx) : remotePromise;
 				}, this);
 			},
 
@@ -410,14 +410,14 @@ Scoped.define("module:Stores.CachedStore", [
 				return data[this._options.queryMetaKey];
 			},
 
-			unlockItem: function (id) {
-				this.itemCache.get(id).success(function (data) {
+			unlockItem: function (id, ctx) {
+				this.itemCache.get(id, ctx).success(function (data) {
 					if (!data)
 						return;
 					var meta = this.readItemMeta(data);
 					meta.lockedItem = false;
 					meta.lockedAttrs = {};
-					this.itemCache.update(id, this.addItemMeta({}, meta));
+					this.itemCache.update(id, this.addItemMeta({}, meta), ctx);
 				}, this);
 			},
 

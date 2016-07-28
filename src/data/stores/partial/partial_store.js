@@ -41,41 +41,41 @@ Scoped.define("module:Stores.PartialStore", [
 				inherited.destroy.call(this);
 			},
 
-			_insert: function (data) {
-				return this.writeStrategy.insert(data);
+			_insert: function (data, ctx) {
+				return this.writeStrategy.insert(data, ctx);
 			},
 			
-			_remove: function (id) {
-				return this.writeStrategy.remove(id);
+			_remove: function (id, ctx) {
+				return this.writeStrategy.remove(id, ctx);
 			},
 			
-			_update: function (id, data) {
-				return this.writeStrategy.update(id, data);
+			_update: function (id, data, ctx) {
+				return this.writeStrategy.update(id, data, ctx);
 			},
 
-			_get: function (id) {
-				return this.cachedStore.get(id);
+			_get: function (id, ctx) {
+				return this.cachedStore.get(id, ctx);
 			},
 			
-			_query: function (query, options) {
-				return this.cachedStore.query(query, options);
+			_query: function (query, options, ctx) {
+				return this.cachedStore.query(query, options, ctx);
 			},			
 			
 			_query_capabilities: function () {
 				return this.cachedStore._query_capabilities();
 			},
 			
-			_remoteInsert: function (data) {
+			_remoteInsert: function (data, ctx) {
 				this.cachedStore.cacheInsertUpdate(data, {
 					lockItem: false,
 					silent: false,
 					refreshMeta: true,
 					accessMeta: true,
 					foreignKey: true
-				});
+				}, ctx);
 			},
 			
-			_remoteUpdate: function (row, data) {
+			_remoteUpdate: function (row, data, ctx) {
 				var id = this.remoteStore.id_of(row);
 				this.cachedStore.cacheUpdate(id, data, {
 					ignoreLock: false,
@@ -84,15 +84,15 @@ Scoped.define("module:Stores.PartialStore", [
 					accessMeta: true,
 					refreshMeta: true,
 					foreignKey: true
-				});
+				}, ctx);
 			},
 			
-			_remoteRemove: function (id) {
+			_remoteRemove: function (id, ctx) {
 				this.cachedStore.cacheRemove(id, {
 					ignoreLock: false,
 					silent: false,
 					foreignKey: true
-				});
+				}, ctx);
 			},
 			
 			serialize: function () {

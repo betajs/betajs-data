@@ -1,5 +1,5 @@
 /*!
-betajs - v1.0.64 - 2016-07-25
+betajs - v1.0.67 - 2016-07-28
 Copyright (c) Oliver Friedmann,Victor Lingenthal
 Apache-2.0 Software License.
 */
@@ -10,7 +10,7 @@ Scoped.binding('module', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "71366f7a-7da3-4e55-9a0b-ea0e4e2a9e79",
-    "version": "524.1469449402994"
+    "version": "528.1469738927136"
 };
 });
 Scoped.require(['module:'], function (mod) {
@@ -1994,6 +1994,25 @@ Scoped.define("module:Objs", [
 		},
 
 		/**
+		 * Return the i-th value of an object.
+		 * 
+		 * @param {object} obj the object
+		 * @param {int} i index of the i-th value (default: 0)
+		 * 
+		 * @return {string} i-th value
+		 */
+		ithValue: function (obj, i) {
+			i = i || 0;
+			for (var key in obj) {
+				if (i <= 0)
+					return obj[key];
+				else
+					--i;
+			}
+			return null;
+		},
+
+		/**
 		 * Returns the number of elements of an object or array.
 		 * 
 		 * @param obj object or array
@@ -2397,6 +2416,14 @@ Scoped.define("module:Objs", [
 			for (var key in iterateOver)
 				if (!(key in ordinary) || ordinary[key] != concrete[key])
 					result[key] = concrete[key];
+			return result;
+		},
+		
+		inverseKeyValue: function (obj) {
+			var result = {};
+			this.iter(obj, function (value, key) {
+				result[value] = key;
+			});
 			return result;
 		}
 
@@ -3409,8 +3436,8 @@ Scoped.define("module:Strings", ["module:Objs"], function (Objs) {
 		    input = input || "";
 			var temp = input.split("<");
 			input = temp[0].trim();
-			if (!input && temp.length > 1) {
-				temp = temp[1].split(">");
+			if (!input || temp.length < 2) {
+				temp = temp[temp.length - 1].split("@");
 				input = temp[0].trim();
 			}		
 			input = input.replace(/['"]/g, "").replace(/[\\._@]/g, " ");
@@ -6057,38 +6084,88 @@ Scoped.define("module:Classes.ContextRegistry", [
 Scoped.define("module:Classes.Taggable", [
     "module:Objs"
 ], function (Objs) {
+
+	/**
+	 * Taggable Mixin for handling instance tags
+	 * 
+	 * @mixin BetaJS.Classes.Taggable
+	 */
 	return {
 		
-		__tags: {},
-		
+		/**
+		 * Determines whether a specific tag is present. 
+		 * 
+		 * @param {string} tag tag in question
+		 * @return {boolean} true if tag present
+		 */
 		hasTag: function (tag) {
-			return tag in this.__tags;
+			return this.__tags && (tag in this.__tags);
 		},
 		
+		/**
+		 * Returns all tags being present.
+		 *  
+		 * @return {array} Array of tags
+		 */
 		getTags: function () {
-			return Object.keys(this.__tags);
+			return Object.keys(this.__tags || {});
 		},
 		
+		/**
+		 * Removes a specific tag. 
+		 * 
+		 * @param {string} tag tag in question
+		 * @return {object} this
+		 */
 		removeTag: function (tag) {
-			delete this.__tags[tag];
-			this._notify("tags-changed");
+			if (this.__tags) {
+				delete this.__tags[tag];
+				this._notify("tags-changed");
+			}
 			return this;
 		},
 		
+		/**
+		 * Remove a list of tags. 
+		 * 
+		 * @param {array} tags tags to be removed
+		 * @return {object} this
+		 */
 		removeTags: function (tags) {
 			Objs.iter(tags, this.removeTag, this);
+			return this;
 		},
 		
+		/**
+		 * Add a tag to the instance. 
+		 * 
+		 * @param {string} tag tag in question
+		 * @return {object} this
+		 */
 		addTag: function (tag) {
+			this.__tags = this.__tags || {};
 			this.__tags[tag] = true;
 			this._notify("tags-changed");
 			return this;
 		},
 		
+		/**
+		 * Add a number of tags to the instance. 
+		 * 
+		 * @param {array} tags tag to be added
+		 * @return {object} this
+		 */
 		addTags: function (tags) {
 			Objs.iter(tags, this.addTag, this);
+			return this;
 		},
 
+		/**
+		 * Returns the subset of the given tags that are present in the instance. 
+		 * 
+		 * @param {array} tags Superset of tags to be checkd
+		 * @return {array} Subset of intersecting tags
+		 */
 		tagIntersect: function (tags) {
 			return Objs.filter(tags, this.hasTag, this);
 		}
@@ -6104,6 +6181,12 @@ Scoped.define("module:Classes.StringTable", [
     "module:Objs"
 ], function (Class, Taggable, Functions, Objs, scoped) {
 	return Class.extend({scoped: scoped}, [Taggable, function (inherited) {
+
+		/**
+		 * Taggable StringTable Class 
+		 * 
+		 * @class BetaJS.Classes.StringTable
+		 */
 		return {
 			
 			_notifications: {
@@ -6112,6 +6195,9 @@ Scoped.define("module:Classes.StringTable", [
 				}
 			},
 			
+			/**
+			 * Instantiates a StringTable. 
+			 */
 			constructor: function () {
 				inherited.constructor.call(this);
 				this.__cache = {};
@@ -6136,6 +6222,16 @@ Scoped.define("module:Classes.StringTable", [
 				return c > 0;
 			},
 			
+			/**
+			 * Registers string resources. 
+			 * 
+			 * @param {object} strings key-value representation of strings
+			 * @param {string} prefix optional prefix for the keys
+			 * @param {array} tags optional tags
+			 * @param {int} priority optional priority
+			 * 
+			 * @return {object} this
+			 */
 			register: function () {
 				var args = Functions.matchArgs(arguments, {
 					strings: true,
@@ -6153,8 +6249,17 @@ Scoped.define("module:Classes.StringTable", [
 					});
 					delete this.__cache[key];
 				}, this);
+				return this;
 			},
 			
+			/**
+			 * Returns a string resource by key 
+			 * 
+			 * @param {string} key key to be retrieved
+			 * @param {string} prefix optional prefix for the key
+			 * 
+			 * @return {string} resource string
+			 */
 			get: function (key, prefix) {
 				key = this.__resolveKey(key, prefix);
 				if (key in this.__cache)
@@ -6170,6 +6275,11 @@ Scoped.define("module:Classes.StringTable", [
 				return current.value;
 			},
 			
+			/**
+			 * Retruns all included string resources 
+			 * 
+			 * @return {object} key-value representation of the included string resources
+			 */
 			all: function () {
 				return Objs.map(this.__strings, function (value, key) {
 					return this.get(key);
@@ -6186,7 +6296,14 @@ Scoped.define("module:Classes.LocaleTable", [
 	"module:Classes.StringTable",
 	"module:Classes.LocaleMixin"
 ], function (StringTable, LocaleMixin, scoped) {
-	return StringTable.extend({scoped: scoped}, [LocaleMixin, {
+	return StringTable.extend({scoped: scoped}, [LocaleMixin,
+
+ 		/**
+ 		 * Locale Table Class
+ 		 * 
+ 		 * @class BetaJS.Classes.LocaleTable
+ 		 */
+        {
 
 		_localeTags: function (locale) {
 			if (!locale)
@@ -6198,10 +6315,16 @@ Scoped.define("module:Classes.LocaleTable", [
 			return result;
 		},
 
+		/**
+		 * @override 
+		 */
 		_clearLocale: function () {
 			this.removeTags(this._localeTags(this.getLocale()));
 		},
 
+		/**
+		 * @override 
+		 */
 		_setLocale: function (locale) {
 			this.addTags(this._localeTags(locale));
 		}
@@ -6266,8 +6389,8 @@ Scoped.define("module:Collections.Collection", [
 				}, this);
 			},
 			
-			get_by_secondary_index: function (key, value) {
-				return this.__indices[key][value];
+			get_by_secondary_index: function (key, value, returnFirst) {
+				return returnFirst ? Objs.ithValue(this.__indices[key][value]) : this.__indices[key][value];
 			},
 			
 			get_ident: function (obj) {
@@ -7304,18 +7427,27 @@ Scoped.define("module:Timers.Timer", [
     "module:Time"
 ], function (Class, Objs, Time, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
+		
+		/**
+		 * Timer Class
+		 * 
+		 * @class BetaJS.Timers.Timer
+		 */
 		return {
 			
-			/*
-			 * int delay (mandatory): number of milliseconds until it fires
-			 * bool once (optional, default false): should it fire infinitely often
-			 * func fire (optional): will be fired
-			 * object context (optional): for fire
-			 * bool start (optional, default true): should it start immediately
-			 * bool real_time (default false)
-			 * bool immediate (optional, default false): zero time until first fire
-			 * int duration (optional, default null)
-			 * int fire_max (optional, default null)
+			/**
+			 * Create a new timer instance.
+			 * 
+			 * @param {object} options, including
+			 *   int delay (mandatory): number of milliseconds until it fires
+			 *   bool once (optional, default false): should it fire infinitely often
+			 *   func fire (optional): will be fired
+			 *   object context (optional): for fire
+			 *   bool start (optional, default true): should it start immediately
+			 *   bool real_time (default false)
+			 *   bool immediate (optional, default false): zero time until first fire
+			 *   int duration (optional, default null)
+			 *   int fire_max (optional, default null)
 			 * 
 			 */
 			constructor: function (options) {
@@ -7347,19 +7479,35 @@ Scoped.define("module:Timers.Timer", [
 					this.start();
 			},
 			
+			/**
+			 * @override
+			 */
 			destroy: function () {
 				this.stop();
 				inherited.destroy.call(this);
 			},
 			
+			/**
+			 * Returns the number of times the timer has fired.
+			 * 
+			 * @return {int} fire count
+			 */
 			fire_count: function () {
 				return this.__fire_count;
 			},
-			
+
+			/**
+			 * Returns the current duration of timer.
+			 * 
+			 * @return {int} duration in milliseconds
+			 */
 			duration: function () {
 				return Time.now() - this.__start_time;
 			},
 			
+			/**
+			 * Fired when the timer fires.
+			 */
 			fire: function () {
 				if (this.__once)
 					this.__started = false;
@@ -7380,6 +7528,11 @@ Scoped.define("module:Timers.Timer", [
 					this.weakDestroy();
 			},
 			
+			/**
+			 * Stops the timer.
+			 * 
+			 * @return {object}
+			 */
 			stop: function () {
 				if (!this.__started)
 					return this;
@@ -7393,6 +7546,11 @@ Scoped.define("module:Timers.Timer", [
 				return this;
 			},
 			
+			/**
+			 * Starts the timer.
+			 * 
+			 * @return {object} this
+			 */
 			start: function () {
 				if (this.__started)
 					return this;
@@ -7413,12 +7571,16 @@ Scoped.define("module:Timers.Timer", [
 				return this;
 			},
 			
+			/**
+			 * Restarts the timer.
+			 * 
+			 * @return {object} this
+			 */
 			restart: function () {
 				this.stop();
 				this.start();
 				return this;
 			}
-			
 			
 		};
 	});
@@ -7915,8 +8077,21 @@ Scoped.define("module:Net.AjaxException", [
     "module:Objs"
 ], function (Exception, Objs, scoped) {
 	return Exception.extend({scoped: scoped}, function (inherited) {
+		
+		/**
+		 * Ajax Exception Class
+		 * 
+		 * @class BetaJS.Net.AjaxException
+		 */
 		return {
 
+			/**
+			 * Instantiates an Ajax Exception
+			 * 
+			 * @param status_code Status Code
+			 * @param {string} status_text Status Text
+			 * @param data Custom Exception Data
+			 */
 			constructor: function (status_code, status_text, data) {
 				inherited.constructor.call(this, status_code + ": " + status_text);
 				this.__status_code = status_code;
@@ -7924,18 +8099,38 @@ Scoped.define("module:Net.AjaxException", [
 				this.__data = data;
 			},
 
+			/**
+			 * Returns the status code associated with the exception
+			 * 
+			 * @return status code
+			 */
 			status_code: function () {
 				return this.__status_code;
 			},
 
+			/**
+			 * Returns the status text associated with the exception
+			 * 
+			 * @return {string} status text
+			 */
 			status_text: function () {
 				return this.__status_text;
 			},
 
+			/**
+			 * Returns the custom data associated with the exception 
+			 * 
+			 * @return custom data
+			 */
 			data: function () {
 				return this.__data;
 			},
 
+			/**
+			 * Returns a JSON representation of the exception
+			 * 
+			 * @return {object} Exception JSON representation
+			 */
 			json: function () {
 				return Objs.extend({
 					data: this.data(),
@@ -7949,20 +8144,23 @@ Scoped.define("module:Net.AjaxException", [
 });
 
 
-/*
- * <ul>
- *  <li>uri: target uri</li>
- *  <li>method: get, post, ...</li>
- *  <li>data: data as JSON to be passed with the request</li>
- * </ul>
- * 
- */
 
 Scoped.define("module:Net.AbstractAjax", [ "module:Class", "module:Objs", "module:Net.Uri" ], function(Class, Objs, Uri, scoped) {
 	return Class.extend({ scoped : scoped }, function(inherited) {
+		
+		/**
+		 * Abstract Ajax Class, child classes override this for concrete realizations of Ajax
+		 * 
+		 * @class BetaJS.Net.AbstractAjax
+		 */
 		return {
 
-			constructor : function(options) {
+			/**
+			 * Instantiates an Abstract Ajax object (should never be instantiated directly)
+			 * 
+			 * @param {object} options Ajax Options
+			 */
+			constructor : function (options) {
 				inherited.constructor.call(this);
 				this.__options = Objs.extend({
 					"method" : "GET",
@@ -7970,43 +8168,50 @@ Scoped.define("module:Net.AbstractAjax", [ "module:Class", "module:Objs", "modul
 				}, options);
 			},
 
+			/**
+			 * Execute asynchronous ajax call
+			 * 
+			 * @param {object} options Ajax Call Options
+			 * @return {object} Success promise
+			 */
 			asyncCall : function(options) {
-				if (this._shouldMap(options))
+				if (this._shouldMap (options))
 					options = this._mapToPost(options);
-				return this._asyncCall(Objs.extend(Objs
-						.clone(this.__options, 1), options));
+				return this._asyncCall(Objs.extend(Objs.clone(this.__options, 1), options));
 			},
 
+			/**
+			 * Abstract Call for executing Ajax.
+			 * 
+			 * @param {object} options Ajax Call Options
+			 * @return {object} Success promise
+			 */
 			_asyncCall : function(options) {
 				throw "Abstract";
 			},
 
 			/**
-			 * @method _shouldMap
-			 * 
 			 * Check if should even attempt a mapping. Important to not assume
 			 * that the method option is always specified.
 			 * 
-			 * @return Boolean
+			 * @param {object} options Ajax Call Options
+			 * @return {boolean} true if it should be mapped
 			 */
-			_shouldMap : function(options) {
+			_shouldMap : function (options) {
 				return (this.__options.mapPutToPost && options.method && options.method.toLowerCase() === "put") ||
 				       (this.__options.mapDestroyToPost && options.method && options.method.toLowerCase() === "destroy");
 			},
 
 			/**
-			 * @method _mapToPost
-			 * 
 			 * Some implementations do not supporting sending data with
 			 * the non-standard request. This fix converts the Request to use POST, so
 			 * the data is sent, but the server still thinks it is receiving a
 			 * non-standard request.
 			 * 
-			 * @param {object} options
-			 * 
-			 * @return {object}
+			 * @param {object} options Ajax Call Options
+			 * @return {object} Updated options
 			 */
-			_mapToPost : function(options) {
+			_mapToPost : function (options) {
 				options.uri = Uri.appendUriParams(options.uri, {
 					_method : options.method.toUpperCase()
 				});

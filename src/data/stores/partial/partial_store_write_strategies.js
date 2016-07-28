@@ -8,11 +8,11 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.WriteStrategy", [
 				this.partialStore = partialStore;
 			},
 
-			insert: function (data) {},
+			insert: function (data, ctx) {},
 
-			remove: function (id) {},
+			remove: function (id, ctx) {},
 
-			update: function (data) {}
+			update: function (data, ctx) {}
 
 		};
 	});
@@ -24,38 +24,38 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
-			insert: function (data) {
-				return this.partialStore.remoteStore.insert(data).mapSuccess(function (data) {
+			insert: function (data, ctx) {
+				return this.partialStore.remoteStore.insert(data, ctx).mapSuccess(function (data) {
 					return this.partialStore.cachedStore.cacheInsert(data, {
 						lockItem: false,
 						silent: true,
 						refreshMeta: true,
 						accessMeta: true
-					}, this);
+					}, ctx);
 				}, this);
 			},
 
-			remove: function (cachedId) {
+			remove: function (cachedId, ctx) {
 				return this.partialStore.cachedStore.cachedIdToRemoteId(cachedId).mapSuccess(function (remoteId) {
-					return this.partialStore.remoteStore.remove(remoteId).mapSuccess(function () {
+					return this.partialStore.remoteStore.remove(remoteId, ctx).mapSuccess(function () {
 						return this.partialStore.cachedStore.cacheRemove(cachedId, {
 							ignoreLock: true,
 							silent: true
-						}, this);
+						}, ctx);
 					}, this);
 				}, this);
 			},
 
-			update: function (cachedId, data) {
+			update: function (cachedId, data, ctx) {
 				return this.partialStore.cachedStore.cachedIdToRemoteId(cachedId).mapSuccess(function (remoteId) {
-					return this.partialStore.remoteStore.update(remoteId, data).mapSuccess(function () {
+					return this.partialStore.remoteStore.update(remoteId, data, ctx).mapSuccess(function () {
 						return this.partialStore.cachedStore.cacheUpdate(cachedId, data, {
 							ignoreLock: false,
 							lockAttrs: false,
 							silent: true,
 							refreshMeta: true,
 							accessMeta: true
-						}, this);
+						}, ctx);
 					}, this);
 				});
 			}
