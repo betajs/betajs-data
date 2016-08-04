@@ -1,5 +1,5 @@
 /*!
-betajs - v1.0.67 - 2016-07-28
+betajs - v1.0.68 - 2016-08-02
 Copyright (c) Oliver Friedmann,Victor Lingenthal
 Apache-2.0 Software License.
 */
@@ -10,7 +10,7 @@ Scoped.binding('module', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "71366f7a-7da3-4e55-9a0b-ea0e4e2a9e79",
-    "version": "528.1469738927136"
+    "version": "531.1470147406525"
 };
 });
 Scoped.require(['module:'], function (mod) {
@@ -1081,31 +1081,68 @@ Scoped.define("module:Exceptions.Exception", [
     "module:Comparators"
 ], function (Class, Comparators, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
+		
+		/**
+		 * Exception Class
+		 * 
+		 * @class BetaJS.Exceptions.Exception
+		 */
 		return {
 			
+			/**
+			 * Instantiates a new exception.
+			 * 
+			 * @param {string} message Exception message
+			 */
 			constructor: function (message) {
 				inherited.constructor.call(this);
 				this.__message = message;
 			},
 			
+			/**
+			 * Asserts to be a certain type of exception. Throws this as an exception of assertion fails.
+			 * 
+			 * @param {object} exception_class Exception class to be asserted
+			 * @return {object} this
+			 */
 			assert: function (exception_class) {
 				if (!this.instance_of(exception_class))
 					throw this;
 				return this;
 			},
 			
+			/**
+			 * Returns exception message string.
+			 * 
+			 * @return {string} Exception message string
+			 */
 			message: function () {
 				return this.__message;
 			},
 			
+			/**
+			 * Format exception as string.
+			 * 
+			 * @return {string} Exception string
+			 */
 			toString: function () {
 				return this.message();
 			},
 			
+			/**
+			 * Format exception as string including the classname.
+			 * 
+			 * @return {string} Exception string plus classname
+			 */
 			format: function () {
 				return this.cls.classname + ": " + this.toString();
 			},
 			
+			/**
+			 * Returns exception data as JSON.
+			 * 
+			 * @return {object} exception data
+			 */
 			json: function () {
 				return {
 					classname: this.cls.classname,
@@ -1113,54 +1150,100 @@ Scoped.define("module:Exceptions.Exception", [
 				};
 			},
 			
+			/**
+			 * Determines whether this exception is equal to another.
+			 * 
+			 * @param {object} other Other exception
+			 * @return {boolean} True if equal
+			 */
 			equals: function (other) {
 				return other && this.cls === other.cls && Comparators.deepEqual(this.json(), other.json(), -1);
 			}			
 			
 		};
+	}, {
+		
+		/**
+		 * Ensures that a given exception is an instance of an Exception class
+		 * 
+		 * @param e Exception
+		 * @return {object} Exception instance, possibly wrapping e as a NativeException
+		 */
+		ensure: function (e) {
+			throw "Should be overwritten via Scoped.";
+		}
+		
 	});
 });
 
 
-Scoped.define("module:Exceptions.NativeException", ["module:Exceptions.Exception"], function (Exception, scoped) {
-	return Exception.extend({scoped: scoped}, function (inherited) {
+Scoped.define("module:Exceptions.NativeException", [
+    "module:Types", 
+    "module:Exceptions.Exception"
+], function (Types, Exception, scoped) {
+	
+	var NativeException = Exception.extend({scoped: scoped}, function (inherited) {
+		
+		/**
+		 * Native Exception Wrapper Class
+		 * 
+		 * @class BetaJS.Exceptions.NativeException
+		 */
 		return {
 			
+			/**
+			 * Instantiates a native exception wrapper.
+			 * 
+			 * @param {object} object Native exception object
+			 */
 			constructor: function (object) {
 				inherited.constructor.call(this, object ? ("toString" in object ? object.toString() : object) : "null");
 				this.__object = object;
 			},
 			
+			/**
+			 * Returns the original native exception object.
+			 * 
+			 * @return {object} Native exception object
+			 */
 			object: function () {
 				return this.__object;
 			}
 
 		};
 	});
-});
-
-
-Scoped.extend("module:Exceptions", ["module:Types", "module:Exceptions.Exception", "module:Exceptions.NativeException"], function (Types, Exception, NativeException) {
-	return {
-		
-		ensure: function (e) {
-			return Exception.is_instance_of(e) ? e : new NativeException(e);
-		}
-
-	};
-});
-
-Scoped.extend("module:Exceptions.Exception", ["module:Exceptions"], ["module:Exceptions.ensure"], function (Exceptions) {
 	
-	return {
-		
-		ensure: function (e) {
-			return Exceptions.ensure(e).assert(this);
-		}
-		
+	Exception.ensure = function (e) {
+		return Exception.is_instance_of(e) ? e : new NativeException(e);
 	};
+	
+	return NativeException;
 });
 
+
+Scoped.extend("module:Exceptions", [
+    "module:Exceptions.Exception"
+], function (Exception) {
+	
+	/**
+	 * The Exception module
+	 * 
+	 * @module BetaJS.Exceptions
+	 */
+	return {
+		
+		/**
+		 * Ensures that a given exception is an instance of an Exception class
+		 * 
+		 * @param e Exception
+		 * @return {object} Exception instance, possibly wrapping e as a NativeException
+		 */
+		ensure: function (e) {
+			return Exception.ensure(e);
+		}
+
+	};
+});
 Scoped.define("module:Functions", ["module:Types"], function (Types) {
 	
 	/**
@@ -2157,6 +2240,75 @@ Scoped.define("module:Objs", [
 			}
 		},
 
+		/**
+		 * Returns true if all key-value-pairs of the first object are contained in the second object.
+		 * 
+		 * @param a first object or array
+		 * @param b second object or array
+		 * 
+		 * @return {boolean} true if first contained in second
+		 */
+		subset_of: function (a, b) {
+			a = Types.is_array(a) ? this.objectify(a) : a;
+			b = Types.is_array(b) ? this.objectify(b) : b;
+			for (var key in a)
+				if (a[key] != b[key])
+					return false;
+			return true;
+		},
+		
+		/**
+		 * Returns true if all key-value-pairs of the second object are contained in the first object.
+		 * 
+		 * @param a first object or array
+		 * @param b second object or array
+		 * 
+		 * @return {boolean} true if second contained in first
+		 */
+		superset_of: function (a, b) {
+			return this.subset_of(b, a);
+		},
+		
+		/**
+		 * Converts an array into an object by pairing together odd and even items.
+		 * 
+		 * @param {array} arr array with pairs
+		 * 
+		 * @return {object} created object
+		 */
+		pairArrayToObject: function (arr) {
+			var result = {};
+			for (var i = 0; i < arr.length / 2; i += 2)
+				result[arr[i]] = arr[i+1];
+			return result;
+		},
+		
+		/**
+		 * Converts a list of arguments into an object by pairing together odd and even arguments.
+		 * 
+		 * @return {object} created object
+		 */
+		pairsToObject: function () {
+			var result = {};
+			for (var i = 0; i < arguments.length; ++i)
+				result[arguments[i][0]] = arguments[i][1];
+			return result;
+		},
+
+		/**
+		 * Inverses the key-value pairs in an object.
+		 * 
+		 * @param {object} obj object to be reversed
+		 * @return {object} object with reversed key-value-pairs
+		 */
+		inverseKeyValue: function (obj) {
+			var result = {};
+			this.iter(obj, function (value, key) {
+				result[value] = key;
+			});
+			return result;
+		},		
+
 		merge: function (secondary, primary, options) {
 			secondary = secondary || {};
 			primary = primary || {};
@@ -2278,19 +2430,14 @@ Scoped.define("module:Objs", [
 			return c;
 		},
 		
-		subset_of: function (a, b) {
-			a = Types.is_array(a) ? this.objectify(a) : a;
-			b = Types.is_array(b) ? this.objectify(b) : b;
+		diff: function (a, b) {
+			var c = {};
 			for (var key in a)
-				if (a[key] != b[key])
-					return false;
-			return true;
+				if (!(key in b) || a[key] !== b[key])
+					c[key] = a[key];
+			return c;
 		},
 		
-		superset_of: function (a, b) {
-			return this.subset_of(b, a);
-		},
-
 		contains_key: function (obj, key) {
 			if (Types.is_array(obj))
 				return Types.is_defined(obj[key]);
@@ -2372,44 +2519,6 @@ Scoped.define("module:Objs", [
 			return obj;
 		},
 
-		valueByIndex: function (obj, idx) {
-			idx = idx || 0;
-			if (Types.is_array(obj))
-				return obj[idx];
-			for (var key in obj) {
-				if (idx === 0)
-					return obj[key];
-				idx--;
-			}
-			return null;
-		},
-
-		keyByIndex: function (obj, idx) {
-			idx = idx || 0;
-			if (Types.is_array(obj))
-				return idx;
-			for (var key in obj) {
-				if (idx === 0)
-					return key;
-				idx--;
-			}
-			return null;
-		},
-
-		pairArrayToObject: function (arr) {
-			var result = {};
-			for (var i = 0; i < arr.length / 2; i += 2)
-				result[arr[i]] = arr[i+1];
-			return result;
-		},
-
-		pairsToObject: function () {
-			var result = {};
-			for (var i = 0; i < arguments.length; ++i)
-				result[arguments[i][0]] = arguments[i][1];
-			return result;
-		},
-		
 		specialize: function (ordinary, concrete, keys) {
 			var result = {};
 			var iterateOver = keys ? ordinary : concrete;
@@ -2419,12 +2528,12 @@ Scoped.define("module:Objs", [
 			return result;
 		},
 		
-		inverseKeyValue: function (obj) {
-			var result = {};
-			this.iter(obj, function (value, key) {
-				result[value] = key;
-			});
-			return result;
+		valueByIndex: function (obj, idx) {
+			return Types.is_array(obj) ? obj[idx || 0] : this.ithValue(obj, idx);
+		},
+
+		keyByIndex: function (obj, idx) {
+			return Types.is_array(obj) ? idx || 0 : this.ithKey(obj, idx);
 		}
 
 	};
@@ -2432,8 +2541,21 @@ Scoped.define("module:Objs", [
 
 
 Scoped.define("module:Objs.Scopes", ["module:Types"], function (Types) {
+	/**
+	 * Scoped access of keys within objects.
+	 * 
+	 * @module BetaJS.Objs.Scopes
+	 */
 	return {
 
+		/**
+		 * Determines whether a scoped key exists within a scope.
+		 * 
+		 * @param {string} key key within scope
+		 * @param {object} name scope context
+		 * 
+		 * @return {boolean} true if key exists within scope
+		 */
 		has: function (key, scope) {
 			var keys = key ? key.split(".") : [];
 			for (var i = 0; i < keys.length; ++i) {
@@ -2444,6 +2566,14 @@ Scoped.define("module:Objs.Scopes", ["module:Types"], function (Types) {
 			return Types.is_defined(scope);
 		},
 
+		/**
+		 * Returns the value of a key within a scope.
+		 * 
+		 * @param {string} key key within scope
+		 * @param {object} name scope context
+		 * 
+		 * @return Value for key in scope
+		 */
 		get: function (key, scope) {
 			var keys = key ? key.split(".") : [];
 			for (var i = 0; i < keys.length; ++i) {
@@ -2454,6 +2584,13 @@ Scoped.define("module:Objs.Scopes", ["module:Types"], function (Types) {
 			return scope;
 		},
 
+		/**
+		 * Sets the value of a key within a scope.
+		 * 
+		 * @param {string} key key within scope
+		 * @param name value to be set
+		 * @param {object} name scope context
+		 */
 		set: function (key, value, scope) {
 			if (!key)
 				return;
@@ -2466,6 +2603,12 @@ Scoped.define("module:Objs.Scopes", ["module:Types"], function (Types) {
 			scope[keys[keys.length - 1]] = value;
 		},
 
+		/**
+		 * Unsets a key within a scope.
+		 * 
+		 * @param {string} key key within scope
+		 * @param {object} name scope context
+		 */
 		unset: function (key, scope) {
 			if (!key)
 				return;
@@ -2478,6 +2621,14 @@ Scoped.define("module:Objs.Scopes", ["module:Types"], function (Types) {
 			delete scope[keys[keys.length - 1]];
 		},
 
+		/**
+		 * Makes sure that a certain key is accessible within a scope.
+		 * 
+		 * @param {string} key key within scope
+		 * @param {object} name scope context
+		 * 
+		 * @return Touched value
+		 */
 		touch: function (key, scope) {
 			if (!key)
 				return scope;

@@ -4,9 +4,8 @@ Scoped.define("module:Modelling.Model", [
                                          "base:Objs",
                                          "base:Promise",
                                          "base:Types",
-                                         "base:Exceptions",
                                          "module:Modelling.Table"
-                                         ], function (AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Exceptions, Table, scoped) {
+                                         ], function (AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Table, scoped) {
 	return AssociatedProperties.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -118,7 +117,7 @@ Scoped.define("module:Modelling.Model", [
 									this.setError(key, value);
 								}, this);
 							}
-							return Exceptions.ensure(new ModelInvalidException(this));
+							return new ModelInvalidException(this, err);
 						}
 						this.__silent++;
 						this.setAll(result);

@@ -40,8 +40,8 @@ Scoped.define("module:Modelling.ModelInvalidException", [
 	return Exception.extend({scoped: scoped}, function (inherited) {			
 		return {
 
-			constructor: function (model) {
-				var message = Objs.values(model.errors()).join("\n");
+			constructor: function (model, err) {
+				var message = Objs.values(model.errors()).join("\n") || err;
 				inherited.constructor.call(this, model, message);
 			}
 

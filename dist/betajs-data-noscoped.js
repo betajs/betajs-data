@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.37 - 2016-07-28
+betajs-data - v1.0.38 - 2016-08-04
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "88.1469739161463"
+    "version": "89.1470287577683"
 };
 });
 Scoped.assumeVersion('base:version', 526);
@@ -3825,6 +3825,14 @@ Scoped.define("module:Stores.CachedStore", [
 					}, this);
 				}, this);
 			},
+			
+			cacheOnlyGet: function (id, options, ctx) {
+				var foreignKey = options.foreignKey && this._foreignKey;
+				var itemPromise = foreignKey ?
+					  this.itemCache.getBy(this.remoteStore.id_key(), id, ctx)
+					: this.itemCache.get(id, ctx);
+				return itemPromise;
+			},
 
 			/*
 			 * options:
@@ -3837,10 +3845,7 @@ Scoped.define("module:Stores.CachedStore", [
 			 */
 			cacheGet: function (id, options, ctx) {
 				var foreignKey = options.foreignKey && this._foreignKey;
-				var itemPromise = foreignKey ?
-					  this.itemCache.getBy(this.remoteStore.id_key(), id, ctx)
-					: this.itemCache.get(id, ctx);
-				return itemPromise.mapSuccess(function (data) {
+				return this.cacheOnlyGet(id, options, ctx).mapSuccess(function (data) {
 					if (!data) {
 						if (!foreignKey && this._foreignKey)
 							return data;
@@ -4191,12 +4196,13 @@ Scoped.define("module:Stores.CacheStrategies.ExpiryCacheStrategy", [
 	});	
 });
 Scoped.define("module:Stores.PartialStore", [
-                                            "module:Stores.BaseStore",
-                                            "module:Stores.CachedStore",
-                                            "module:Stores.PartialStoreWriteStrategies.PostWriteStrategy",
-                                            "module:Stores.PartialStoreWatcher",
-                                            "base:Objs"
-                                            ], function (Store, CachedStore, PostWriteStrategy, PartialStoreWatcher, Objs, scoped) {
+	"module:Stores.BaseStore",
+	"module:Stores.CachedStore",
+	"module:Stores.PartialStoreWriteStrategies.PostWriteStrategy",
+	"module:Stores.PartialStoreWatcher",
+	"base:Objs",
+	"base:Types"
+], function (Store, CachedStore, PostWriteStrategy, PartialStoreWatcher, Objs, Types, scoped) {
 	return Store.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -4242,7 +4248,10 @@ Scoped.define("module:Stores.PartialStore", [
 			},
 			
 			_update: function (id, data, ctx) {
-				return this.writeStrategy.update(id, data, ctx);
+				return this.cachedStore.cacheOnlyGet(id, {}, ctx).mapSuccess(function (cachedData) {
+					var diff = Objs.diff(data, cachedData);
+					return Types.is_empty(diff) ? cachedData : this.writeStrategy.update(id, data, ctx);
+				}, this);
 			},
 
 			_get: function (id, ctx) {
@@ -5387,8 +5396,8 @@ Scoped.define("module:Modelling.ModelInvalidException", [
 	return Exception.extend({scoped: scoped}, function (inherited) {			
 		return {
 
-			constructor: function (model) {
-				var message = Objs.values(model.errors()).join("\n");
+			constructor: function (model, err) {
+				var message = Objs.values(model.errors()).join("\n") || err;
 				inherited.constructor.call(this, model, message);
 			}
 
@@ -5402,9 +5411,8 @@ Scoped.define("module:Modelling.Model", [
                                          "base:Objs",
                                          "base:Promise",
                                          "base:Types",
-                                         "base:Exceptions",
                                          "module:Modelling.Table"
-                                         ], function (AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Exceptions, Table, scoped) {
+                                         ], function (AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Table, scoped) {
 	return AssociatedProperties.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -5516,7 +5524,7 @@ Scoped.define("module:Modelling.Model", [
 									this.setError(key, value);
 								}, this);
 							}
-							return Exceptions.ensure(new ModelInvalidException(this));
+							return new ModelInvalidException(this, err);
 						}
 						this.__silent++;
 						this.setAll(result);

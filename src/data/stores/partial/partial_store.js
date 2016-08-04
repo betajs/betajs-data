@@ -1,10 +1,11 @@
 Scoped.define("module:Stores.PartialStore", [
-                                            "module:Stores.BaseStore",
-                                            "module:Stores.CachedStore",
-                                            "module:Stores.PartialStoreWriteStrategies.PostWriteStrategy",
-                                            "module:Stores.PartialStoreWatcher",
-                                            "base:Objs"
-                                            ], function (Store, CachedStore, PostWriteStrategy, PartialStoreWatcher, Objs, scoped) {
+	"module:Stores.BaseStore",
+	"module:Stores.CachedStore",
+	"module:Stores.PartialStoreWriteStrategies.PostWriteStrategy",
+	"module:Stores.PartialStoreWatcher",
+	"base:Objs",
+	"base:Types"
+], function (Store, CachedStore, PostWriteStrategy, PartialStoreWatcher, Objs, Types, scoped) {
 	return Store.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -50,7 +51,10 @@ Scoped.define("module:Stores.PartialStore", [
 			},
 			
 			_update: function (id, data, ctx) {
-				return this.writeStrategy.update(id, data, ctx);
+				return this.cachedStore.cacheOnlyGet(id, {}, ctx).mapSuccess(function (cachedData) {
+					var diff = Objs.diff(data, cachedData);
+					return Types.is_empty(diff) ? cachedData : this.writeStrategy.update(id, data, ctx);
+				}, this);
 			},
 
 			_get: function (id, ctx) {

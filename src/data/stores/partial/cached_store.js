@@ -206,6 +206,14 @@ Scoped.define("module:Stores.CachedStore", [
 					}, this);
 				}, this);
 			},
+			
+			cacheOnlyGet: function (id, options, ctx) {
+				var foreignKey = options.foreignKey && this._foreignKey;
+				var itemPromise = foreignKey ?
+					  this.itemCache.getBy(this.remoteStore.id_key(), id, ctx)
+					: this.itemCache.get(id, ctx);
+				return itemPromise;
+			},
 
 			/*
 			 * options:
@@ -218,10 +226,7 @@ Scoped.define("module:Stores.CachedStore", [
 			 */
 			cacheGet: function (id, options, ctx) {
 				var foreignKey = options.foreignKey && this._foreignKey;
-				var itemPromise = foreignKey ?
-					  this.itemCache.getBy(this.remoteStore.id_key(), id, ctx)
-					: this.itemCache.get(id, ctx);
-				return itemPromise.mapSuccess(function (data) {
+				return this.cacheOnlyGet(id, options, ctx).mapSuccess(function (data) {
 					if (!data) {
 						if (!foreignKey && this._foreignKey)
 							return data;
