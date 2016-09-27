@@ -13,7 +13,7 @@ Scoped.define("module:Stores.Invokers.RestInvokeeAjaxInvoker", [
 			},
 			
 			restInvoke: function (method, uri, post, get) {
-				return this.__ajax.asyncCall({
+				return this.__ajax.execute({
 					method: method,
 					data: post,
 					uri: Uri.appendUriParams(uri, get)
