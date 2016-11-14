@@ -171,13 +171,17 @@ The BetaJS Data module contains the following subsystems:
 | betajs-scoped | [Open](https://github.com/betajs/betajs-scoped) |
 
 
-## Contributors
+## Main Contributors
 
 - Oliver Friedmann
-
 
 ## License
 
 Apache-2.0
+
+
+
+
+
 
 
