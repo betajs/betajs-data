@@ -133,14 +133,14 @@ The BetaJS Data module contains the following subsystems:
 ## Compatability
 | Target | Versions |
 | :----- | -------: |
-| Firefox | 4 - Latest |
+| Firefox | 3 - Latest |
 | Chrome | 15 - Latest |
 | Safari | 4 - Latest |
 | Opera | 12 - Latest |
 | Internet Explorer | 6 - Latest |
 | Edge | 12 - Latest |
-| iOS | 7.0 - Latest |
-| Android | 4.0 - Latest |
+| iOS | 3.0 - Latest |
+| Android | 2.2 - Latest |
 | NodeJS | 0.10 - Latest |
 
 
@@ -183,5 +183,10 @@ Apache-2.0
 
 
 
+
+## Sponsors
+
+- Ziggeo
+- Browserstack
 
 
