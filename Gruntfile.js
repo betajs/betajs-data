@@ -1,7 +1,7 @@
 module.exports = function(grunt) {
 
 	var pkg = grunt.file.readJSON('package.json');
-	var gruntHelper = require('betajs-compile/grunt.js');
+	var gruntHelper = require('betajs-compile');
 	var dist = 'betajs-data';
 
 	gruntHelper.init(pkg, grunt)
@@ -12,29 +12,26 @@ module.exports = function(grunt) {
 		"module": "global:BetaJS.Data",
 		"base": "global:BetaJS"
     }, {
-    	"base:version": 526
+    	"base:version": pkg.devDependencies.betajs
     })	
-    .concatTask('concat-scoped', ['vendors/scoped.js', 'dist/' + dist + '-noscoped.js'], 'dist/' + dist + '.js')
+    .concatTask('concat-scoped', [require.resolve("betajs-scoped"), 'dist/' + dist + '-noscoped.js'], 'dist/' + dist + '.js')
     .uglifyTask('uglify-noscoped', 'dist/' + dist + '-noscoped.js', 'dist/' + dist + '-noscoped.min.js')
     .uglifyTask('uglify-scoped', 'dist/' + dist + '.js', 'dist/' + dist + '.min.js')
 
     /* Testing */
     .qunitTask(null, './dist/' + dist + '-noscoped.js',
     				 grunt.file.expand("./tests/*/*.js"),
-    		         ['./vendors/scoped.js', './vendors/beta-noscoped.js'])
-    .closureTask(null, ["./vendors/scoped.js", "./vendors/beta-noscoped.js", "./dist/betajs-data-noscoped.js"])
+    		         [require.resolve("betajs-scoped"), require.resolve("betajs")])
+    .closureTask(null, [require.resolve("betajs-scoped"), require.resolve("betajs"), "./dist/betajs-data-noscoped.js"])
     .browserstackTask(null, 'tests/tests.html', {desktop: true, mobile: true})
     .lintTask(null, ['./src/**/*.js', './dist/' + dist + '-noscoped.js', './dist/' + dist + '.js', './Gruntfile.js', './tests/**/*.js', './benchmarks/**/*.js'])
     .benchmarkTask("benchmark-compare", ['benchmarks/common/init.js', 'benchmarks/compare/*.js'])
     
     /* External Configurations */
     .codeclimateTask()
-    .travisTask()
+    .travisTask(null, "0.11")
     .packageTask()
     
-    /* Dependencies */
-    .dependenciesTask(null, { github: ['betajs/betajs-scoped/dist/scoped.js', 'betajs/betajs/dist/beta-noscoped.js'] })
-
     /* Markdown Files */
 	.readmeTask()
     .licenseTask()

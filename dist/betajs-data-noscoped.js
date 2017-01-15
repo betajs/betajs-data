@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.40 - 2016-10-05
+betajs-data - v1.0.41 - 2017-01-15
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,10 +11,10 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "91.1475682609549"
+    "version": "1.0.41"
 };
 });
-Scoped.assumeVersion('base:version', 526);
+Scoped.assumeVersion('base:version', '~1.0.96');
 /**
  * @class AbstractQueryCollection
  *
