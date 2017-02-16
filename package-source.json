@@ -39,7 +39,8 @@
 		"badges": {
 			"codeclimate": true,
 			"travis": true,
-			"npm": true
+			"npm": true,
+			"gitter": true
 		},
 		"compatability": {
 			"Firefox": "3 - Latest",
