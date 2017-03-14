@@ -1,5 +1,5 @@
 Scoped.define("module:Stores.WriteStoreMixin", [
-                                                "module:Stores.StoreException",                                               
+                                                "module:Stores.StoreException",
                                                 "base:Promise",
                                                 "base:IdGenerators.TimedIdGenerator",
                                                 "base:Types"
@@ -10,6 +10,7 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			options = options || {};
 			this._id_key = options.id_key || "id";
 			this._create_ids = options.create_ids || false;
+			this.preserve_preupdate_data = options.preserve_preupdate_data || false;
 			if (this._create_ids)
 				this._id_generator = options.id_generator || this._auto_destroy(new TimedIdGenerator());
 		},
@@ -38,9 +39,9 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			this.trigger("write", "remove", id, ctx);
 		},
 
-		_updated: function (row, data, ctx) {
-			this.trigger("update", row, data, ctx);	
-			this.trigger("write", "update", row, data, ctx);
+		_updated: function (row, data, ctx, pre_data) {
+			this.trigger("update", row, data, ctx, pre_data);
+			this.trigger("write", "update", row, data, ctx, pre_data);
 		}, 
 
 		insert_all: function (data, ctx) {
@@ -79,9 +80,20 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 		},
 
 		update: function (id, data, ctx) {
-			return this._update(id, data, ctx).success(function (row) {
-				this._updated(row, data, ctx);
-			}, this);
+			if (this.preserve_preupdate_data) {
+                return this.get(id, ctx).mapSuccess(function (pre_data) {
+                	var pre_data_filtered = {};
+                	for (var key in data)
+                        pre_data_filtered[key] = pre_data[key];
+                	return this._update(id, data, ctx).success(function (row) {
+                        this._updated(row, data, ctx, pre_data_filtered);
+                    }, this);
+                }, this);
+			} else {
+				return this._update(id, data, ctx).success(function (row) {
+                    this._updated(row, data, ctx);
+                }, this);
+			}
 		},
 		
 		unserialize: function (arr, ctx) {

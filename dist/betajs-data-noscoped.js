@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.41 - 2017-01-15
+betajs-data - v1.0.42 - 2017-03-14
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.41"
+    "version": "1.0.42"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -1973,12 +1973,13 @@ Scoped.define("module:Stores.StoreException", ["base:Exceptions.Exception"], fun
 });
 
 Scoped.define("module:Stores.StoreHistory", [
-                                             "base:Class",
-                                             "base:Objs",
-                                             "base:Types",
-                                             "module:Stores.MemoryStore"
-                                             ], function (Class, Objs, Types, MemoryStore, scoped) {
-	return Class.extend({scoped: scoped}, function (inherited) {
+	"base:Class",
+	"base:Events.EventsMixin",
+	"base:Objs",
+	"base:Types",
+	"module:Stores.MemoryStore"
+], function (Class, EventsMixin, Objs, Types, MemoryStore, scoped) {
+	return Class.extend({scoped: scoped}, [EventsMixin, function (inherited) {
 		return {
 
 			constructor: function (sourceStore, historyStore, options) {
@@ -1993,6 +1994,7 @@ Scoped.define("module:Stores.StoreHistory", [
 					filter_data: {}
 				}, options);
 				this.historyStore = historyStore || new MemoryStore();
+				this.sourceStore = sourceStore;
 				this.commitId = 1;
 				if (sourceStore) {
 					sourceStore.on("insert", this.sourceInsert, this);
@@ -2009,9 +2011,11 @@ Scoped.define("module:Stores.StoreHistory", [
 					row_id: data[this._options.source_id_key],
 					commit_id: this.commitId
 				}, this._options.row_data));
+				this.trigger("insert", this.commitId);
+				return this.commitId;
 			},
 
-			sourceUpdate: function (row, data) {
+			sourceUpdate: function (row, data, dummy_ctx, pre_data) {
 				this.commitId++;
 				var row_id = Types.is_object(row) ? row[this._options.source_id_key] : row;
 				var target_type = "update";
@@ -2039,10 +2043,14 @@ Scoped.define("module:Stores.StoreHistory", [
 				}
 				this.historyStore.insert(Objs.extend({
 					row: data,
+					pre_data: pre_data,
 					type: target_type,
 					row_id: row_id,
 					commit_id: this.commitId
 				}, this._options.row_data));
+                this.trigger("update", this.commitId);
+                this.trigger("update:" + row_id, this.commitId);
+                return this.commitId;
 			},
 
 			sourceRemove: function (id, data) {
@@ -2074,14 +2082,45 @@ Scoped.define("module:Stores.StoreHistory", [
 					row: data,
 					commit_id: this.commitId
 				}, this._options.row_data));
+                this.trigger("remove", this.commitId);
+                this.trigger("remove:" + id, this.commitId);
+                return this.commitId;
+			},
+
+			getCommitById: function (commitId) {
+				return this.historyStore.query({
+					commit_id: commitId
+				}, {
+					limit: 1
+				}).mapSuccess(function (commits) {
+					return commits.next();
+				});
+			},
+
+			undoCommit: function (commit) {
+				if (commit.type === "insert") {
+					return this.sourceStore.remove(commit.row_id);
+                } else if (commit.type === "remove") {
+					return this.sourceStore.insert(commit.row);
+				} else if (commit.type === "update") {
+					return this.sourceStore.update(commit.row_id, commit.pre_data || {});
+				}
+			},
+
+			undoCommitById: function (commitId) {
+				return this.getCommitById(commitId).mapSuccess(function (commit) {
+					return this.undoCommit(commit).success(function () {
+						this.historyStore.remove(this.historyStore.id_of(commit));
+					}, this);
+				}, this);
 			}
 
 		};
-	});
+	}]);
 });
 
 Scoped.define("module:Stores.WriteStoreMixin", [
-                                                "module:Stores.StoreException",                                               
+                                                "module:Stores.StoreException",
                                                 "base:Promise",
                                                 "base:IdGenerators.TimedIdGenerator",
                                                 "base:Types"
@@ -2092,6 +2131,7 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			options = options || {};
 			this._id_key = options.id_key || "id";
 			this._create_ids = options.create_ids || false;
+			this.preserve_preupdate_data = options.preserve_preupdate_data || false;
 			if (this._create_ids)
 				this._id_generator = options.id_generator || this._auto_destroy(new TimedIdGenerator());
 		},
@@ -2120,9 +2160,9 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			this.trigger("write", "remove", id, ctx);
 		},
 
-		_updated: function (row, data, ctx) {
-			this.trigger("update", row, data, ctx);	
-			this.trigger("write", "update", row, data, ctx);
+		_updated: function (row, data, ctx, pre_data) {
+			this.trigger("update", row, data, ctx, pre_data);
+			this.trigger("write", "update", row, data, ctx, pre_data);
 		}, 
 
 		insert_all: function (data, ctx) {
@@ -2161,9 +2201,20 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 		},
 
 		update: function (id, data, ctx) {
-			return this._update(id, data, ctx).success(function (row) {
-				this._updated(row, data, ctx);
-			}, this);
+			if (this.preserve_preupdate_data) {
+                return this.get(id, ctx).mapSuccess(function (pre_data) {
+                	var pre_data_filtered = {};
+                	for (var key in data)
+                        pre_data_filtered[key] = pre_data[key];
+                	return this._update(id, data, ctx).success(function (row) {
+                        this._updated(row, data, ctx, pre_data_filtered);
+                    }, this);
+                }, this);
+			} else {
+				return this._update(id, data, ctx).success(function (row) {
+                    this._updated(row, data, ctx);
+                }, this);
+			}
 		},
 		
 		unserialize: function (arr, ctx) {

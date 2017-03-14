@@ -1,10 +1,11 @@
 Scoped.define("module:Stores.StoreHistory", [
-                                             "base:Class",
-                                             "base:Objs",
-                                             "base:Types",
-                                             "module:Stores.MemoryStore"
-                                             ], function (Class, Objs, Types, MemoryStore, scoped) {
-	return Class.extend({scoped: scoped}, function (inherited) {
+	"base:Class",
+	"base:Events.EventsMixin",
+	"base:Objs",
+	"base:Types",
+	"module:Stores.MemoryStore"
+], function (Class, EventsMixin, Objs, Types, MemoryStore, scoped) {
+	return Class.extend({scoped: scoped}, [EventsMixin, function (inherited) {
 		return {
 
 			constructor: function (sourceStore, historyStore, options) {
@@ -19,6 +20,7 @@ Scoped.define("module:Stores.StoreHistory", [
 					filter_data: {}
 				}, options);
 				this.historyStore = historyStore || new MemoryStore();
+				this.sourceStore = sourceStore;
 				this.commitId = 1;
 				if (sourceStore) {
 					sourceStore.on("insert", this.sourceInsert, this);
@@ -35,9 +37,11 @@ Scoped.define("module:Stores.StoreHistory", [
 					row_id: data[this._options.source_id_key],
 					commit_id: this.commitId
 				}, this._options.row_data));
+				this.trigger("insert", this.commitId);
+				return this.commitId;
 			},
 
-			sourceUpdate: function (row, data) {
+			sourceUpdate: function (row, data, dummy_ctx, pre_data) {
 				this.commitId++;
 				var row_id = Types.is_object(row) ? row[this._options.source_id_key] : row;
 				var target_type = "update";
@@ -65,10 +69,14 @@ Scoped.define("module:Stores.StoreHistory", [
 				}
 				this.historyStore.insert(Objs.extend({
 					row: data,
+					pre_data: pre_data,
 					type: target_type,
 					row_id: row_id,
 					commit_id: this.commitId
 				}, this._options.row_data));
+                this.trigger("update", this.commitId);
+                this.trigger("update:" + row_id, this.commitId);
+                return this.commitId;
 			},
 
 			sourceRemove: function (id, data) {
@@ -100,8 +108,39 @@ Scoped.define("module:Stores.StoreHistory", [
 					row: data,
 					commit_id: this.commitId
 				}, this._options.row_data));
+                this.trigger("remove", this.commitId);
+                this.trigger("remove:" + id, this.commitId);
+                return this.commitId;
+			},
+
+			getCommitById: function (commitId) {
+				return this.historyStore.query({
+					commit_id: commitId
+				}, {
+					limit: 1
+				}).mapSuccess(function (commits) {
+					return commits.next();
+				});
+			},
+
+			undoCommit: function (commit) {
+				if (commit.type === "insert") {
+					return this.sourceStore.remove(commit.row_id);
+                } else if (commit.type === "remove") {
+					return this.sourceStore.insert(commit.row);
+				} else if (commit.type === "update") {
+					return this.sourceStore.update(commit.row_id, commit.pre_data || {});
+				}
+			},
+
+			undoCommitById: function (commitId) {
+				return this.getCommitById(commitId).mapSuccess(function (commit) {
+					return this.undoCommit(commit).success(function () {
+						this.historyStore.remove(this.historyStore.id_of(commit));
+					}, this);
+				}, this);
 			}
 
 		};
-	});
+	}]);
 });

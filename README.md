@@ -1,8 +1,8 @@
-# betajs-data 1.0.41
+# betajs-data 1.0.42
 [![Build Status](https://api.travis-ci.org/betajs/betajs-data.svg?branch=master)](https://travis-ci.org/betajs/betajs-data)
 [![Code Climate](https://codeclimate.com/github/betajs/betajs-data/badges/gpa.svg)](https://codeclimate.com/github/betajs/betajs-data)
 [![NPM](https://img.shields.io/npm/v/betajs-data.svg?style=flat)](https://www.npmjs.com/package/betajs-data)
-
+[![Gitter Chat](https://badges.gitter.im/betajs/betajs-data.svg)](https://gitter.im/betajs/betajs-data)
 
 BetaJS-Data is a general-purpose JavaScript framework for handling RESTful operations and ActiveRecord abstractions.
 
@@ -128,7 +128,7 @@ The BetaJS Data module contains the following subsystems:
 | Repository | [https://github.com/betajs/betajs-data](https://github.com/betajs/betajs-data) |
 | Blog       | [http://blog.betajs.com](http://blog.betajs.com) | 
 | Twitter    | [http://twitter.com/thebetajs](http://twitter.com/thebetajs) | 
- 
+| Gitter     | [https://gitter.im/betajs/betajs-data](https://gitter.im/betajs/betajs-data) | 
 
 
 
