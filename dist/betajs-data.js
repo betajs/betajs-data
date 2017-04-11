@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.42 - 2017-03-14
+betajs-data - v1.0.43 - 2017-04-11
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1004,7 +1004,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.42 - 2017-03-14
+betajs-data - v1.0.43 - 2017-04-11
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1016,7 +1016,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.42"
+    "version": "1.0.43"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -1026,1644 +1026,1670 @@ Scoped.assumeVersion('base:version', '~1.0.96');
  * A base class for querying collections. Subclasses specify the expected type
  * of data store and specify whether the query collection is active.
  */
-Scoped.define("module:Collections.AbstractQueryCollection", [      
-                                                     "base:Collections.Collection",
-                                                     "base:Objs",
-                                                     "base:Types",
-                                                     "base:Comparators",
-                                                     "base:Promise",
-                                                     "base:Class",
-                                                     "module:Queries.Constrained",
-                                                     "module:Queries"
-                                                     ], function (Collection, Objs, Types, Comparators, Promise, Class, Constrained, Queries, scoped) {
-	return Collection.extend({scoped: scoped}, function (inherited) {
-		return {
+Scoped.define("module:Collections.AbstractQueryCollection", [
+    "base:Collections.Collection",
+    "base:Objs",
+    "base:Types",
+    "base:Comparators",
+    "base:Promise",
+    "base:Class",
+    "module:Queries.Constrained",
+    "module:Queries"
+], function(Collection, Objs, Types, Comparators, Promise, Class, Constrained, Queries, scoped) {
+    return Collection.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-			/**
-		       * @method constructor
-		       *
-		       * @param {object} source The source object
-		       * can either be an instance of a Table
-		       * or a Store. A Table should be used if validations and other data
-		       * processing methods are desired. A Store is sufficient if just
-		       * performing simple queries and returning the results with little
-		       * manipulation.
-		       *
-		       * @param {object} query The query object contains keys specifying query
-		       * parameters and values specifying their respective values. This query
-		       * object can be updated later with the `set_query` method.
-		       *
-		       * @param {object} options The options object contains keys specifying
-		       * option parameters and values specifying their respective values.
-		       *
-		       * @return {QueryCollection} A new instance of QueryCollection.
-		       */
-			constructor: function (source, query, options) {
-				inherited.constructor.call(this, {
-					release_references: true
-				});
-				options = options || {};
-				this._id_key = this._id_key || options.id_key || "id";
-				this._source = source;
-				this._complete = false;
-				this._active = options.active || false;
-				this._incremental = "incremental" in options ? options.incremental : true; 
-				this._active_bounds = "active_bounds" in options ? options.active_bounds : true;
-				this._enabled = false;
-				this._range = options.range || null;
-				this._forward_steps = options.forward_steps || null;
-				this._backward_steps = options.backward_steps || null;
-				this._async = options.async || false;
-				if (this._active) {
-					this.on("add", function (object) {
-						this._watchItem(object.get(this._id_key));
-					}, this);
-					this.on("remove", function (object) {
-						this._unwatchItem(object.get(this._id_key));
-					}, this);
-				}
-				this._query = {
-					query: {},
-					options: {
-						skip: 0,
-						limit: null,
-						sort: null
-					}
-				};
-				this.update(Objs.tree_extend({
-					query: {},
-					options: {
-						skip: options.skip || 0,
-						limit: options.limit || options.range || null,
-						sort: options.sort || null
-					}
-				}, query ? (query.query || query.options ? query : {query: query}) : {}));
-				if (options.auto)
-					this.enable();
-			},
+            /**
+             * @method constructor
+             *
+             * @param {object} source The source object
+             * can either be an instance of a Table
+             * or a Store. A Table should be used if validations and other data
+             * processing methods are desired. A Store is sufficient if just
+             * performing simple queries and returning the results with little
+             * manipulation.
+             *
+             * @param {object} query The query object contains keys specifying query
+             * parameters and values specifying their respective values. This query
+             * object can be updated later with the `set_query` method.
+             *
+             * @param {object} options The options object contains keys specifying
+             * option parameters and values specifying their respective values.
+             *
+             * @return {QueryCollection} A new instance of QueryCollection.
+             */
+            constructor: function(source, query, options) {
+                inherited.constructor.call(this, {
+                    release_references: true
+                });
+                options = options || {};
+                this._id_key = this._id_key || options.id_key || "id";
+                this._source = source;
+                this._complete = false;
+                this._active = options.active || false;
+                this._incremental = "incremental" in options ? options.incremental : true;
+                this._active_bounds = "active_bounds" in options ? options.active_bounds : true;
+                this._enabled = false;
+                this._range = options.range || null;
+                this._forward_steps = options.forward_steps || null;
+                this._backward_steps = options.backward_steps || null;
+                this._async = options.async || false;
+                if (this._active) {
+                    this.on("add", function(object) {
+                        this._watchItem(object.get(this._id_key));
+                    }, this);
+                    this.on("remove", function(object) {
+                        this._unwatchItem(object.get(this._id_key));
+                    }, this);
+                }
+                this._query = {
+                    query: {},
+                    options: {
+                        skip: 0,
+                        limit: null,
+                        sort: null
+                    }
+                };
+                this.update(Objs.tree_extend({
+                    query: {},
+                    options: {
+                        skip: options.skip || 0,
+                        limit: options.limit || options.range || null,
+                        sort: options.sort || null
+                    }
+                }, query ? (query.query || query.options ? query : {
+                    query: query
+                }) : {}));
+                if (options.auto)
+                    this.enable();
+            },
 
-			destroy: function () {
-				this.disable();
-				if (this._watcher()) {
-					this._watcher().unwatchInsert(null, this);
-					this._watcher().unwatchItem(null, this);
-				}
-				inherited.destroy.call(this);
-			},
+            destroy: function() {
+                this.disable();
+                if (this._watcher()) {
+                    this._watcher().unwatchInsert(null, this);
+                    this._watcher().unwatchItem(null, this);
+                }
+                inherited.destroy.call(this);
+            },
 
-			
-		      /**
-		       * @method paginate
-		       *
-		       * Paginate to a specific page.
-		       *
-		       * @param {int} index The page to paginate to.
-		       *
-		       * @return {Promise} Promise from query execution.
-		       */
-			
-			paginate: function (index) {
-				return this.update({options: {
-					skip: index * this._range,
-					limit: this._range
-				}});
-			},
-			
-		      /**
-		       * @method paginate_index
-		       *
-		       * @return {int} Current pagination page.
-		       */
-			paginate_index: function () {
-				return Math.floor(this.getSkip() / this._range);
-			},
-			
-		      /**
-		       * @method paginate_next
-		       *
-		       * Update the query to paginate to the next page.
-		       *
-		       * @return {Promise} Promise of the query.
-		       */
-			paginate_next: function () {
-				return this.isComplete() ? Promise.create(true) : this.paginate(this.paginate_index() + 1);
-			},
-			
-	      /**
-	       * @method paginate_prev
-	       *
-	       * Update the query to paginate to the previous page.
-	       *
-	       * @return {Promise} Promise of the query.
-	       */
-			paginate_prev: function () {
-				return this.paginate_index() > 0 ? this.paginate(this.paginate_index() - 1) : Promise.create(true);
-			},		
-			
-			increase_forwards: function (steps) {
-				steps = steps || this._forward_steps;
-				return this.isComplete() ? Promise.create(true) : this.update({options: {
-					limit: this.getLimit() + steps
-				}});
-			},
 
-			increase_backwards: function (steps) {
-				steps = steps || this._backward_steps;
-				return !this.getSkip() ? Promise.create(true) : this.update({options: {
-					skip: Math.max(this.getSkip() - steps, 0),
-					limit: this.getLimit() ? this.getLimit() + this.getSkip() - Math.max(this.getSkip() - steps, 0) : null  
-				}});
-			},
-			
+            /**
+             * @method paginate
+             *
+             * Paginate to a specific page.
+             *
+             * @param {int} index The page to paginate to.
+             *
+             * @return {Promise} Promise from query execution.
+             */
 
-			get_ident: function (obj) {
-				return Class.is_class_instance(obj) ? obj.get(this._id_key) : obj[this._id_key];
-			},
+            paginate: function(index) {
+                return this.update({
+                    options: {
+                        skip: index * this._range,
+                        limit: this._range
+                    }
+                });
+            },
 
-			getQuery: function () {
-				return this._query;
-			},
+            /**
+             * @method paginate_index
+             *
+             * @return {int} Current pagination page.
+             */
+            paginate_index: function() {
+                return Math.floor(this.getSkip() / this._range);
+            },
 
-			getSkip: function () {
-				return this._query.options.skip || 0;
-			},
+            /**
+             * @method paginate_next
+             *
+             * Update the query to paginate to the next page.
+             *
+             * @return {Promise} Promise of the query.
+             */
+            paginate_next: function() {
+                return this.isComplete() ? Promise.create(true) : this.paginate(this.paginate_index() + 1);
+            },
 
-			getLimit: function () {
-				return this._query.options.limit || null;
-			},
+            /**
+             * @method paginate_prev
+             *
+             * Update the query to paginate to the previous page.
+             *
+             * @return {Promise} Promise of the query.
+             */
+            paginate_prev: function() {
+                return this.paginate_index() > 0 ? this.paginate(this.paginate_index() - 1) : Promise.create(true);
+            },
 
-		      /**
-		       * @method update
-		       *
-		       * Update the collection with a new query. Setting the query not only
-		       * updates the query field, but also updates the data with the results of
-		       * the new query.
-		       *
-		       * @param {object} constrainedQuery The new query for this collection.
-		       *
-		       * @example
-		       * // Updates the query dictating the collection contents.
-		       * collectionQuery.update({query: {'queryField': 'queryValue'}, options: {skip: 10}});
-		       */
-			update: function (constrainedQuery) {
-				var hasQuery = !!constrainedQuery.query;
-				constrainedQuery = Constrained.rectify(constrainedQuery);
-				var currentSkip = this._query.options.skip || 0;
-				var currentLimit = this._query.options.limit || null;
-				if (constrainedQuery.query)
-					this._query.query = constrainedQuery.query;
-				this._query.options = Objs.extend(this._query.options, constrainedQuery.options);
-				if (!this._enabled)
-					return Promise.create(true);
-				if (hasQuery || "sort" in constrainedQuery.options || !this._incremental)					
-					return this.refresh(true);
-				var nextSkip = "skip" in constrainedQuery.options ? constrainedQuery.options.skip || 0 : currentSkip;
-				var nextLimit = "limit" in constrainedQuery.options ? constrainedQuery.options.limit || null : currentLimit;
-				if (nextSkip === currentSkip && nextLimit === currentLimit)
-					return Promise.create(true);
-				// No overlap
-				if ((nextLimit && nextSkip + nextLimit <= currentSkip) || (currentLimit && currentSkip + currentLimit <= nextSkip))
-					return this.refresh(true);
-				// Make sure that currentSkip >= nextSkip
-				while (currentSkip < nextSkip && (currentLimit === null || currentLimit > 0)) {
-					this.remove(this.getByIndex(0));
-					currentSkip++;
-					currentLimit--;
-				}
-				var promise = Promise.create(true);
-				// Make sure that nextSkip === currentSkip
-				if (nextSkip < currentSkip) {
-					var leftLimit = currentSkip - nextSkip;
-					if (nextLimit !== null)
-						leftLimit = Math.min(leftLimit, nextLimit);
-					promise = this._execute(Objs.tree_extend(Objs.clone(this._query, 2), {options: {
-						skip: nextSkip,
-						limit: leftLimit    
-					}}, 2), true);
-					nextSkip += leftLimit;
-					if (nextLimit !== null)
-						nextLimit -= leftLimit;
-				}
-				if (!currentLimit || (nextLimit && nextLimit <= currentLimit)) {
-					if (nextLimit)
-						while (this.count() > nextLimit)
-							this.remove(this.getByIndex(this.count() - 1));
-					return promise;
-				}
-				return promise.and(this._execute(Objs.tree_extend(Objs.clone(this._query, 2), {
-					options: {
-						skip: currentSkip + currentLimit,
-						limit: !nextLimit ? null : nextLimit - currentLimit
-					}
-				}, 2), true));
-			},
+            increase_forwards: function(steps) {
+                steps = steps || this._forward_steps;
+                return this.isComplete() ? Promise.create(true) : this.update({
+                    options: {
+                        limit: this.getLimit() + steps
+                    }
+                });
+            },
 
-			enable: function () {
-				if (this._enabled)
-					return;
-				this._enabled = true;
-				this.refresh();
-			},
+            increase_backwards: function(steps) {
+                steps = steps || this._backward_steps;
+                return !this.getSkip() ? Promise.create(true) : this.update({
+                    options: {
+                        skip: Math.max(this.getSkip() - steps, 0),
+                        limit: this.getLimit() ? this.getLimit() + this.getSkip() - Math.max(this.getSkip() - steps, 0) : null
+                    }
+                });
+            },
 
-			disable: function () {
-				if (!this._enabled)
-					return;
-				this._enabled = false;
-				this.clear();
-				this._unwatchInsert();
-			},
 
-			refresh: function (clear) {
-				if (clear && !this._incremental)
-					this.clear();
-				if (this._query.options.sort && !Types.is_empty(this._query.options.sort)) {
-					this.set_compare(Comparators.byObject(this._query.options.sort));
-				} else {
-					this.set_compare(null);
-				}
-				this._unwatchInsert();
-				if (this._active)
-					this._watchInsert(this._query);
-				return this._execute(this._query, !(clear && this._incremental));
-			},
+            get_ident: function(obj) {
+                return Class.is_class_instance(obj) ? obj.get(this._id_key) : obj[this._id_key];
+            },
 
-			isEnabled: function () {
-				return this._enabled;
-			},
+            getQuery: function() {
+                return this._query;
+            },
 
-		      /**
-		       * @method _execute
-		       *
-		       * Execute a constrained query. This method is called whenever a new query is set.
-		       * Doesn't override previous reults.
-		       *
-		       * @protected
-		       *
-		       * @param {constrainedQuery} constrainedQuery The constrained query that should be executed
-		       *
-		       * @return {Promise} Promise from executing query.
-		       */
-			_execute: function (constrainedQuery, keep_others) {
-				if (this.__executePromise) {
-					return this.__executePromise.mapCallback(function () {
-						return this._execute(constrainedQuery, keep_others);
-					}, this);
-				}
-				return this._subExecute(constrainedQuery.query, constrainedQuery.options).mapSuccess(function (iter) {
-					if (!iter.hasNext()) {
-						this._complete = true;
-						return true;
-					}
-					if (!keep_others || !this._async) {
-						this.replace_objects(iter.asArray(), keep_others);
-						return true;
-					}
-					this.__executePromise = iter.asyncIterate(this.replace_object, this);
-					this.__executePromise.callback(function () {
-						this.__executePromise = null;
-					}, this);
-					return true;
-				}, this);
-			},
+            getSkip: function() {
+                return this._query.options.skip || 0;
+            },
 
-		      /**
-		       * @method _sub_execute
-		       *
-		       * Run the specified query on the data source.
-		       *
-		       * @private
-		       *
-		       * @param {object} options The options for the subquery.
-		       *
-		       * @return {object} Iteratable object containing query results.
-		       */
-			_subExecute: function (query, options) {
-				return this._source.query(query, options);
-			},
+            getLimit: function() {
+                return this._query.options.limit || null;
+            },
 
-		      /**
-		       * @method isComplete
-		       *
-		       * @return {boolean} Return value indicates if the query has finished/if
-		       * data has been returned.
-		       */
-			isComplete: function () {
-				return this._complete;
-			},
-			
-			isValid: function (data) {
-				return Queries.evaluate(this._query.query, data);
-			},
+            /**
+             * @method update
+             *
+             * Update the collection with a new query. Setting the query not only
+             * updates the query field, but also updates the data with the results of
+             * the new query.
+             *
+             * @param {object} constrainedQuery The new query for this collection.
+             *
+             * @example
+             * // Updates the query dictating the collection contents.
+             * collectionQuery.update({query: {'queryField': 'queryValue'}, options: {skip: 10}});
+             */
+            update: function(constrainedQuery) {
+                var hasQuery = !!constrainedQuery.query;
+                constrainedQuery = Constrained.rectify(constrainedQuery);
+                var currentSkip = this._query.options.skip || 0;
+                var currentLimit = this._query.options.limit || null;
+                if (constrainedQuery.query)
+                    this._query.query = constrainedQuery.query;
+                this._query.options = Objs.extend(this._query.options, constrainedQuery.options);
+                if (!this._enabled)
+                    return Promise.create(true);
+                if (hasQuery || "sort" in constrainedQuery.options || !this._incremental)
+                    return this.refresh(true);
+                var nextSkip = "skip" in constrainedQuery.options ? constrainedQuery.options.skip || 0 : currentSkip;
+                var nextLimit = "limit" in constrainedQuery.options ? constrainedQuery.options.limit || null : currentLimit;
+                if (nextSkip === currentSkip && nextLimit === currentLimit)
+                    return Promise.create(true);
+                // No overlap
+                if ((nextLimit && nextSkip + nextLimit <= currentSkip) || (currentLimit && currentSkip + currentLimit <= nextSkip))
+                    return this.refresh(true);
+                // Make sure that currentSkip >= nextSkip
+                while (currentSkip < nextSkip && (currentLimit === null || currentLimit > 0)) {
+                    this.remove(this.getByIndex(0));
+                    currentSkip++;
+                    currentLimit--;
+                }
+                var promise = Promise.create(true);
+                // Make sure that nextSkip === currentSkip
+                if (nextSkip < currentSkip) {
+                    var leftLimit = currentSkip - nextSkip;
+                    if (nextLimit !== null)
+                        leftLimit = Math.min(leftLimit, nextLimit);
+                    promise = this._execute(Objs.tree_extend(Objs.clone(this._query, 2), {
+                        options: {
+                            skip: nextSkip,
+                            limit: leftLimit
+                        }
+                    }, 2), true);
+                    nextSkip += leftLimit;
+                    if (nextLimit !== null)
+                        nextLimit -= leftLimit;
+                }
+                if (!currentLimit || (nextLimit && nextLimit <= currentLimit)) {
+                    if (nextLimit)
+                        while (this.count() > nextLimit)
+                            this.remove(this.getByIndex(this.count() - 1));
+                    return promise;
+                }
+                return promise.and(this._execute(Objs.tree_extend(Objs.clone(this._query, 2), {
+                    options: {
+                        skip: currentSkip + currentLimit,
+                        limit: !nextLimit ? null : nextLimit - currentLimit
+                    }
+                }, 2), true));
+            },
 
-			_materialize: function (data) {
-				return data;
-			},
+            enable: function() {
+                if (this._enabled)
+                    return;
+                this._enabled = true;
+                this.refresh();
+            },
 
-			_activeCreate: function (data) {
-				if (!this._active || !this._enabled)
-					return;
-				if (!this.isValid(data))
-					return;
-				this.add(this._materialize(data));
-				if (this._query.options.limit && this.count() > this._query.options.limit) {
-					if (this._active_bounds)
-						this._query.options.limit++;
-					else
-						this.remove(this.getByIndex(this.count() - 1));
-				}
-			},
+            disable: function() {
+                if (!this._enabled)
+                    return;
+                this._enabled = false;
+                this.clear();
+                this._unwatchInsert();
+            },
 
-			_activeRemove: function (id) {
-				if (!this._active || !this._enabled)
-					return;
-				var object = this.getById(id);
-				if (!object)
-					return;
-				this.remove(object);
-				if (this._query.options.limit !== null) {
-					if (this._active_bounds)
-						this._query.options.limit--;
-				}
-			},
+            refresh: function(clear) {
+                if (clear && !this._incremental)
+                    this.clear();
+                if (this._query.options.sort && !Types.is_empty(this._query.options.sort)) {
+                    this.set_compare(Comparators.byObject(this._query.options.sort));
+                } else {
+                    this.set_compare(null);
+                }
+                this._unwatchInsert();
+                if (this._active)
+                    this._watchInsert(this._query);
+                return this._execute(this._query, !(clear && this._incremental));
+            },
 
-			_activeUpdate: function (id, data, row) {
-				if (!this._active || !this._enabled)
-					return;
-				var object = this.getById(id);
-				var merged = Objs.extend(row, data);
-				if (!object)
-					this._activeCreate(merged);
-				else if (!this.isValid(merged))
-					this._activeRemove(id);
-				else
-					object.setAll(data);
-			},
+            isEnabled: function() {
+                return this._enabled;
+            },
 
-			_watcher: function () {
-				return null;
-			},
-			
-			_watchInsert: function (query) {
-				if (this._watcher())
-					this._watcher().watchInsert(query, this);
-			},
+            /**
+             * @method _execute
+             *
+             * Execute a constrained query. This method is called whenever a new query is set.
+             * Doesn't override previous reults.
+             *
+             * @protected
+             *
+             * @param {constrainedQuery} constrainedQuery The constrained query that should be executed
+             *
+             * @return {Promise} Promise from executing query.
+             */
+            _execute: function(constrainedQuery, keep_others) {
+                if (this.__executePromise) {
+                    return this.__executePromise.mapCallback(function() {
+                        return this._execute(constrainedQuery, keep_others);
+                    }, this);
+                }
+                return this._subExecute(constrainedQuery.query, constrainedQuery.options).mapSuccess(function(iter) {
+                    if (!iter.hasNext()) {
+                        this._complete = true;
+                        return true;
+                    }
+                    if (!keep_others || !this._async) {
+                        this.replace_objects(iter.asArray(), keep_others);
+                        return true;
+                    }
+                    this.__executePromise = iter.asyncIterate(this.replace_object, this);
+                    this.__executePromise.callback(function() {
+                        this.__executePromise = null;
+                    }, this);
+                    return true;
+                }, this);
+            },
 
-			_unwatchInsert: function () {
-				if (this._watcher())
-					this._watcher().unwatchInsert(null, this);
-			},
-			
-			_watchItem: function (id) {
-				if (this._watcher())
-					this._watcher().watchItem(id, this);
-			},
-			
-			_unwatchItem: function (id) {
-				if (this._watcher())
-					this._watcher().unwatchItem(id, this);
-			}			
+            /**
+             * @method _sub_execute
+             *
+             * Run the specified query on the data source.
+             *
+             * @private
+             *
+             * @param {object} options The options for the subquery.
+             *
+             * @return {object} Iteratable object containing query results.
+             */
+            _subExecute: function(query, options) {
+                return this._source.query(query, options);
+            },
 
-		};
-	});
+            /**
+             * @method isComplete
+             *
+             * @return {boolean} Return value indicates if the query has finished/if
+             * data has been returned.
+             */
+            isComplete: function() {
+                return this._complete;
+            },
+
+            isValid: function(data) {
+                return Queries.evaluate(this._query.query, data);
+            },
+
+            _materialize: function(data) {
+                return data;
+            },
+
+            _activeCreate: function(data) {
+                if (!this._active || !this._enabled)
+                    return;
+                if (!this.isValid(data))
+                    return;
+                this.add(this._materialize(data));
+                if (this._query.options.limit && this.count() > this._query.options.limit) {
+                    if (this._active_bounds)
+                        this._query.options.limit++;
+                    else
+                        this.remove(this.getByIndex(this.count() - 1));
+                }
+            },
+
+            _activeRemove: function(id) {
+                if (!this._active || !this._enabled)
+                    return;
+                var object = this.getById(id);
+                if (!object)
+                    return;
+                this.remove(object);
+                if (this._query.options.limit !== null) {
+                    if (this._active_bounds)
+                        this._query.options.limit--;
+                }
+            },
+
+            _activeUpdate: function(id, data, row) {
+                if (!this._active || !this._enabled)
+                    return;
+                var object = this.getById(id);
+                var merged = Objs.extend(row, data);
+                if (!object)
+                    this._activeCreate(merged);
+                else if (!this.isValid(merged))
+                    this._activeRemove(id);
+                else
+                    object.setAll(data);
+            },
+
+            _watcher: function() {
+                return null;
+            },
+
+            _watchInsert: function(query) {
+                if (this._watcher())
+                    this._watcher().watchInsert(query, this);
+            },
+
+            _unwatchInsert: function() {
+                if (this._watcher())
+                    this._watcher().unwatchInsert(null, this);
+            },
+
+            _watchItem: function(id) {
+                if (this._watcher())
+                    this._watcher().watchItem(id, this);
+            },
+
+            _unwatchItem: function(id) {
+                if (this._watcher())
+                    this._watcher().unwatchItem(id, this);
+            }
+
+        };
+    });
 });
+Scoped.define("module:Collections.StoreQueryCollection", [
+    "module:Collections.AbstractQueryCollection",
+    "base:Objs"
+], function(QueryCollection, Objs, scoped) {
+    return QueryCollection.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
+            constructor: function(source, query, options) {
+                inherited.constructor.call(this, source, query, Objs.extend({
+                    id_key: source.id_key()
+                }, options));
+                this._source = source;
+                source.on("insert", this._activeCreate, this);
+                source.on("remove", this._activeRemove, this);
+                source.on("update", function(row, data) {
+                    this._activeUpdate(source.id_of(row), data, row);
+                }, this);
+            },
 
+            destroy: function() {
+                this._source.off(null, null, this);
+                inherited.destroy.call(this);
+            },
 
+            get_ident: function(obj) {
+                return obj.get(this._source.id_key());
+            },
 
-Scoped.define("module:Collections.StoreQueryCollection", [      
-                                                          "module:Collections.AbstractQueryCollection",
-                                                          "base:Objs"
-                                                          ], function (QueryCollection, Objs, scoped) {
-	return QueryCollection.extend({scoped: scoped}, function (inherited) {
-		return {
+            _watcher: function() {
+                return this._source.watcher();
+            }
 
-			constructor: function (source, query, options) {
-				inherited.constructor.call(this, source, query, Objs.extend({
-					id_key: source.id_key()
-				}, options));
-				this._source = source;
-				source.on("insert", this._activeCreate, this);
-				source.on("remove", this._activeRemove, this);
-				source.on("update", function (row, data) {
-					this._activeUpdate(source.id_of(row), data, row);
-				}, this);
-			},
-
-			destroy: function () {
-				this._source.off(null, null, this);
-				inherited.destroy.call(this);
-			},
-
-			get_ident: function (obj) {
-				return obj.get(this._source.id_key());
-			},
-			
-			_watcher: function () {
-				return this._source.watcher();
-			}
-
-		};
-	});
+        };
+    });
 });
+Scoped.define("module:Collections.TableQueryCollection", [
+    "module:Collections.AbstractQueryCollection",
+    "base:Objs"
+], function(QueryCollection, Objs, scoped) {
+    return QueryCollection.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-Scoped.define("module:Collections.TableQueryCollection", [      
-                                                          "module:Collections.AbstractQueryCollection",
-                                                          "base:Objs"
-                                                          ], function (QueryCollection, Objs, scoped) {
-	return QueryCollection.extend({scoped: scoped}, function (inherited) {
-		return {
+            constructor: function(source, query, options) {
+                inherited.constructor.call(this, source, query, Objs.extend({
+                    id_key: source.primary_key()
+                }, options));
+                source.on("create", this._activeCreate, this);
+                source.on("remove", this._activeRemove, this);
+                source.on("update", this._activeUpdate, this);
+            },
 
-			constructor: function (source, query, options) {
-				inherited.constructor.call(this, source, query, Objs.extend({
-					id_key: source.primary_key()
-				}, options));
-				source.on("create", this._activeCreate, this);
-				source.on("remove", this._activeRemove, this);
-				source.on("update", this._activeUpdate, this);
-			},
+            destroy: function() {
+                this._source.off(null, null, this);
+                inherited.destroy.call(this);
+            },
 
-			destroy: function () {
-				this._source.off(null, null, this);
-				inherited.destroy.call(this);
-			},
+            _materialize: function(data) {
+                return this._source.materialize(data);
+            },
 
-			_materialize: function (data) {
-				return this._source.materialize(data);
-			},
-			
-			_watcher: function () {
-				return this._source.store().watcher();
-			}
+            _watcher: function() {
+                return this._source.store().watcher();
+            }
 
-		};
-	});
+        };
+    });
 });
-
-
-
 Scoped.define("module:Stores.AbstractIndex", [
-                                              "base:Class",
-                                              "base:Comparators",
-                                              "base:Objs",
-                                              "base:Functions"
-                                              ], function (Class, Comparators, Objs, Functions, scoped) {
-	return Class.extend({scoped: scoped}, function (inherited) {
-		return {
+    "base:Class",
+    "base:Comparators",
+    "base:Objs",
+    "base:Functions"
+], function(Class, Comparators, Objs, Functions, scoped) {
+    return Class.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-			constructor: function (store, key, compare, options) {
-				inherited.constructor.call(this);
-				this._options = Objs.extend({
-					exact: true,
-					ignoreCase: false
-				}, options);
-				this._compare = compare || Comparators.byValue;
-				this._store = store;
-				this.__row_count = 0;
-				this._initialize();
-				var id_key = store.id_key();
-				store.query({}).value().iterate(function (row) {
-					this.__row_count++;
-					this._insert(row[id_key], row[key]);
-				}, this);
-				store.on("insert", function (row) {
-					this.__row_count++;
-					this._insert(row[id_key], row[key]);
-				}, this);
-				store.on("remove", function (id) {
-					this.__row_count--;
-					this._remove(id);
-				}, this);
-				store.on("update", function (id, data) {
-					if (key in data)
-						this._update(id, data[key]);
-				}, this);
-			},
+            constructor: function(store, key, compare, options) {
+                inherited.constructor.call(this);
+                this._options = Objs.extend({
+                    exact: true,
+                    ignoreCase: false
+                }, options);
+                this._compare = compare || Comparators.byValue;
+                this._store = store;
+                this.__row_count = 0;
+                this._initialize();
+                var id_key = store.id_key();
+                store.query({}).value().iterate(function(row) {
+                    this.__row_count++;
+                    this._insert(row[id_key], row[key]);
+                }, this);
+                store.on("insert", function(row) {
+                    this.__row_count++;
+                    this._insert(row[id_key], row[key]);
+                }, this);
+                store.on("remove", function(id) {
+                    this.__row_count--;
+                    this._remove(id);
+                }, this);
+                store.on("update", function(id, data) {
+                    if (key in data)
+                        this._update(id, data[key]);
+                }, this);
+            },
 
-			_initialize: function () {},
+            _initialize: function() {},
 
-			destroy: function () {
-				this._store.off(null, null, this);
-				inherited.destroy.call(this);
-			},
+            destroy: function() {
+                this._store.off(null, null, this);
+                inherited.destroy.call(this);
+            },
 
-			compare: function () {
-				return this._compare.apply(arguments);
-			},
+            compare: function() {
+                return this._compare.apply(arguments);
+            },
 
-			comparator: function () {
-				return Functions.as_method(this, this._compare);
-			},
+            comparator: function() {
+                return Functions.as_method(this, this._compare);
+            },
 
-			info: function () {
-				return {
-					row_count: this.__row_count,
-					key_count: this._key_count(),
-					key_count_ic: this._key_count_ic()
-				};
-			},
+            info: function() {
+                return {
+                    row_count: this.__row_count,
+                    key_count: this._key_count(),
+                    key_count_ic: this._key_count_ic()
+                };
+            },
 
-			options: function () {
-				return this._options;
-			},
+            options: function() {
+                return this._options;
+            },
 
-			iterate: function (key, direction, callback, context) {
-				this._iterate(key, direction, callback, context);
-			},
+            iterate: function(key, direction, callback, context) {
+                this._iterate(key, direction, callback, context);
+            },
 
-			itemIterate: function (key, direction, callback, context) {
-				this.iterate(key, direction, function (iterKey, id) {
-					return callback.call(context, iterKey, this._store.get(id).value());
-				}, this); 
-			},
+            itemIterate: function(key, direction, callback, context) {
+                this.iterate(key, direction, function(iterKey, id) {
+                    return callback.call(context, iterKey, this._store.get(id).value());
+                }, this);
+            },
 
-			iterate_ic: function (key, direction, callback, context) {
-				this._iterate_ic(key, direction, callback, context);
-			},
+            iterate_ic: function(key, direction, callback, context) {
+                this._iterate_ic(key, direction, callback, context);
+            },
 
-			itemIterateIc: function (key, direction, callback, context) {
-				this.iterate_ic(key, direction, function (iterKey, id) {
-					return callback.call(context, iterKey, this._store.get(id).value());
-				}, this); 
-			},
+            itemIterateIc: function(key, direction, callback, context) {
+                this.iterate_ic(key, direction, function(iterKey, id) {
+                    return callback.call(context, iterKey, this._store.get(id).value());
+                }, this);
+            },
 
-			_iterate: function (key, direction, callback, context) {},
+            _iterate: function(key, direction, callback, context) {},
 
-			_iterate_ic: function (key, direction, callback, context) {},
+            _iterate_ic: function(key, direction, callback, context) {},
 
-			_insert: function (id, key) {},
+            _insert: function(id, key) {},
 
-			_remove: function (id) {},
+            _remove: function(id) {},
 
-			_update: function (id, key) {},
+            _update: function(id, key) {},
 
-			_key_count: function () {},
+            _key_count: function() {},
 
-			_key_count_ic: function () {},
+            _key_count_ic: function() {},
 
-			key_count_left_ic: function (key) {},
-			key_count_right_ic: function (key) {},
-			key_count_distance_ic: function (leftKey, rightKey) {},
-			key_count_left: function (key) {},
-			key_count_right: function (key) {},
-			key_count_distance: function (leftKey, rightKey) {}
+            key_count_left_ic: function(key) {},
+            key_count_right_ic: function(key) {},
+            key_count_distance_ic: function(leftKey, rightKey) {},
+            key_count_left: function(key) {},
+            key_count_right: function(key) {},
+            key_count_distance: function(leftKey, rightKey) {}
 
-		};
-	});
+        };
+    });
 });
-
 Scoped.define("module:Stores.MemoryIndex", [
-                                            "module:Stores.AbstractIndex",
-                                            "base:Structures.TreeMap",
-                                            "base:Objs",
-                                            "base:Types"
-                                            ], function (AbstractIndex, TreeMap, Objs, Types, scoped) {
-	return AbstractIndex.extend({scoped: scoped}, function (inherited) {
-		return {
+    "module:Stores.AbstractIndex",
+    "base:Structures.TreeMap",
+    "base:Objs",
+    "base:Types"
+], function(AbstractIndex, TreeMap, Objs, Types, scoped) {
+    return AbstractIndex.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-			_initialize: function () {
-				if (this._options.exact)
-					this._exactMap = TreeMap.empty(this._compare);
-				if (this._options.ignoreCase)
-					this._ignoreCaseMap = TreeMap.empty(this._compare);
-				this._idToKey = {};
-			},
+            _initialize: function() {
+                if (this._options.exact)
+                    this._exactMap = TreeMap.empty(this._compare);
+                if (this._options.ignoreCase)
+                    this._ignoreCaseMap = TreeMap.empty(this._compare);
+                this._idToKey = {};
+            },
 
-			__insert: function (id, key, map) {
-				var value = TreeMap.find(key, map);
-				if (value)
-					value[id] = true;
-				else 
-					map = TreeMap.add(key, Objs.objectBy(id, true), map);
-				return map;
-			},
+            __insert: function(id, key, map) {
+                var value = TreeMap.find(key, map);
+                if (value)
+                    value[id] = true;
+                else
+                    map = TreeMap.add(key, Objs.objectBy(id, true), map);
+                return map;
+            },
 
-			_insert: function (id, key) {
-				this._idToKey[id] = key;
-				if (this._options.exact)
-					this._exactMap = this.__insert(id, key, this._exactMap);
-				if (this._options.ignoreCase)
-					this._ignoreCaseMap = this.__insert(id, key, this._ignoreCaseMap);
-			},
+            _insert: function(id, key) {
+                this._idToKey[id] = key;
+                if (this._options.exact)
+                    this._exactMap = this.__insert(id, key, this._exactMap);
+                if (this._options.ignoreCase)
+                    this._ignoreCaseMap = this.__insert(id, key, this._ignoreCaseMap);
+            },
 
-			__remove: function (key, map, id) {
-				var value = TreeMap.find(key, map);
-				delete value[id];
-				if (Types.is_empty(value))
-					map = TreeMap.remove(key, map);
-				return map;
-			},
+            __remove: function(key, map, id) {
+                var value = TreeMap.find(key, map);
+                delete value[id];
+                if (Types.is_empty(value))
+                    map = TreeMap.remove(key, map);
+                return map;
+            },
 
-			_remove: function (id) {
-				var key = this._idToKey[id];
-				delete this._idToKey[id];
-				if (this._options.exact)
-					this._exactMap = this.__remove(key, this._exactMap, id);
-				if (this._options.ignoreCase)
-					this._ignoreCaseMap = this.__remove(key, this._ignoreCaseMap, id);
-			},
+            _remove: function(id) {
+                var key = this._idToKey[id];
+                delete this._idToKey[id];
+                if (this._options.exact)
+                    this._exactMap = this.__remove(key, this._exactMap, id);
+                if (this._options.ignoreCase)
+                    this._ignoreCaseMap = this.__remove(key, this._ignoreCaseMap, id);
+            },
 
-			_update: function (id, key) {
-				var old_key = this._idToKey[id];
-				if (old_key == key)
-					return;
-				this._remove(id);
-				this._insert(id, key);
-			},
+            _update: function(id, key) {
+                var old_key = this._idToKey[id];
+                if (old_key == key)
+                    return;
+                this._remove(id);
+                this._insert(id, key);
+            },
 
-			_iterate: function (key, direction, callback, context) {
-				TreeMap.iterate_from(key, this._exactMap, function (iterKey, value) {
-					for (var id in value) {
-						if (callback.call(context, iterKey, id) === false)
-							return false;
-					}
-					return true;
-				}, this, !direction);
-			},	
+            _iterate: function(key, direction, callback, context) {
+                TreeMap.iterate_from(key, this._exactMap, function(iterKey, value) {
+                    for (var id in value) {
+                        if (callback.call(context, iterKey, id) === false)
+                            return false;
+                    }
+                    return true;
+                }, this, !direction);
+            },
 
-			_iterate_ic: function (key, direction, callback, context) {
-				TreeMap.iterate_from(key, this._ignoreCaseMap, function (iterKey, value) {
-					for (var id in value) {
-						if (callback.call(context, iterKey, id) === false)
-							return false;
-					}
-					return true;
-				}, this, !direction);
-			},	
+            _iterate_ic: function(key, direction, callback, context) {
+                TreeMap.iterate_from(key, this._ignoreCaseMap, function(iterKey, value) {
+                    for (var id in value) {
+                        if (callback.call(context, iterKey, id) === false)
+                            return false;
+                    }
+                    return true;
+                }, this, !direction);
+            },
 
-			_key_count: function () {
-				return this._options.exact ? TreeMap.length(this._exactMap) : 0;
-			},
+            _key_count: function() {
+                return this._options.exact ? TreeMap.length(this._exactMap) : 0;
+            },
 
-			_key_count_ic: function () {
-				return this._options.ignoreCase ? TreeMap.length(this._ignoreCaseMap) : 0;
-			},
+            _key_count_ic: function() {
+                return this._options.ignoreCase ? TreeMap.length(this._ignoreCaseMap) : 0;
+            },
 
-			key_count_left_ic: function (key) {
-				return TreeMap.treeSizeLeft(key, this._ignoreCaseMap);
-			},
+            key_count_left_ic: function(key) {
+                return TreeMap.treeSizeLeft(key, this._ignoreCaseMap);
+            },
 
-			key_count_right_ic: function (key) {
-				return TreeMap.treeSizeRight(key, this._ignoreCaseMap);
-			},
+            key_count_right_ic: function(key) {
+                return TreeMap.treeSizeRight(key, this._ignoreCaseMap);
+            },
 
-			key_count_distance_ic: function (leftKey, rightKey) {
-				return TreeMap.distance(leftKey, rightKey, this._ignoreCaseMap);
-			},
+            key_count_distance_ic: function(leftKey, rightKey) {
+                return TreeMap.distance(leftKey, rightKey, this._ignoreCaseMap);
+            },
 
-			key_count_left: function (key) {
-				return TreeMap.treeSizeLeft(key, this._exactMap);
-			},
+            key_count_left: function(key) {
+                return TreeMap.treeSizeLeft(key, this._exactMap);
+            },
 
-			key_count_right: function (key) {
-				return TreeMap.treeSizeRight(key, this._exactMap);
-			},
+            key_count_right: function(key) {
+                return TreeMap.treeSizeRight(key, this._exactMap);
+            },
 
-			key_count_distance: function (leftKey, rightKey) {
-				return TreeMap.distance(leftKey, rightKey, this._exactMap);
-			}
+            key_count_distance: function(leftKey, rightKey) {
+                return TreeMap.distance(leftKey, rightKey, this._exactMap);
+            }
 
-		};
-	});
+        };
+    });
 });
-
 Scoped.define("module:Queries.Constrained", [
-                                             "module:Queries",
-                                             "base:Types",
-                                             "base:Objs",
-                                             "base:Tokens",
-                                             "base:Comparators"
-                                             ], function (Queries, Types, Objs, Tokens, Comparators) {
-	return {
+    "module:Queries",
+    "base:Types",
+    "base:Objs",
+    "base:Tokens",
+    "base:Comparators"
+], function(Queries, Types, Objs, Tokens, Comparators) {
+    return {
 
-		/*
-		 * 
-		 * { query: query, options: options }
-		 * 
-		 * options:
-		 *  limit: int || null
-		 *  skip: int || 0
-		 *  sort: {
-		 *    key1: 1 || -1,
-		 *    key2: 1 || -1
-		 *  }
-		 * 
-		 */
+        /*
+         * 
+         * { query: query, options: options }
+         * 
+         * options:
+         *  limit: int || null
+         *  skip: int || 0
+         *  sort: {
+         *    key1: 1 || -1,
+         *    key2: 1 || -1
+         *  }
+         * 
+         */
 
-		rectify: function (constrainedQuery) {
-			var base = ("options" in constrainedQuery || "query" in constrainedQuery) ? constrainedQuery : { query: constrainedQuery};
-			return Objs.extend({
-				query: {},
-				options: {}
-			}, base);
-		},
+        rectify: function(constrainedQuery) {
+            var base = ("options" in constrainedQuery || "query" in constrainedQuery) ? constrainedQuery : {
+                query: constrainedQuery
+            };
+            return Objs.extend({
+                query: {},
+                options: {}
+            }, base);
+        },
 
-		skipValidate: function (options, capabilities) {
-			if ("skip" in options) {
-				if (capabilities)
-					return capabilities.skip;
-			}
-			return true;
-		},
+        skipValidate: function(options, capabilities) {
+            if ("skip" in options) {
+                if (capabilities)
+                    return capabilities.skip;
+            }
+            return true;
+        },
 
-		limitValidate: function (options, capabilities) {
-			if ("limit" in options) {
-				if (capabilities)
-					return capabilities.limit;
-			}
-			return true;
-		},
+        limitValidate: function(options, capabilities) {
+            if ("limit" in options) {
+                if (capabilities)
+                    return capabilities.limit;
+            }
+            return true;
+        },
 
-		sortValidate: function (options, capabilities) {
-			if ("sort" in options) {
-				if (capabilities && !capabilities.sort)
-					return false;
-				if (capabilities && Types.is_object(capabilities.sort)) {
-					var supported = Objs.all(options.sort, function (dummy, key) {
-						return key in capabilities.sort;
-					});
-					if (!supported)
-						return false;
-				}
-			}
-			return true;
-		},
+        sortValidate: function(options, capabilities) {
+            if ("sort" in options) {
+                if (capabilities && !capabilities.sort)
+                    return false;
+                if (capabilities && Types.is_object(capabilities.sort)) {
+                    var supported = Objs.all(options.sort, function(dummy, key) {
+                        return key in capabilities.sort;
+                    });
+                    if (!supported)
+                        return false;
+                }
+            }
+            return true;
+        },
 
-		constraintsValidate: function (options, capabilities) {
-			return Objs.all(["skip", "limit", "sort"], function (prop) {
-				return this[prop + "Validate"].call(this, options, capabilities);
-			}, this);
-		},
+        constraintsValidate: function(options, capabilities) {
+            return Objs.all(["skip", "limit", "sort"], function(prop) {
+                return this[prop + "Validate"].call(this, options, capabilities);
+            }, this);
+        },
 
-		validate: function (constrainedQuery, capabilities) {
-			constrainedQuery = this.rectify(constrainedQuery);
-			return this.constraintsValidate(constrainedQuery.options, capabilities) && Queries.validate(constrainedQuery.query, capabilities.query || {});
-		},
+        validate: function(constrainedQuery, capabilities) {
+            constrainedQuery = this.rectify(constrainedQuery);
+            return this.constraintsValidate(constrainedQuery.options, capabilities) && Queries.validate(constrainedQuery.query, capabilities.query || {});
+        },
 
-		fullConstrainedQueryCapabilities: function (queryCapabilties) {
-			return {
-				query: queryCapabilties || Queries.fullQueryCapabilities(),
-				skip: true,
-				limit: true,
-				sort: true // can also be false OR a non-empty object containing keys which can be ordered by
-			};
-		},
+        fullConstrainedQueryCapabilities: function(queryCapabilties) {
+            return {
+                query: queryCapabilties || Queries.fullQueryCapabilities(),
+                skip: true,
+                limit: true,
+                sort: true // can also be false OR a non-empty object containing keys which can be ordered by
+            };
+        },
 
-		normalize: function (constrainedQuery) {
-			constrainedQuery = this.rectify(constrainedQuery);
-			return {
-				query: Queries.normalize(constrainedQuery.query),
-				options: constrainedQuery.options
-			};
-		},
+        normalize: function(constrainedQuery) {
+            constrainedQuery = this.rectify(constrainedQuery);
+            return {
+                query: Queries.normalize(constrainedQuery.query),
+                options: constrainedQuery.options
+            };
+        },
 
-		serialize: function (constrainedQuery) {
-			return JSON.stringify(this.rectify(constrainedQuery));
-		},
+        serialize: function(constrainedQuery) {
+            return JSON.stringify(this.rectify(constrainedQuery));
+        },
 
-		unserialize: function (constrainedQuery) {
-			return JSON.parse(constrainedQuery);
-		},
+        unserialize: function(constrainedQuery) {
+            return JSON.parse(constrainedQuery);
+        },
 
-		hash: function (constrainedQuery) {
-			return Tokens.simple_hash(this.serialize(constrainedQuery));
-		},
+        hash: function(constrainedQuery) {
+            return Tokens.simple_hash(this.serialize(constrainedQuery));
+        },
 
-		subsumizes: function (constrainedQuery, constrainedQuery2) {
-			constrainedQuery = this.rectify(constrainedQuery);
-			constrainedQuery2 = this.rectify(constrainedQuery2);
-			var qskip = constrainedQuery.options.skip || 0;
-			var qskip2 = constrainedQuery2.options.skip || 0;
-			var qlimit = constrainedQuery.options.limit || null;
-			var qlimit2 = constrainedQuery2.options.limit || null;
-			var qsort = constrainedQuery.options.sort;
-			var qsort2 = constrainedQuery.options.sort;
-			if (qskip > qskip2)
-				return false;
-			if (qlimit) {
-				if (!qlimit2)
-					return false;
-				if (qlimit2 + qskip2 > qlimit + qskip)
-					return false;
-			}
-			if ((qskip || qlimit) && (qsort || qsort2) && JSON.stringify(qsort) != JSON.stringify(qsort2))
-				return false;
-			return Queries.subsumizes(constrainedQuery.query, constrainedQuery2.query);
-		},
+        subsumizes: function(constrainedQuery, constrainedQuery2) {
+            constrainedQuery = this.rectify(constrainedQuery);
+            constrainedQuery2 = this.rectify(constrainedQuery2);
+            var qskip = constrainedQuery.options.skip || 0;
+            var qskip2 = constrainedQuery2.options.skip || 0;
+            var qlimit = constrainedQuery.options.limit || null;
+            var qlimit2 = constrainedQuery2.options.limit || null;
+            var qsort = constrainedQuery.options.sort;
+            var qsort2 = constrainedQuery.options.sort;
+            if (qskip > qskip2)
+                return false;
+            if (qlimit) {
+                if (!qlimit2)
+                    return false;
+                if (qlimit2 + qskip2 > qlimit + qskip)
+                    return false;
+            }
+            if ((qskip || qlimit) && (qsort || qsort2) && JSON.stringify(qsort) != JSON.stringify(qsort2))
+                return false;
+            return Queries.subsumizes(constrainedQuery.query, constrainedQuery2.query);
+        },
 
-		mergeable: function (constrainedQuery, constrainedQuery2) {
-			constrainedQuery = this.rectify(constrainedQuery);
-			constrainedQuery2 = this.rectify(constrainedQuery2);
-			if (Queries.serialize(constrainedQuery.query) != Queries.serialize(constrainedQuery2.query))
-				return false;
-			var qopts = constrainedQuery.options;
-			var qopts2 = constrainedQuery2.options;
-			if (JSON.stringify(qopts.sort || {}) != JSON.stringify(qopts2.sort || {}))
-				return false;
-			if ("skip" in qopts) {
-				if ("skip" in qopts2) {
-					if (qopts.skip <= qopts2.skip)
-						return !qopts.limit || (qopts.skip + qopts.limit >= qopts2.skip);
-					else
-						return !qopts2.limit || (qopts2.skip + qopts2.limit >= qopts.skip);
-				} else 
-					return (!qopts2.limit || (qopts2.limit >= qopts.skip));
-			} else 
-				return !("skip" in qopts2) || (!qopts.limit || (qopts.limit >= qopts2.skip));
-		},
+        mergeable: function(constrainedQuery, constrainedQuery2) {
+            constrainedQuery = this.rectify(constrainedQuery);
+            constrainedQuery2 = this.rectify(constrainedQuery2);
+            if (Queries.serialize(constrainedQuery.query) != Queries.serialize(constrainedQuery2.query))
+                return false;
+            var qopts = constrainedQuery.options;
+            var qopts2 = constrainedQuery2.options;
+            if (JSON.stringify(qopts.sort || {}) != JSON.stringify(qopts2.sort || {}))
+                return false;
+            if ("skip" in qopts) {
+                if ("skip" in qopts2) {
+                    if (qopts.skip <= qopts2.skip)
+                        return !qopts.limit || (qopts.skip + qopts.limit >= qopts2.skip);
+                    else
+                        return !qopts2.limit || (qopts2.skip + qopts2.limit >= qopts.skip);
+                } else
+                    return (!qopts2.limit || (qopts2.limit >= qopts.skip));
+            } else
+                return !("skip" in qopts2) || (!qopts.limit || (qopts.limit >= qopts2.skip));
+        },
 
-		merge: function (constrainedQuery, constrainedQuery2) {
-			constrainedQuery = this.rectify(constrainedQuery);
-			constrainedQuery2 = this.rectify(constrainedQuery2);
-			var qopts = constrainedQuery.options;
-			var qopts2 = constrainedQuery2.options;
-			return {
-				query: constrainedQuery.query,
-				options: {
-					skip: "skip" in qopts ? ("skip" in qopts2 ? Math.min(qopts.skip, qopts2.skip): null) : null,
-							limit: "limit" in qopts ? ("limit" in qopts2 ? Math.max(qopts.limit, qopts2.limit): null) : null,
-									sort: constrainedQuery.sort
-				}
-			};
-		}
+        merge: function(constrainedQuery, constrainedQuery2) {
+            constrainedQuery = this.rectify(constrainedQuery);
+            constrainedQuery2 = this.rectify(constrainedQuery2);
+            var qopts = constrainedQuery.options;
+            var qopts2 = constrainedQuery2.options;
+            return {
+                query: constrainedQuery.query,
+                options: {
+                    skip: "skip" in qopts ? ("skip" in qopts2 ? Math.min(qopts.skip, qopts2.skip) : null) : null,
+                    limit: "limit" in qopts ? ("limit" in qopts2 ? Math.max(qopts.limit, qopts2.limit) : null) : null,
+                    sort: constrainedQuery.sort
+                }
+            };
+        }
 
 
-	}; 
+    };
 });
 Scoped.define("module:Queries", [
-                                 "base:Types",
-                                 "base:Sort",
-                                 "base:Objs",
-                                 "base:Class",
-                                 "base:Tokens",
-                                 "base:Iterators.ArrayIterator",
-                                 "base:Iterators.FilteredIterator",
-                                 "base:Strings",
-                                 "base:Comparators"
-                                 ], function (Types, Sort, Objs, Class, Tokens, ArrayIterator, FilteredIterator, Strings, Comparators) {
+    "base:Types",
+    "base:Sort",
+    "base:Objs",
+    "base:Class",
+    "base:Tokens",
+    "base:Iterators.ArrayIterator",
+    "base:Iterators.FilteredIterator",
+    "base:Strings",
+    "base:Comparators"
+], function(Types, Sort, Objs, Class, Tokens, ArrayIterator, FilteredIterator, Strings, Comparators) {
 
-	var SYNTAX_PAIR_KEYS = {
-			"$or": {
-				evaluate_combine: Objs.exists
-			},
-			"$and": {
-				evaluate_combine: Objs.all
-			}
-	};
+    var SYNTAX_PAIR_KEYS = {
+        "$or": {
+            evaluate_combine: Objs.exists
+        },
+        "$and": {
+            evaluate_combine: Objs.all
+        }
+    };
 
-	var SYNTAX_CONDITION_KEYS = {
-			"$in": {
-				target: "atoms",
-				evaluate_combine: Objs.exists,
-				evaluate_single: function (object_value, condition_value) {
-					return object_value === condition_value;
-				}
-			}, "$gt": {
-				target: "atom",
-				evaluate_single: function (object_value, condition_value) {
-					return object_value > condition_value;
-				}
-			}, "$lt": {
-				target: "atom",
-				evaluate_single: function (object_value, condition_value) {
-					return object_value < condition_value;
-				}
-			}, "$gte": {
-				target: "atom",
-				evaluate_single: function (object_value, condition_value) {
-					return object_value >= condition_value;
-				}
-			}, "$le": {
-				target: "atom",
-				evaluate_single: function (object_value, condition_value) {
-					return object_value <= condition_value;
-				}
-			}, "$sw": {
-				target: "atom",
-				evaluate_single: function (object_value, condition_value) {
-					return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) === 0);
-				}
-			}, "$ct": {
-				target: "atom",
-				no_index_support: true,
-				evaluate_single: function (object_value, condition_value) {
-					return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) >= 0);
-				}
-			}, "$eq": {
-				target: "atom",
-				evaluate_single: function (object_value, condition_value) {
-					return object_value === condition_value;
-				}
-			}
-	};
+    var SYNTAX_CONDITION_KEYS = {
+        "$in": {
+            target: "atoms",
+            evaluate_combine: Objs.exists,
+            evaluate_single: function(object_value, condition_value) {
+                return object_value === condition_value;
+            }
+        },
+        "$gt": {
+            target: "atom",
+            evaluate_single: function(object_value, condition_value) {
+                return object_value > condition_value;
+            }
+        },
+        "$lt": {
+            target: "atom",
+            evaluate_single: function(object_value, condition_value) {
+                return object_value < condition_value;
+            }
+        },
+        "$gte": {
+            target: "atom",
+            evaluate_single: function(object_value, condition_value) {
+                return object_value >= condition_value;
+            }
+        },
+        "$le": {
+            target: "atom",
+            evaluate_single: function(object_value, condition_value) {
+                return object_value <= condition_value;
+            }
+        },
+        "$sw": {
+            target: "atom",
+            evaluate_single: function(object_value, condition_value) {
+                return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) === 0);
+            }
+        },
+        "$ct": {
+            target: "atom",
+            no_index_support: true,
+            evaluate_single: function(object_value, condition_value) {
+                return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) >= 0);
+            }
+        },
+        "$eq": {
+            target: "atom",
+            evaluate_single: function(object_value, condition_value) {
+                return object_value === condition_value;
+            }
+        }
+    };
 
-	Objs.iter(Objs.clone(SYNTAX_CONDITION_KEYS, 1), function (value, key) {
-		var valueic = Objs.clone(value, 1);
-		valueic.evaluate_single = function (object_value, condition_value) {
-			return value.evaluate_single(Types.is_string(object_value) ? object_value.toLowerCase() : object_value, Types.is_string(condition_value) ? condition_value.toLowerCase() : condition_value);
-		};
-		valueic.ignore_case = true;
-		SYNTAX_CONDITION_KEYS[key + "ic"] = valueic;
-	});
+    Objs.iter(Objs.clone(SYNTAX_CONDITION_KEYS, 1), function(value, key) {
+        var valueic = Objs.clone(value, 1);
+        valueic.evaluate_single = function(object_value, condition_value) {
+            return value.evaluate_single(Types.is_string(object_value) ? object_value.toLowerCase() : object_value, Types.is_string(condition_value) ? condition_value.toLowerCase() : condition_value);
+        };
+        valueic.ignore_case = true;
+        SYNTAX_CONDITION_KEYS[key + "ic"] = valueic;
+    });
 
 
-	return {		
+    return {
 
-		/*
-		 * Syntax:
-		 *
-		 * atoms :== [atom, ...]
-		 * atom :== string | int | bool | float
-		 * queries :== [query, ...]
-		 * query :== {pair, ...}
-		 * pair :== key: value | $or : queries | $and: queries
-		 * value :== atom | conditions
-		 * conditions :== {condition, ...}  
-		 * condition :== $in: atoms | $gt: atom | $lt: atom | $gte: atom | $le: atom | $sw: atom | $ct: atom | all with ic
-		 *
-		 */
+        /*
+         * Syntax:
+         *
+         * atoms :== [atom, ...]
+         * atom :== string | int | bool | float
+         * queries :== [query, ...]
+         * query :== {pair, ...}
+         * pair :== key: value | $or : queries | $and: queries
+         * value :== atom | conditions
+         * conditions :== {condition, ...}  
+         * condition :== $in: atoms | $gt: atom | $lt: atom | $gte: atom | $le: atom | $sw: atom | $ct: atom | all with ic
+         *
+         */
 
-		SYNTAX_PAIR_KEYS: SYNTAX_PAIR_KEYS,
+        SYNTAX_PAIR_KEYS: SYNTAX_PAIR_KEYS,
 
-		SYNTAX_CONDITION_KEYS: SYNTAX_CONDITION_KEYS,
+        SYNTAX_CONDITION_KEYS: SYNTAX_CONDITION_KEYS,
 
-		validate: function (query, capabilities) {
-			return this.validate_query(query, capabilities);
-		},
+        validate: function(query, capabilities) {
+            return this.validate_query(query, capabilities);
+        },
 
-		validate_atoms: function (atoms, capabilities) {
-			return Types.is_array(atoms) && Objs.all(atoms, function (atom) {
-				return this.validate_atom(atom, capabilities);
-			}, this);
-		},
+        validate_atoms: function(atoms, capabilities) {
+            return Types.is_array(atoms) && Objs.all(atoms, function(atom) {
+                return this.validate_atom(atom, capabilities);
+            }, this);
+        },
 
-		validate_atom: function (atom, capabilities) {
-			return !capabilities || !!capabilities.atom; 
-		},
+        validate_atom: function(atom, capabilities) {
+            return !capabilities || !!capabilities.atom;
+        },
 
-		validate_queries: function (queries, capabilities) {
-			return Types.is_array(queries) && Objs.all(queries, function (query) {
-				return this.validate_query(query, capabilities);
-			}, this);
-		},
+        validate_queries: function(queries, capabilities) {
+            return Types.is_array(queries) && Objs.all(queries, function(query) {
+                return this.validate_query(query, capabilities);
+            }, this);
+        },
 
-		validate_query: function (query, capabilities) {
-			return Types.is_object(query) && Objs.all(query, function (value, key) {
-				return this.validate_pair(value, key, capabilities);
-			}, this);
-		},
+        validate_query: function(query, capabilities) {
+            return Types.is_object(query) && Objs.all(query, function(value, key) {
+                return this.validate_pair(value, key, capabilities);
+            }, this);
+        },
 
-		validate_pair: function (value, key, capabilities) {
-			if (key in this.SYNTAX_PAIR_KEYS) {
-				if (capabilities && (!capabilities.bool || !(key in capabilities.bool)))
-					return false;
-				return this.validate_queries(value, capabilities);
-			}
-			return this.validate_value(value, capabilities);
-		},
+        validate_pair: function(value, key, capabilities) {
+            if (key in this.SYNTAX_PAIR_KEYS) {
+                if (capabilities && (!capabilities.bool || !(key in capabilities.bool)))
+                    return false;
+                return this.validate_queries(value, capabilities);
+            }
+            return this.validate_value(value, capabilities);
+        },
 
-		is_query_atom: function (value) {
-			return value === null || !Types.is_object(value) || value.toString() !== "[object Object]" || Objs.all(value, function (v, key) {
-				return !(key in this.SYNTAX_CONDITION_KEYS);
-			}, this);
-		},
+        is_query_atom: function(value) {
+            return value === null || !Types.is_object(value) || value.toString() !== "[object Object]" || Objs.all(value, function(v, key) {
+                return !(key in this.SYNTAX_CONDITION_KEYS);
+            }, this);
+        },
 
-		validate_value: function (value, capabilities) {
-			return !this.is_query_atom(value) ? this.validate_conditions(value, capabilities) : this.validate_atom(value, capabilities);
-		},
+        validate_value: function(value, capabilities) {
+            return !this.is_query_atom(value) ? this.validate_conditions(value, capabilities) : this.validate_atom(value, capabilities);
+        },
 
-		validate_conditions: function (conditions, capabilities) {
-			return Types.is_object(conditions) && Objs.all(conditions, function (value, key) {
-				return this.validate_condition(value, key, capabilities);
-			}, this);
-		},
+        validate_conditions: function(conditions, capabilities) {
+            return Types.is_object(conditions) && Objs.all(conditions, function(value, key) {
+                return this.validate_condition(value, key, capabilities);
+            }, this);
+        },
 
-		validate_condition: function (value, key, capabilities) {
-			if (capabilities && (!capabilities.conditions || !(key in capabilities.conditions)))
-				return false;
-			var meta = this.SYNTAX_CONDITION_KEYS[key];
-			return meta && (meta.target === "atoms" ? this.validate_atoms(value) : this.validate_atom(value));
-		},
+        validate_condition: function(value, key, capabilities) {
+            if (capabilities && (!capabilities.conditions || !(key in capabilities.conditions)))
+                return false;
+            var meta = this.SYNTAX_CONDITION_KEYS[key];
+            return meta && (meta.target === "atoms" ? this.validate_atoms(value) : this.validate_atom(value));
+        },
 
-		normalize: function (query) {
-			return Sort.deep_sort(query);
-		},
+        normalize: function(query) {
+            return Sort.deep_sort(query);
+        },
 
-		serialize: function (query) {
-			return JSON.stringify(query);
-		},
+        serialize: function(query) {
+            return JSON.stringify(query);
+        },
 
-		unserialize: function (query) {
-			return JSON.parse(query);
-		},
+        unserialize: function(query) {
+            return JSON.parse(query);
+        },
 
-		hash: function (query) {
-			return Tokens.simple_hash(this.serialize(query));
-		},
+        hash: function(query) {
+            return Tokens.simple_hash(this.serialize(query));
+        },
 
-		dependencies: function (query) {
-			return Object.keys(this.dependencies_query(query, {}));
-		},
+        dependencies: function(query) {
+            return Object.keys(this.dependencies_query(query, {}));
+        },
 
-		dependencies_queries: function (queries, dep) {
-			Objs.iter(queries, function (query) {
-				dep = this.dependencies_query(query, dep);
-			}, this);
-			return dep;
-		},
+        dependencies_queries: function(queries, dep) {
+            Objs.iter(queries, function(query) {
+                dep = this.dependencies_query(query, dep);
+            }, this);
+            return dep;
+        },
 
-		dependencies_query: function (query, dep) {
-			Objs.iter(query, function (value, key) {
-				dep = this.dependencies_pair(value, key, dep);
-			}, this);
-			return dep;
-		},
+        dependencies_query: function(query, dep) {
+            Objs.iter(query, function(value, key) {
+                dep = this.dependencies_pair(value, key, dep);
+            }, this);
+            return dep;
+        },
 
-		dependencies_pair: function (value, key, dep) {
-			return key in this.SYNTAX_PAIR_KEYS ? this.dependencies_queries(value, dep) : this.dependencies_key(key, dep);
-		},
+        dependencies_pair: function(value, key, dep) {
+            return key in this.SYNTAX_PAIR_KEYS ? this.dependencies_queries(value, dep) : this.dependencies_key(key, dep);
+        },
 
-		dependencies_key: function (key, dep) {
-			dep[key] = (dep[key] || 0) + 1;
-			return dep;
-		},
+        dependencies_key: function(key, dep) {
+            dep[key] = (dep[key] || 0) + 1;
+            return dep;
+        },
 
-		evaluate : function(query, object) {
-			return this.evaluate_query(query, object);
-		},
+        evaluate: function(query, object) {
+            return this.evaluate_query(query, object);
+        },
 
-		evaluate_query: function (query, object) {
-			return Objs.all(query, function (value, key) {
-				return this.evaluate_pair(value, key, object);
-			}, this);
-		},
+        evaluate_query: function(query, object) {
+            return Objs.all(query, function(value, key) {
+                return this.evaluate_pair(value, key, object);
+            }, this);
+        },
 
-		evaluate_pair: function (value, key, object) {
-			if (key in this.SYNTAX_PAIR_KEYS) {
-				return this.SYNTAX_PAIR_KEYS[key].evaluate_combine.call(Objs, value, function (query) {
-					return this.evaluate_query(query, object);
-				}, this);
-			} else
-				return this.evaluate_value(value, object[key]);
-		},
+        evaluate_pair: function(value, key, object) {
+            if (key in this.SYNTAX_PAIR_KEYS) {
+                return this.SYNTAX_PAIR_KEYS[key].evaluate_combine.call(Objs, value, function(query) {
+                    return this.evaluate_query(query, object);
+                }, this);
+            } else
+                return this.evaluate_value(value, object[key]);
+        },
 
-		evaluate_value: function (value, object_value) {
-			return !this.is_query_atom(value) ? this.evaluate_conditions(value, object_value) : this.evaluate_atom(value, object_value);
-		},
+        evaluate_value: function(value, object_value) {
+            return !this.is_query_atom(value) ? this.evaluate_conditions(value, object_value) : this.evaluate_atom(value, object_value);
+        },
 
-		evaluate_atom: function (value, object_value) {
-			return value === object_value;
-		},
+        evaluate_atom: function(value, object_value) {
+            return value === object_value;
+        },
 
-		evaluate_conditions: function (value, object_value) {
-			return Objs.all(value, function (condition_value, condition_key) {
-				return this.evaluate_condition(condition_value, condition_key, object_value);
-			}, this);
-		},
+        evaluate_conditions: function(value, object_value) {
+            return Objs.all(value, function(condition_value, condition_key) {
+                return this.evaluate_condition(condition_value, condition_key, object_value);
+            }, this);
+        },
 
-		evaluate_condition: function (condition_value, condition_key, object_value) {
-			var rec = this.SYNTAX_CONDITION_KEYS[condition_key];
-			if (rec.target === "atoms") {
-				return rec.evaluate_combine.call(Objs, condition_value, function (condition_single_value) {
-					return rec.evaluate_single.call(this, object_value, condition_single_value);
-				}, this);
-			}
-			return rec.evaluate_single.call(this, object_value, condition_value);
-		},
+        evaluate_condition: function(condition_value, condition_key, object_value) {
+            var rec = this.SYNTAX_CONDITION_KEYS[condition_key];
+            if (rec.target === "atoms") {
+                return rec.evaluate_combine.call(Objs, condition_value, function(condition_single_value) {
+                    return rec.evaluate_single.call(this, object_value, condition_single_value);
+                }, this);
+            }
+            return rec.evaluate_single.call(this, object_value, condition_value);
+        },
 
-		subsumizes: function (query, query2) {
-			// This is very simple at this point
-			if (!Types.is_object(query) || !Types.is_object)
-				return query == query2;
-			for (var key in query) {
-				if (!(key in query2) || !this.subsumizes(query[key], query2[key]))
-					return false;
-			}
-			return true;
-		},
+        subsumizes: function(query, query2) {
+            // This is very simple at this point
+            if (!Types.is_object(query) || !Types.is_object)
+                return query == query2;
+            for (var key in query) {
+                if (!(key in query2) || !this.subsumizes(query[key], query2[key]))
+                    return false;
+            }
+            return true;
+        },
 
-		fullQueryCapabilities: function () {
-			var bool = {};
-			Objs.iter(this.SYNTAX_PAIR_KEYS, function (dummy, key) {
-				bool[key] = true;
-			});
-			var conditions = {};
-			Objs.iter(this.SYNTAX_CONDITION_KEYS, function (dummy, key) {
-				conditions[key] = true;
-			});
-			return {
-				atom: true,
-				bool: bool,
-				conditions: conditions
-			};
-		},
+        fullQueryCapabilities: function() {
+            var bool = {};
+            Objs.iter(this.SYNTAX_PAIR_KEYS, function(dummy, key) {
+                bool[key] = true;
+            });
+            var conditions = {};
+            Objs.iter(this.SYNTAX_CONDITION_KEYS, function(dummy, key) {
+                conditions[key] = true;
+            });
+            return {
+                atom: true,
+                bool: bool,
+                conditions: conditions
+            };
+        },
 
-		mergeConditions: function (conditions1, conditions2) {
-			if (!Types.is_object(conditions1))
-				conditions1 = {"$eq": conditions1 };
-			if (!Types.is_object(conditions2))
-				conditions2 = {"$eq": conditions2 };
-			var fail = false;
-			var obj = Objs.clone(conditions1, 1);
-			Objs.iter(conditions2, function (target, condition) {
-				if (fail)
-					return false;
-				if (condition in obj) {
-					var base = obj[condition];
-					if (Strings.starts_with(condition, "$eq")) 
-						fail = true;
-					if (Strings.starts_with(condition, "$in")) {
-						base = Objs.objectify(base);
-						obj[condition] = [];
-						fail = true;
-						Objs.iter(target, function (x) {
-							if (base[x]) {
-								obj[condition].push(x);
-								fail = false;
-							}
-						});
-					}
-					if (Strings.starts_with(condition, "$sw")) {
-						if (Strings.starts_with(base, target))
-							obj[condition] = target;
-						else if (!Strings.starts_with(target, base))
-							fail = true;
-					}
-					if (Strings.starts_with(condition, "$gt"))
-						if (Comparators.byValue(base, target) < 0)
-							obj[condition] = target;
-					if (Strings.starts_with(condition, "$lt"))
-						if (Comparators.byValue(base, target) > 0)
-							obj[condition] = target;
-				} else
-					obj[condition] = target;
-			}, this);
-			if (fail)
-				obj = {"$in": []};
-			return obj;
-		},
+        mergeConditions: function(conditions1, conditions2) {
+            if (!Types.is_object(conditions1))
+                conditions1 = {
+                    "$eq": conditions1
+                };
+            if (!Types.is_object(conditions2))
+                conditions2 = {
+                    "$eq": conditions2
+                };
+            var fail = false;
+            var obj = Objs.clone(conditions1, 1);
+            Objs.iter(conditions2, function(target, condition) {
+                if (fail)
+                    return false;
+                if (condition in obj) {
+                    var base = obj[condition];
+                    if (Strings.starts_with(condition, "$eq"))
+                        fail = true;
+                    if (Strings.starts_with(condition, "$in")) {
+                        base = Objs.objectify(base);
+                        obj[condition] = [];
+                        fail = true;
+                        Objs.iter(target, function(x) {
+                            if (base[x]) {
+                                obj[condition].push(x);
+                                fail = false;
+                            }
+                        });
+                    }
+                    if (Strings.starts_with(condition, "$sw")) {
+                        if (Strings.starts_with(base, target))
+                            obj[condition] = target;
+                        else if (!Strings.starts_with(target, base))
+                            fail = true;
+                    }
+                    if (Strings.starts_with(condition, "$gt"))
+                        if (Comparators.byValue(base, target) < 0)
+                            obj[condition] = target;
+                    if (Strings.starts_with(condition, "$lt"))
+                        if (Comparators.byValue(base, target) > 0)
+                            obj[condition] = target;
+                } else
+                    obj[condition] = target;
+            }, this);
+            if (fail)
+                obj = {
+                    "$in": []
+                };
+            return obj;
+        },
 
-		disjunctiveNormalForm: function (query, mergeKeys) {
-			query = Objs.clone(query, 1);
-			var factors = [];
-			if (query.$or) {
-				var factor = [];
-				Objs.iter(query.$or, function (q) {
-					Objs.iter(this.disjunctiveNormalForm(q, mergeKeys).$or, function (q2) {
-						factor.push(q2);
-					}, this);
-				}, this);
-				factors.push(factor);
-				delete query.$or;
-			}
-			if (query.$and) {
-				Objs.iter(query.$and, function (q) {
-					var factor = [];
-					Objs.iter(this.disjunctiveNormalForm(q, mergeKeys).$or, function (q2) {
-						factor.push(q2);
-					}, this);
-					factors.push(factor);
-				}, this);
-				delete query.$and;
-			}
-			var result = [];
-			var helper = function (base, i) {
-				if (i < factors.length) {
-					Objs.iter(factors[i], function (factor) {
-						var target = Objs.clone(base, 1);
-						Objs.iter(factor, function (value, key) {
-							if (key in target) {
-								if (mergeKeys)
-									target[key] = this.mergeConditions(target[key], value);
-								else {
-									if (!target.$and)
-										target.$and = [];
-									target.$and.push(Objs.objectBy(key, value));
-								}
-							} else
-								target[key] = value;
-						}, this);
-						helper(target, i + 1);
-					}, this);
-				} else
-					result.push(base);
-			};
-			helper(query, 0);
-			return {"$or": result};
-		},
+        disjunctiveNormalForm: function(query, mergeKeys) {
+            query = Objs.clone(query, 1);
+            var factors = [];
+            if (query.$or) {
+                var factor = [];
+                Objs.iter(query.$or, function(q) {
+                    Objs.iter(this.disjunctiveNormalForm(q, mergeKeys).$or, function(q2) {
+                        factor.push(q2);
+                    }, this);
+                }, this);
+                factors.push(factor);
+                delete query.$or;
+            }
+            if (query.$and) {
+                Objs.iter(query.$and, function(q) {
+                    var factor = [];
+                    Objs.iter(this.disjunctiveNormalForm(q, mergeKeys).$or, function(q2) {
+                        factor.push(q2);
+                    }, this);
+                    factors.push(factor);
+                }, this);
+                delete query.$and;
+            }
+            var result = [];
+            var helper = function(base, i) {
+                if (i < factors.length) {
+                    Objs.iter(factors[i], function(factor) {
+                        var target = Objs.clone(base, 1);
+                        Objs.iter(factor, function(value, key) {
+                            if (key in target) {
+                                if (mergeKeys)
+                                    target[key] = this.mergeConditions(target[key], value);
+                                else {
+                                    if (!target.$and)
+                                        target.$and = [];
+                                    target.$and.push(Objs.objectBy(key, value));
+                                }
+                            } else
+                                target[key] = value;
+                        }, this);
+                        helper(target, i + 1);
+                    }, this);
+                } else
+                    result.push(base);
+            };
+            helper(query, 0);
+            return {
+                "$or": result
+            };
+        },
 
-		simplifyQuery: function (query) {
-			var result = {};
-			Objs.iter(query, function (value, key) {
-				if (key in this.SYNTAX_PAIR_KEYS) {
-					var arr = [];
-					var had_true = false;
-					Objs.iter(value, function (q) {
-						var qs = this.simplifyQuery(q);
-						if (Types.is_empty(qs))
-							had_true = true;
-						else
-							arr.push(qs);
-					}, this);
-					if ((key === "$and" && arr.length > 0) || (key === "$or" && !had_true))
-						result[key] = arr;
-				} else if (Types.is_object(value)) {
-					var conds = this.simplifyConditions(value);
-					if (!Types.is_empty(conds))
-						result[key] = conds;
-				} else
-					result[key] = value;
-			}, this);
-			return result;
-		},
-		
-		simplifiedDNF: function (query, mergeKeys) {
-			query = this.simplifyQuery(this.disjunctiveNormalForm(query, true));
-			return !Types.is_empty(query) ? query : {"$or": [{}]};
-		},
+        simplifyQuery: function(query) {
+            var result = {};
+            Objs.iter(query, function(value, key) {
+                if (key in this.SYNTAX_PAIR_KEYS) {
+                    var arr = [];
+                    var had_true = false;
+                    Objs.iter(value, function(q) {
+                        var qs = this.simplifyQuery(q);
+                        if (Types.is_empty(qs))
+                            had_true = true;
+                        else
+                            arr.push(qs);
+                    }, this);
+                    if ((key === "$and" && arr.length > 0) || (key === "$or" && !had_true))
+                        result[key] = arr;
+                } else if (Types.is_object(value)) {
+                    var conds = this.simplifyConditions(value);
+                    if (!Types.is_empty(conds))
+                        result[key] = conds;
+                } else
+                    result[key] = value;
+            }, this);
+            return result;
+        },
 
-		simplifyConditions: function (conditions) {
-			var result = {};
-			Objs.iter(["", "ic"], function (add) {
-				if (conditions["$eq" + add] || conditions["$in" + add]) {
-					var filtered = Objs.filter(conditions["$eq" + add] ? [conditions["$eq" + add]] : conditions["$in" + add], function (inkey) {
-						return this.evaluate_conditions(conditions, inkey);
-					}, this);
-					result[(filtered.length === 1 ? "$eq" : "$in") + add] = filtered.length === 1 ? filtered[0] : filtered;
-				} else {
-					var gt = null;
-					var lt = null;
-					var lte = false;
-					var gte = false;
-					var compare = Comparators.byValue;
-					if (conditions["$gt" + add])
-						gt = conditions["$gt" + add];
-					if (conditions["$lt" + add])
-						gt = conditions["$lt" + add];
-					if (conditions["$gte" + add] && (gt === null || compare(gt, conditions["$gte" + add]) < 0)) {
-						gte = true;
-						gt = conditions["$gte" + add];
-					}
-					if (conditions["$lte" + add] && (lt === null || compare(lt, conditions["$lte" + add]) > 0)) {
-						lte = true;
-						lt = conditions["$lte" + add];
-					}
-					if (conditions["$sw" + add]) {
-						var s = conditions["$sw" + add];
-						if (gt === null || compare(gt, s) <= 0) {
-							gte = true;
-							gt = s;
-						}
-						var swnext = null;
-						if (typeof(s) === 'number')
-							swnext = s + 1;
-						else if (typeof(s) === 'string' && s.length > 0)
-							swnext = s.substring(0, s.length - 1) + String.fromCharCode(s.charCodeAt(s.length - 1) + 1);
-						if (swnext !== null && (lt === null || compare(lt, swnext) >= 0)) {
-							lte = true;
-							lt = swnext;
-						}
-					}				
-					if (lt !== null)
-						result[(lte ? "$lte" : "$lt") + add] = lt;
-					if (gt !== null)
-						result[(gte ? "$gte" : "$gt") + add] = gt;
-					if (conditions["$ct" + add])
-						result["$ct" + add] = conditions["$ct" + add];
-				}
-			}, this);
-			return result;
-		},
-		
-		mapKeyValue: function (query, callback, context) {
-			return this.mapKeyValueQuery(query, callback, context);
-		},
-		
-		mapKeyValueQuery: function (query, callback, context) {
-			var result = {};
-			Objs.iter(query, function (value, key) {
-				result = Objs.extend(result, this.mapKeyValuePair(value, key, callback, context));
-			}, this);
-			return result;
-		},
-		
-		mapKeyValueQueries: function (queries, callback, context) {
-			return Objs.map(queries, function (query) {
-				return this.mapKeyValueQuery(query, callback, context);
-			}, this);
-		},
-		
-		mapKeyValuePair: function (value, key, callback, context) {
-			if (key in this.SYNTAX_PAIR_KEYS)
-				return Objs.objectBy(key, this.mapKeyValueQueries(value, callback, context));
-			if (this.is_query_atom(value))
-				return callback.call(context, key, value);
-			var result = {};
-			Objs.iter(value, function (condition_value, condition_key) {
-				result[condition_key] = this.mapKeyValueCondition(condition_value, key, callback, context);
-			}, this);
-			return Objs.objectBy(key, result);
-		},
+        simplifiedDNF: function(query, mergeKeys) {
+            query = this.simplifyQuery(this.disjunctiveNormalForm(query, true));
+            return !Types.is_empty(query) ? query : {
+                "$or": [{}]
+            };
+        },
 
-		mapKeyValueCondition: function (condition_value, key, callback, context) {
-			var is_array = Types.is_array(condition_value);
-			if (!is_array)
-				condition_value = [condition_value];
-			var result = Objs.map(condition_value, function (value) {
-				return Objs.peek(callback.call(context, key, value));
-			}, this);
-			return is_array ? result : result[0];
-		},
+        simplifyConditions: function(conditions) {
+            var result = {};
+            Objs.iter(["", "ic"], function(add) {
+                if (conditions["$eq" + add] || conditions["$in" + add]) {
+                    var filtered = Objs.filter(conditions["$eq" + add] ? [conditions["$eq" + add]] : conditions["$in" + add], function(inkey) {
+                        return this.evaluate_conditions(conditions, inkey);
+                    }, this);
+                    result[(filtered.length === 1 ? "$eq" : "$in") + add] = filtered.length === 1 ? filtered[0] : filtered;
+                } else {
+                    var gt = null;
+                    var lt = null;
+                    var lte = false;
+                    var gte = false;
+                    var compare = Comparators.byValue;
+                    if (conditions["$gt" + add])
+                        gt = conditions["$gt" + add];
+                    if (conditions["$lt" + add])
+                        gt = conditions["$lt" + add];
+                    if (conditions["$gte" + add] && (gt === null || compare(gt, conditions["$gte" + add]) < 0)) {
+                        gte = true;
+                        gt = conditions["$gte" + add];
+                    }
+                    if (conditions["$lte" + add] && (lt === null || compare(lt, conditions["$lte" + add]) > 0)) {
+                        lte = true;
+                        lt = conditions["$lte" + add];
+                    }
+                    if (conditions["$sw" + add]) {
+                        var s = conditions["$sw" + add];
+                        if (gt === null || compare(gt, s) <= 0) {
+                            gte = true;
+                            gt = s;
+                        }
+                        var swnext = null;
+                        if (typeof(s) === 'number')
+                            swnext = s + 1;
+                        else if (typeof(s) === 'string' && s.length > 0)
+                            swnext = s.substring(0, s.length - 1) + String.fromCharCode(s.charCodeAt(s.length - 1) + 1);
+                        if (swnext !== null && (lt === null || compare(lt, swnext) >= 0)) {
+                            lte = true;
+                            lt = swnext;
+                        }
+                    }
+                    if (lt !== null)
+                        result[(lte ? "$lte" : "$lt") + add] = lt;
+                    if (gt !== null)
+                        result[(gte ? "$gte" : "$gt") + add] = gt;
+                    if (conditions["$ct" + add])
+                        result["$ct" + add] = conditions["$ct" + add];
+                }
+            }, this);
+            return result;
+        },
 
-		queryDeterminedByAttrs: function (query, attributes) {
-			return Objs.exists(query, function (value, key) {
-				if (key === "$and") {
-					return Objs.exists(value, function (q) {
-						return this.queryDeterminedByAttrs(q, attributes);
-					}, this);
-				} else if (key === "$or") {
-					return Objs.all(value, function (q) {
-						return this.queryDeterminedByAttrs(q, attributes);
-					}, this);
-				} else
-					return attributes[key];
-			}, this);
-		}
-		
-	}; 
+        mapKeyValue: function(query, callback, context) {
+            return this.mapKeyValueQuery(query, callback, context);
+        },
+
+        mapKeyValueQuery: function(query, callback, context) {
+            var result = {};
+            Objs.iter(query, function(value, key) {
+                result = Objs.extend(result, this.mapKeyValuePair(value, key, callback, context));
+            }, this);
+            return result;
+        },
+
+        mapKeyValueQueries: function(queries, callback, context) {
+            return Objs.map(queries, function(query) {
+                return this.mapKeyValueQuery(query, callback, context);
+            }, this);
+        },
+
+        mapKeyValuePair: function(value, key, callback, context) {
+            if (key in this.SYNTAX_PAIR_KEYS)
+                return Objs.objectBy(key, this.mapKeyValueQueries(value, callback, context));
+            if (this.is_query_atom(value))
+                return callback.call(context, key, value);
+            var result = {};
+            Objs.iter(value, function(condition_value, condition_key) {
+                result[condition_key] = this.mapKeyValueCondition(condition_value, key, callback, context);
+            }, this);
+            return Objs.objectBy(key, result);
+        },
+
+        mapKeyValueCondition: function(condition_value, key, callback, context) {
+            var is_array = Types.is_array(condition_value);
+            if (!is_array)
+                condition_value = [condition_value];
+            var result = Objs.map(condition_value, function(value) {
+                return Objs.peek(callback.call(context, key, value));
+            }, this);
+            return is_array ? result : result[0];
+        },
+
+        queryDeterminedByAttrs: function(query, attributes) {
+            return Objs.exists(query, function(value, key) {
+                if (key === "$and") {
+                    return Objs.exists(value, function(q) {
+                        return this.queryDeterminedByAttrs(q, attributes);
+                    }, this);
+                } else if (key === "$or") {
+                    return Objs.all(value, function(q) {
+                        return this.queryDeterminedByAttrs(q, attributes);
+                    }, this);
+                } else
+                    return attributes[key];
+            }, this);
+        }
+
+    };
 });
 Scoped.define("module:Queries.Engine", [
-                                        "module:Queries",
-                                        "module:Queries.Constrained",
-                                        "base:Strings",
-                                        "base:Types",
-                                        "base:Objs",
-                                        "base:Promise",
-                                        "base:Comparators",
-                                        "base:Iterators.SkipIterator",
-                                        "base:Iterators.LimitIterator",
-                                        "base:Iterators.SortedIterator",
-                                        "base:Iterators.FilteredIterator",
-                                        "base:Iterators.SortedOrIterator",
-                                        "base:Iterators.PartiallySortedIterator",
-                                        "base:Iterators.ArrayIterator",
-                                        "base:Iterators.LazyMultiArrayIterator"
-                                        ], function (Queries, Constrained, Strings, Types, Objs, Promise, Comparators, SkipIterator, LimitIterator, SortedIterator, FilteredIterator, SortedOrIterator, PartiallySortedIterator, ArrayIterator, LazyMultiArrayIterator) {
-	return {
+    "module:Queries",
+    "module:Queries.Constrained",
+    "base:Strings",
+    "base:Types",
+    "base:Objs",
+    "base:Promise",
+    "base:Comparators",
+    "base:Iterators.SkipIterator",
+    "base:Iterators.LimitIterator",
+    "base:Iterators.SortedIterator",
+    "base:Iterators.FilteredIterator",
+    "base:Iterators.SortedOrIterator",
+    "base:Iterators.PartiallySortedIterator",
+    "base:Iterators.ArrayIterator",
+    "base:Iterators.LazyMultiArrayIterator"
+], function(Queries, Constrained, Strings, Types, Objs, Promise, Comparators, SkipIterator, LimitIterator, SortedIterator, FilteredIterator, SortedOrIterator, PartiallySortedIterator, ArrayIterator, LazyMultiArrayIterator) {
+    return {
 
-		indexQueryConditionsSize: function (conds, index, ignoreCase) {
-			var add = ignoreCase ? "ic" : "";
-			var postfix = ignoreCase ? "_ic" : "";
-			var info = index.info();
-			var subSize = info.row_count;
-			var rows_per_key = info.row_count / Math.max(info["key_count" + postfix], 1);
-			if (conds["$eq" + add])
-				subSize = rows_per_key;
-			else if (conds["$in" + add])
-				subSize = rows_per_key * conds["$in" + add].length;
-			else {
-				var keys = 0;
-				var g = null;
-				if (conds["$gt" + add] || conds["$gte" + add]) {
-					g = conds["$gt" + add] || conds["$gte" + add];
-					if (conds["$gt" + add])
-						keys--;
-				}
-				var l = null;
-				if (conds["$lt" + add] || conds["$lte" + add]) {
-					l = conds["$lt" + add] || conds["$lte" + add];
-					if (conds["$lt" + add])
-						keys--;
-				}
-				if (g !== null && l !== null)
-					keys += index["key_count_distance" + postfix](g, l);						
-				else if (g !== null)
-					keys += index["key_count_right" + postfix](g);
-				else if (l !== null)
-					keys += index["key_count_left" + postfix](l);
-				subSize = keys * rows_per_key;
-			}
-			return subSize;
-		},
+        indexQueryConditionsSize: function(conds, index, ignoreCase) {
+            var add = ignoreCase ? "ic" : "";
+            var postfix = ignoreCase ? "_ic" : "";
+            var info = index.info();
+            var subSize = info.row_count;
+            var rows_per_key = info.row_count / Math.max(info["key_count" + postfix], 1);
+            if (conds["$eq" + add])
+                subSize = rows_per_key;
+            else if (conds["$in" + add])
+                subSize = rows_per_key * conds["$in" + add].length;
+            else {
+                var keys = 0;
+                var g = null;
+                if (conds["$gt" + add] || conds["$gte" + add]) {
+                    g = conds["$gt" + add] || conds["$gte" + add];
+                    if (conds["$gt" + add])
+                        keys--;
+                }
+                var l = null;
+                if (conds["$lt" + add] || conds["$lte" + add]) {
+                    l = conds["$lt" + add] || conds["$lte" + add];
+                    if (conds["$lt" + add])
+                        keys--;
+                }
+                if (g !== null && l !== null)
+                    keys += index["key_count_distance" + postfix](g, l);
+                else if (g !== null)
+                    keys += index["key_count_right" + postfix](g);
+                else if (l !== null)
+                    keys += index["key_count_left" + postfix](l);
+                subSize = keys * rows_per_key;
+            }
+            return subSize;
+        },
 
-		indexQuerySize: function (queryDNF, key, index) {
-			var acc = 0;
-			var info = index.info();
-			Objs.iter(queryDNF.$or, function (q) {
-				if (!(key in q)) {
-					acc = null;
-					return false;
-				}
-				var conds = q[key];
-				var findSize = info.row_count;
-				if (index.options().exact)
-					findSize = Math.min(findSize, this.indexQueryConditionsSize(conds, index, false));
-				if (index.options().ignoreCase)
-					findSize = Math.min(findSize, this.indexQueryConditionsSize(conds, index, true));
-				acc += findSize;
-			}, this);
-			return acc;
-		},
+        indexQuerySize: function(queryDNF, key, index) {
+            var acc = 0;
+            var info = index.info();
+            Objs.iter(queryDNF.$or, function(q) {
+                if (!(key in q)) {
+                    acc = null;
+                    return false;
+                }
+                var conds = q[key];
+                var findSize = info.row_count;
+                if (index.options().exact)
+                    findSize = Math.min(findSize, this.indexQueryConditionsSize(conds, index, false));
+                if (index.options().ignoreCase)
+                    findSize = Math.min(findSize, this.indexQueryConditionsSize(conds, index, true));
+                acc += findSize;
+            }, this);
+            return acc;
+        },
 
-		queryPartially: function (constrainedQuery, constrainedQueryCapabilities) {
-			var simplified = {
-					query: constrainedQuery.query,
-					options: {}
-			};
-			if (constrainedQuery.options.sort) {
-				var first = Objs.ithKey(constrainedQuery.options.sort, 0);
-				simplified.options.sort = {};
-				simplified.options.sort[first] = constrainedQuery.options.sort[first];
-			}
-			return Constrained.validate(simplified, constrainedQueryCapabilities);
-		},
+        queryPartially: function(constrainedQuery, constrainedQueryCapabilities) {
+            var simplified = {
+                query: constrainedQuery.query,
+                options: {}
+            };
+            if (constrainedQuery.options.sort) {
+                var first = Objs.ithKey(constrainedQuery.options.sort, 0);
+                simplified.options.sort = {};
+                simplified.options.sort[first] = constrainedQuery.options.sort[first];
+            }
+            return Constrained.validate(simplified, constrainedQueryCapabilities);
+        },
 
-		compileQuery: function (constrainedQuery, constrainedQueryCapabilities, constrainedQueryFunction, constrainedQueryContext) {
-			constrainedQuery = Constrained.rectify(constrainedQuery);
-			var sorting_supported = Constrained.sortValidate(constrainedQuery.options, constrainedQueryCapabilities);
-			var query_supported = Queries.validate(constrainedQuery.query, constrainedQueryCapabilities.query || {});
-			var skip_supported = Constrained.skipValidate(constrainedQuery.options, constrainedQueryCapabilities);
-			var limit_supported = Constrained.limitValidate(constrainedQuery.options, constrainedQueryCapabilities);
-			var post_actions = {
-					skip: null,
-					limit: null,
-					filter: null,
-					sort: null
-			};
-			if (!query_supported || !sorting_supported || !skip_supported) {
-				post_actions.skip = constrainedQuery.options.skip;
-				delete constrainedQuery.options.skip;
-				if ("limit" in constrainedQuery.options && limit_supported && query_supported && sorting_supported)
-					constrainedQuery.options.limit += post_actions.skip;
-			}
-			if (!query_supported || !sorting_supported || !limit_supported) {
-				post_actions.limit = constrainedQuery.options.limit;
-				delete constrainedQuery.options.limit;
-			}
-			if (!sorting_supported) {
-				post_actions.sort = constrainedQuery.options.sort;
-				delete constrainedQuery.options.sort;
-			}
-			if (!query_supported) {
-				post_actions.filter = constrainedQuery.query;
-				constrainedQuery.query = {};
-			}
-			var query_result = constrainedQueryFunction.call(constrainedQueryContext, constrainedQuery);
-			return query_result.mapSuccess(function (iter) {
-				iter = this._queryResultRectify(iter, false);
-				if (post_actions.filter)
-					iter = new FilteredIterator(iter, function(row) {
-						return Queries.evaluate(post_actions.filter, row);
-					});
-				if (post_actions.sort)
-					iter = new SortedIterator(iter, Comparators.byObject(post_actions.sort));
-				if (post_actions.skip)
-					iter = new SkipIterator(iter, post_actions.skip);
-				if (post_actions.limit)
-					iter = new LimitIterator(iter, post_actions.limit);
-				return iter;
-			}, this);
-		},
+        compileQuery: function(constrainedQuery, constrainedQueryCapabilities, constrainedQueryFunction, constrainedQueryContext) {
+            constrainedQuery = Constrained.rectify(constrainedQuery);
+            var sorting_supported = Constrained.sortValidate(constrainedQuery.options, constrainedQueryCapabilities);
+            var query_supported = Queries.validate(constrainedQuery.query, constrainedQueryCapabilities.query || {});
+            var skip_supported = Constrained.skipValidate(constrainedQuery.options, constrainedQueryCapabilities);
+            var limit_supported = Constrained.limitValidate(constrainedQuery.options, constrainedQueryCapabilities);
+            var post_actions = {
+                skip: null,
+                limit: null,
+                filter: null,
+                sort: null
+            };
+            if (!query_supported || !sorting_supported || !skip_supported) {
+                post_actions.skip = constrainedQuery.options.skip;
+                delete constrainedQuery.options.skip;
+                if ("limit" in constrainedQuery.options && limit_supported && query_supported && sorting_supported)
+                    constrainedQuery.options.limit += post_actions.skip;
+            }
+            if (!query_supported || !sorting_supported || !limit_supported) {
+                post_actions.limit = constrainedQuery.options.limit;
+                delete constrainedQuery.options.limit;
+            }
+            if (!sorting_supported) {
+                post_actions.sort = constrainedQuery.options.sort;
+                delete constrainedQuery.options.sort;
+            }
+            if (!query_supported) {
+                post_actions.filter = constrainedQuery.query;
+                constrainedQuery.query = {};
+            }
+            var query_result = constrainedQueryFunction.call(constrainedQueryContext, constrainedQuery);
+            return query_result.mapSuccess(function(iter) {
+                iter = this._queryResultRectify(iter, false);
+                if (post_actions.filter)
+                    iter = new FilteredIterator(iter, function(row) {
+                        return Queries.evaluate(post_actions.filter, row);
+                    });
+                if (post_actions.sort)
+                    iter = new SortedIterator(iter, Comparators.byObject(post_actions.sort));
+                if (post_actions.skip)
+                    iter = new SkipIterator(iter, post_actions.skip);
+                if (post_actions.limit)
+                    iter = new LimitIterator(iter, post_actions.limit);
+                return iter;
+            }, this);
+        },
 
-		compileIndexQuery: function (constrainedDNFQuery, key, index) {
-			var fullQuery = Objs.exists(constrainedDNFQuery.query.$or, function (query) {
-				return !(key in query);
-			});
-			var primaryKeySort = constrainedDNFQuery.options.sort && Objs.ithKey(constrainedDNFQuery.options.sort, 0) === key;
-			var primarySortDirection = primaryKeySort ? constrainedDNFQuery.options.sort[key] : 1;
-			var iter;
-			var ignoreCase = !index.options().exact;
-			if (fullQuery) {
-				var materialized = [];
-				index["itemIterate" + (ignoreCase ? "_ic" : "")](null, primarySortDirection, function (dataKey, data) {
-					materialized.push(data);
-				});
-				iter = new ArrayIterator(materialized);
-			} else {
-				iter = new SortedOrIterator(Objs.map(constrainedDNFQuery.query.$or, function (query) {
-					var conds = query[key];
-					if (!primaryKeySort && index.options().ignoreCase && index.options().exact) {
-						if (this.indexQueryConditionsSize(conds, index, true) < this.indexQueryConditionsSize(conds, index, false))
-							ignoreCase = true;
-					}
-					var add = ignoreCase ? "ic" : "";
-					var postfix = ignoreCase ? "_ic" : "";
-					if (conds["$eq" + add] || !Types.is_object(conds)) {
-						var materialized = [];
-						var value = Types.is_object(conds) ? conds["$eq" + add] : conds;
-						index["itemIterate" + postfix](value, primarySortDirection, function (dataKey, data) {
-							if (dataKey !== value)
-								return false;
-							materialized.push(data);
-						});
-						iter = new ArrayIterator(materialized);
-					} else if (conds["$in" + add]) {
-						var i = 0;
-						iter = new LazyMultiArrayIterator(function () {
-							if (i >= conds["$in" + add].length)
-								return null;
-							var materialized = [];
-							index["itemIterate" + postfix](conds["$in" + add][i], primarySortDirection, function (dataKey, data) {
-								if (dataKey !== conds["in" + add][i])
-									return false;
-								materialized.push(data);
-							});
-							i++;
-							return materialized;
-						});
-					} else {
-						var currentKey = null;
-						var lastKey = null;
-						if (conds["$gt" + add] || conds["$gte" + add])
-							currentKey = conds["$gt" + add] || conds["$gte" + add];
-						if (conds["$lt" + add] || conds["$lte" + add])
-							lastKey = conds["$lt" + add] || conds["$lte" + add];
-						if (primarySortDirection < 0) {
-							var temp = currentKey;
-							currentKey = lastKey;
-							lastKey = temp;
-						}
-						iter = new LazyMultiArrayIterator(function () {
-							if (currentKey !== null && lastKey !== null) {
-								if (Math.sign((index.comparator())(currentKey, lastKey)) === Math.sign(primarySortDirection))
-									return null;
-							}
-							var materialized = [];
-							index["itemIterate" + postfix](currentKey, primarySortDirection, function (dataKey, data) {
-								if (currentKey === null)
-									currentKey = dataKey;
-								if (dataKey !== currentKey) {
-									currentKey = dataKey;
-									return false;
-								}
-								materialized.push(data);
-							});
-							return materialized;
-						});
-					}
-					return iter;
-				}, this), index.comparator());
-			}
-			iter = new FilteredIterator(iter, function (row) {
-				return Queries.evaluate(constrainedDNFQuery.query, row);
-			});
-			if (constrainedDNFQuery.options.sort) {
-				if (primaryKeySort)
-					iter = new PartiallySortedIterator(iter, Comparators.byObject(constrainedDNFQuery.options.sort), function (first, next) {
-						return first[key] === next[key];
-					});
-				else
-					iter = new SortedIterator(iter, Comparators.byObject(constrainedDNFQuery.options.sort));
-			}
-			if (constrainedDNFQuery.options.skip)
-				iter = new SkipIterator(iter, constrainedDNFQuery.options.skip);
-			if (constrainedDNFQuery.options.limit)
-				iter = new LimitIterator(iter, constrainedDNFQuery.options.limit);
-			return Promise.value(iter);
-		},
+        compileIndexQuery: function(constrainedDNFQuery, key, index) {
+            var fullQuery = Objs.exists(constrainedDNFQuery.query.$or, function(query) {
+                return !(key in query);
+            });
+            var primaryKeySort = constrainedDNFQuery.options.sort && Objs.ithKey(constrainedDNFQuery.options.sort, 0) === key;
+            var primarySortDirection = primaryKeySort ? constrainedDNFQuery.options.sort[key] : 1;
+            var iter;
+            var ignoreCase = !index.options().exact;
+            if (fullQuery) {
+                var materialized = [];
+                index["itemIterate" + (ignoreCase ? "_ic" : "")](null, primarySortDirection, function(dataKey, data) {
+                    materialized.push(data);
+                });
+                iter = new ArrayIterator(materialized);
+            } else {
+                iter = new SortedOrIterator(Objs.map(constrainedDNFQuery.query.$or, function(query) {
+                    var conds = query[key];
+                    if (!primaryKeySort && index.options().ignoreCase && index.options().exact) {
+                        if (this.indexQueryConditionsSize(conds, index, true) < this.indexQueryConditionsSize(conds, index, false))
+                            ignoreCase = true;
+                    }
+                    var add = ignoreCase ? "ic" : "";
+                    var postfix = ignoreCase ? "_ic" : "";
+                    if (conds["$eq" + add] || !Types.is_object(conds)) {
+                        var materialized = [];
+                        var value = Types.is_object(conds) ? conds["$eq" + add] : conds;
+                        index["itemIterate" + postfix](value, primarySortDirection, function(dataKey, data) {
+                            if (dataKey !== value)
+                                return false;
+                            materialized.push(data);
+                        });
+                        iter = new ArrayIterator(materialized);
+                    } else if (conds["$in" + add]) {
+                        var i = 0;
+                        iter = new LazyMultiArrayIterator(function() {
+                            if (i >= conds["$in" + add].length)
+                                return null;
+                            var materialized = [];
+                            index["itemIterate" + postfix](conds["$in" + add][i], primarySortDirection, function(dataKey, data) {
+                                if (dataKey !== conds["in" + add][i])
+                                    return false;
+                                materialized.push(data);
+                            });
+                            i++;
+                            return materialized;
+                        });
+                    } else {
+                        var currentKey = null;
+                        var lastKey = null;
+                        if (conds["$gt" + add] || conds["$gte" + add])
+                            currentKey = conds["$gt" + add] || conds["$gte" + add];
+                        if (conds["$lt" + add] || conds["$lte" + add])
+                            lastKey = conds["$lt" + add] || conds["$lte" + add];
+                        if (primarySortDirection < 0) {
+                            var temp = currentKey;
+                            currentKey = lastKey;
+                            lastKey = temp;
+                        }
+                        iter = new LazyMultiArrayIterator(function() {
+                            if (currentKey !== null && lastKey !== null) {
+                                if (Math.sign((index.comparator())(currentKey, lastKey)) === Math.sign(primarySortDirection))
+                                    return null;
+                            }
+                            var materialized = [];
+                            index["itemIterate" + postfix](currentKey, primarySortDirection, function(dataKey, data) {
+                                if (currentKey === null)
+                                    currentKey = dataKey;
+                                if (dataKey !== currentKey) {
+                                    currentKey = dataKey;
+                                    return false;
+                                }
+                                materialized.push(data);
+                            });
+                            return materialized;
+                        });
+                    }
+                    return iter;
+                }, this), index.comparator());
+            }
+            iter = new FilteredIterator(iter, function(row) {
+                return Queries.evaluate(constrainedDNFQuery.query, row);
+            });
+            if (constrainedDNFQuery.options.sort) {
+                if (primaryKeySort)
+                    iter = new PartiallySortedIterator(iter, Comparators.byObject(constrainedDNFQuery.options.sort), function(first, next) {
+                        return first[key] === next[key];
+                    });
+                else
+                    iter = new SortedIterator(iter, Comparators.byObject(constrainedDNFQuery.options.sort));
+            }
+            if (constrainedDNFQuery.options.skip)
+                iter = new SkipIterator(iter, constrainedDNFQuery.options.skip);
+            if (constrainedDNFQuery.options.limit)
+                iter = new LimitIterator(iter, constrainedDNFQuery.options.limit);
+            return Promise.value(iter);
+        },
 
-		compileIndexedQuery: function (constrainedQuery, constrainedQueryCapabilities, constrainedQueryFunction, constrainedQueryContext, indices) {
-			constrainedQuery = Constrained.rectify(constrainedQuery);
-			indices = indices || {};
-			if (this.queryPartially(constrainedQuery, constrainedQueryCapabilities) || Types.is_empty(indices))
-				return this.compileQuery(constrainedQuery, constrainedQueryCapabilities, constrainedQueryFunction, constrainedQueryContext);
-			var dnf = Queries.simplifiedDNF(constrainedQuery.query, true);
-			if (constrainedQuery.options.sort) {
-				var first = Objs.ithKey(constrainedQuery.options.sort, 0);
-				if (indices[first]) {
-					return this.compileIndexQuery({
-						query: dnf,
-						options: constrainedQuery.options
-					}, first, indices[first]);
-				}
-			}
-			var smallestSize = null;
-			var smallestKey = null;
-			Objs.iter(indices, function (index, key) {
-				var size = this.indexQuerySize(dnf, key, index);
-				if (size !== null && (smallestSize === null || size < smallestSize)) {
-					smallestSize = size;
-					smallestKey = key;
-				}
-			}, this);
-			if (smallestKey !== null)
-				return this.compileIndexQuery({
-					query: dnf,
-					options: constrainedQuery.options
-				}, smallestKey, indices[smallestKey]);
-			else
-				return this.compileQuery(constrainedQuery, constrainedQueryCapabilities, constrainedQueryFunction, constrainedQueryContext);
-		},
+        compileIndexedQuery: function(constrainedQuery, constrainedQueryCapabilities, constrainedQueryFunction, constrainedQueryContext, indices) {
+            constrainedQuery = Constrained.rectify(constrainedQuery);
+            indices = indices || {};
+            if (this.queryPartially(constrainedQuery, constrainedQueryCapabilities) || Types.is_empty(indices))
+                return this.compileQuery(constrainedQuery, constrainedQueryCapabilities, constrainedQueryFunction, constrainedQueryContext);
+            var dnf = Queries.simplifiedDNF(constrainedQuery.query, true);
+            if (constrainedQuery.options.sort) {
+                var first = Objs.ithKey(constrainedQuery.options.sort, 0);
+                if (indices[first]) {
+                    return this.compileIndexQuery({
+                        query: dnf,
+                        options: constrainedQuery.options
+                    }, first, indices[first]);
+                }
+            }
+            var smallestSize = null;
+            var smallestKey = null;
+            Objs.iter(indices, function(index, key) {
+                var size = this.indexQuerySize(dnf, key, index);
+                if (size !== null && (smallestSize === null || size < smallestSize)) {
+                    smallestSize = size;
+                    smallestKey = key;
+                }
+            }, this);
+            if (smallestKey !== null)
+                return this.compileIndexQuery({
+                    query: dnf,
+                    options: constrainedQuery.options
+                }, smallestKey, indices[smallestKey]);
+            else
+                return this.compileQuery(constrainedQuery, constrainedQueryCapabilities, constrainedQueryFunction, constrainedQueryContext);
+        },
 
-		_queryResultRectify: function (result, materialize) {
-			result = result || [];
-			return Types.is_array(result) == materialize ? result : (materialize ? result.asArray() : new ArrayIterator(result)); 
-		}
+        _queryResultRectify: function(result, materialize) {
+            result = result || [];
+            return Types.is_array(result) == materialize ? result : (materialize ? result.asArray() : new ArrayIterator(result));
+        }
 
-	}; 
+    };
 });
-
-
-
 Scoped.define("module:Stores.AssocStore", [
                                            "module:Stores.BaseStore",
                                            "base:Promise",
@@ -3136,6 +3162,7 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			options = options || {};
 			this._id_key = options.id_key || "id";
 			this._create_ids = options.create_ids || false;
+			this._id_lock = options.id_lock || false;
 			this.preserve_preupdate_data = options.preserve_preupdate_data || false;
 			if (this._create_ids)
 				this._id_generator = options.id_generator || this._auto_destroy(new TimedIdGenerator());
@@ -3192,6 +3219,8 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 		insert: function (data, ctx) {
 			if (!data)
 				return Promise.create(null, new StoreException("empty insert"));
+            if (this._id_key in data && data[this._id_key] && this._id_lock)
+            	return Promise.create(null, new StoreException("id lock"));
 			if (this._create_ids && !(this._id_key in data && data[this._id_key]))
 				data[this._id_key] = this._id_generator.generate();
 			return this._insert(data, ctx).success(function (row) {
@@ -6158,1018 +6187,1066 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 
 
 Scoped.define("module:Modelling.Associations.Association", [
-                                                            "base:Class",
-                                                            "base:Promise",
-                                                            "base:Iterators"
-                                                            ], function (Class, Promise, Iterators, scoped) {
-	return Class.extend({scoped: scoped}, function (inherited) {
-		return {
+    "base:Class",
+    "base:Promise",
+    "base:Iterators"
+], function(Class, Promise, Iterators, scoped) {
+    return Class.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-			constructor: function (model, options) {
-				inherited.constructor.call(this);
-				this._model = model;
-				this._options = options || {};
-				if (options.delete_cascade) {
-					model.on("remove", function () {
-						this.__delete_cascade();
-					}, this);
-				}
-			},
+            constructor: function(model, options) {
+                inherited.constructor.call(this);
+                this._model = model;
+                this._options = options || {};
+                if (options.delete_cascade) {
+                    model.on("remove", function() {
+                        this.__delete_cascade();
+                    }, this);
+                }
+            },
 
-			__delete_cascade: function () {
-				this.execute().success(function (iter) {
-					iter = Iterators.ensure(iter);
-					while (iter.hasNext())
-						iter.next().remove({});
-				}, this);
-			},
+            __delete_cascade: function() {
+                this.execute().success(function(iter) {
+                    iter = Iterators.ensure(iter);
+                    while (iter.hasNext())
+                        iter.next().remove({});
+                }, this);
+            },
 
-			execute: function () {
-				if ("__cache" in this)
-					return Promise.create(this.__cache);
-				var promise = this._execute();
-				if (this._options.cached) {
-					promise.callback(function (error, value) {
-						this.__cache = error ? null : value;
-					}, this);
-				}
-				return promise;
-			},
+            execute: function() {
+                if ("__cache" in this)
+                    return Promise.create(this.__cache);
+                var promise = this._execute();
+                if (this._options.cached) {
+                    promise.callback(function(error, value) {
+                        this.__cache = error ? null : value;
+                    }, this);
+                }
+                return promise;
+            },
 
-			invalidate: function () {
-				delete this.__cache;
-			}
+            invalidate: function() {
+                delete this.__cache;
+            }
 
-		};
-	});
+        };
+    });
 });
 Scoped.define("module:Modelling.Associations.BelongsToAssociation", [
-        "module:Modelling.Associations.TableAssociation",
-        "base:Promise",
-        "base:Objs"
-    ], function (TableAssociation, Promise, Objs, scoped) {
-    return TableAssociation.extend({scoped: scoped}, function (inherited) {
-		return {
-			
-			_execute: function () {
-				var value = this._model.get(this._foreign_key);
-				if (!value)
-					return Promise.value(null);
-				return this._primary_key ?
-					this._foreign_table.findBy(Objs.objectBy(this._primary_key, value)) :
-					this._foreign_table.findById(value);
-			}
-	
-		};
+    "module:Modelling.Associations.TableAssociation",
+    "base:Promise",
+    "base:Objs"
+], function(TableAssociation, Promise, Objs, scoped) {
+    return TableAssociation.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            _execute: function() {
+                var value = this._model.get(this._foreign_key);
+                if (!value)
+                    return Promise.value(null);
+                return this._primary_key ?
+                    this._foreign_table.findBy(Objs.objectBy(this._primary_key, value)) :
+                    this._foreign_table.findById(value);
+            }
+
+        };
     });
 });
 Scoped.define("module:Modelling.Associations.ConditionalAssociation", [
-                                                                       "module:Modelling.Associations.Association",
-                                                                       "base:Objs"
-                                                                       ], function (Associations, Objs, scoped) {
-	return Associations.extend({scoped: scoped}, function (inherited) {
-		return {
+    "module:Modelling.Associations.Association",
+    "base:Objs"
+], function(Associations, Objs, scoped) {
+    return Associations.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-			constructor: function (model, options) {
-				inherited.constructor.call(this, model, Objs.extend({
-					conditional: function () { return true; }
-				}, options));
-			},
+            constructor: function(model, options) {
+                inherited.constructor.call(this, model, Objs.extend({
+                    conditional: function() {
+                        return true;
+                    }
+                }, options));
+            },
 
-			_execute: function () {
-				var assoc = this.assoc();
-				return assoc.execute.apply(assoc, arguments);
-			},
+            _execute: function() {
+                var assoc = this.assoc();
+                return assoc.execute.apply(assoc, arguments);
+            },
 
-			assoc: function () {
-				return this._model.assocs[this._options.conditional(this._model)];
-			}
+            assoc: function() {
+                return this._model.assocs[this._options.conditional(this._model)];
+            }
 
-		};
-	});
+        };
+    });
 });
 Scoped.define("module:Modelling.Associations.HasManyAssociation", [
-        "module:Modelling.Associations.TableAssociation",
-        "base:Objs",
-        "base:Iterators.ArrayIterator"
-    ], function (TableAssociation, Objs, ArrayIterator, scoped) {
-    return TableAssociation.extend({scoped: scoped}, function (inherited) {
-		return {
-		
-			_id: function () {
-				return this._primary_key ? this._model.get(this._primary_key) : this._model.id();
-			},
-		
-			_execute: function () {
-				return this.allBy();
-			},
-		
-			execute: function () {
-				return inherited.execute.call(this).mapSuccess(function (items) {
-					return new ArrayIterator(items);
-				});
-			},
-			
-			findBy: function (query) {
-				return this._foreign_table.findBy(Objs.objectBy(this._foreign_key, this._id()));
-			},
-		
-			allBy: function (query, id) {
-				return this._foreign_table.allBy(Objs.extend(Objs.objectBy(this._foreign_key, id ? id : this._id(), query)));
-			}
+    "module:Modelling.Associations.TableAssociation",
+    "base:Objs",
+    "base:Iterators.ArrayIterator"
+], function(TableAssociation, Objs, ArrayIterator, scoped) {
+    return TableAssociation.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-		};
+            _id: function() {
+                return this._primary_key ? this._model.get(this._primary_key) : this._model.id();
+            },
+
+            _execute: function() {
+                return this.allBy();
+            },
+
+            execute: function() {
+                return inherited.execute.call(this).mapSuccess(function(items) {
+                    return new ArrayIterator(items);
+                });
+            },
+
+            findBy: function(query) {
+                return this._foreign_table.findBy(Objs.objectBy(this._foreign_key, this._id()));
+            },
+
+            allBy: function(query, id) {
+                return this._foreign_table.allBy(Objs.extend(Objs.objectBy(this._foreign_key, id ? id : this._id(), query)));
+            }
+
+        };
     });
 });
 Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
-        "module:Modelling.Associations.HasManyAssociation",
-        "base:Promise",
-        "base:Objs"
-    ], function (HasManyAssociation, Promise, Objs, scoped) {
-    return HasManyAssociation.extend({scoped: scoped}, {
-		
-		_execute: function () {
-			var returnPromise = Promise.create();
-			var promises = Promise.and();
-			Objs.iter(this._model.get(this._foreign_key), function (id) {
-				promises = promises.and(this._foreign_table.findById(id));
-			}, this);
-			promises.forwardError(returnPromise).success(function (result) {
-				returnPromise.asyncSuccess(Objs.filter(result, function (item) {
-					return !!item;
-				}));
-			});
-			return returnPromise;
-		}
+    "module:Modelling.Associations.HasManyAssociation",
+    "base:Promise",
+    "base:Objs"
+], function(HasManyAssociation, Promise, Objs, scoped) {
+    return HasManyAssociation.extend({
+        scoped: scoped
+    }, {
+
+        _execute: function() {
+            var returnPromise = Promise.create();
+            var promises = Promise.and();
+            Objs.iter(this._model.get(this._foreign_key), function(id) {
+                promises = promises.and(this._foreign_table.findById(id));
+            }, this);
+            promises.forwardError(returnPromise).success(function(result) {
+                returnPromise.asyncSuccess(Objs.filter(result, function(item) {
+                    return !!item;
+                }));
+            });
+            return returnPromise;
+        }
 
     });
 });
 Scoped.define("module:Modelling.Associations.HasManyViaAssociation", [
-        "module:Modelling.Associations.HasManyAssociation",
-        "base:Objs",
-        "base:Promise"
-    ], function (HasManyAssociation, Objs, Promise, scoped) {
-    return HasManyAssociation.extend({scoped: scoped}, function (inherited) {
-		return {
-			
-			constructor: function (model, intermediate_table, intermediate_key, foreign_table, foreign_key, options) {
-				inherited.constructor.call(this, model, foreign_table, foreign_key, options);
-				this._intermediate_table = intermediate_table;
-				this._intermediate_key = intermediate_key;
-			},
-		
-			findBy: function (query) {
-				var returnPromise = Promise.create();
-				var intermediateQuery = Objs.objectBy(this._intermediate_key, this._id());
-				this._intermediate_table.findBy(intermediateQuery).forwardError(returnPromise).success(function (intermediate) {
-					if (intermediate) {
-						var full_query = Objs.extend(
-							Objs.clone(query, 1),
-							Objs.objectBy(this._foreign_table.primary_key(), intermediate.get(this._foreign_key)));
-						this._foreign_table.findBy(full_query).forwardCallback(returnPromise);
-					} else
-						returnPromise.asyncSuccess(null);
-				}, this);
-				return returnPromise;
-			},
-		
-			allBy: function (query, id) {
-				var returnPromise = Promise.create();
-				var intermediateQuery = Objs.objectBy(this._intermediate_key, id ? id : this._id());
-				this._intermediate_table.allBy(intermediateQuery).forwardError(returnPromise).success(function (intermediates) {
-					var promises = Promise.and();
-					while (intermediates.hasNext()) {
-						var intermediate = intermediates.next();
-						var full_query = Objs.extend(
-							Objs.clone(query, 1),
-							Objs.objectBy(this._foreign_table.primary_key(), intermediate.get(this._foreign_key)));
-						promises = promises.and(this._foreign_table.allBy(full_query));
-					}
-					promises.forwardError(returnPromise).success(function (foreignss) {
-						var results = [];
-						Objs.iter(foreignss, function (foreigns) {
-							while (foreigns.hasNext())
-								results.push(foreigns.next());
-						});
-						returnPromise.asyncSuccess(results);
-					}, this);
-				}, this);
-				return returnPromise;
-			}
+    "module:Modelling.Associations.HasManyAssociation",
+    "base:Objs",
+    "base:Promise"
+], function(HasManyAssociation, Objs, Promise, scoped) {
+    return HasManyAssociation.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-		};
+            constructor: function(model, intermediate_table, intermediate_key, foreign_table, foreign_key, options) {
+                inherited.constructor.call(this, model, foreign_table, foreign_key, options);
+                this._intermediate_table = intermediate_table;
+                this._intermediate_key = intermediate_key;
+            },
+
+            findBy: function(query) {
+                var returnPromise = Promise.create();
+                var intermediateQuery = Objs.objectBy(this._intermediate_key, this._id());
+                this._intermediate_table.findBy(intermediateQuery).forwardError(returnPromise).success(function(intermediate) {
+                    if (intermediate) {
+                        var full_query = Objs.extend(
+                            Objs.clone(query, 1),
+                            Objs.objectBy(this._foreign_table.primary_key(), intermediate.get(this._foreign_key)));
+                        this._foreign_table.findBy(full_query).forwardCallback(returnPromise);
+                    } else
+                        returnPromise.asyncSuccess(null);
+                }, this);
+                return returnPromise;
+            },
+
+            allBy: function(query, id) {
+                var returnPromise = Promise.create();
+                var intermediateQuery = Objs.objectBy(this._intermediate_key, id ? id : this._id());
+                this._intermediate_table.allBy(intermediateQuery).forwardError(returnPromise).success(function(intermediates) {
+                    var promises = Promise.and();
+                    while (intermediates.hasNext()) {
+                        var intermediate = intermediates.next();
+                        var full_query = Objs.extend(
+                            Objs.clone(query, 1),
+                            Objs.objectBy(this._foreign_table.primary_key(), intermediate.get(this._foreign_key)));
+                        promises = promises.and(this._foreign_table.allBy(full_query));
+                    }
+                    promises.forwardError(returnPromise).success(function(foreignss) {
+                        var results = [];
+                        Objs.iter(foreignss, function(foreigns) {
+                            while (foreigns.hasNext())
+                                results.push(foreigns.next());
+                        });
+                        returnPromise.asyncSuccess(results);
+                    }, this);
+                }, this);
+                return returnPromise;
+            }
+
+        };
     });
 });
 Scoped.define("module:Modelling.Associations.HasOneAssociation", [
-        "module:Modelling.Associations.TableAssociation",
-        "base:Objs"
-    ], function (TableAssociation, Objs, scoped) {
-    return TableAssociation.extend({scoped: scoped}, {
-	
-		_execute: function (id) {
-			var value = id ? id : (this._primary_key ? this._model.get(this._primary_key) : this._model.id());
-			return this._foreign_table.findBy(Objs.objectBy(this._foreign_key, value));
-		}
+    "module:Modelling.Associations.TableAssociation",
+    "base:Objs"
+], function(TableAssociation, Objs, scoped) {
+    return TableAssociation.extend({
+        scoped: scoped
+    }, {
+
+        _execute: function(id) {
+            var value = id ? id : (this._primary_key ? this._model.get(this._primary_key) : this._model.id());
+            return this._foreign_table.findBy(Objs.objectBy(this._foreign_key, value));
+        }
 
     });
 });
 Scoped.define("module:Modelling.Associations.PolymorphicHasOneAssociation", [
-        "module:Modelling.Associations.Association",
-        "base:Objs"
-    ], function (Association, Objs, scoped) {
-    return Association.extend({scoped: scoped}, function (inherited) {
-		return {
-			
-			constructor: function (model, foreign_table_key, foreign_key, options) {
-				inherited.constructor.call(this, model, options);
-				this._foreign_table_key = foreign_table_key;
-				this._foreign_key = foreign_key;
-				if (options.primary_key)
-					this._primary_key = options.primary_key;
-			},
+    "module:Modelling.Associations.Association",
+    "base:Objs"
+], function(Association, Objs, scoped) {
+    return Association.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-			_execute: function (id) {
-				var value = id ? id : (this._primary_key ? this._model.get(this._primary_key) : this._model.id());
-				var foreign_table = Scoped.getGlobal(this._model.get(this._foreign_table_key));
-				return foreign_table.findBy(Objs.objectBy(this._foreign_key, value));
-			}
+            constructor: function(model, foreign_table_key, foreign_key, options) {
+                inherited.constructor.call(this, model, options);
+                this._foreign_table_key = foreign_table_key;
+                this._foreign_key = foreign_key;
+                if (options.primary_key)
+                    this._primary_key = options.primary_key;
+            },
 
-		};
+            _execute: function(id) {
+                var value = id ? id : (this._primary_key ? this._model.get(this._primary_key) : this._model.id());
+                var foreign_table = Scoped.getGlobal(this._model.get(this._foreign_table_key));
+                return foreign_table.findBy(Objs.objectBy(this._foreign_key, value));
+            }
+
+        };
     });
 });
-
 Scoped.define("module:Modelling.Associations.TableAssociation", [
-        "module:Modelling.Associations.Association"
-    ], function (Association, scoped) {
-    return Association.extend({scoped: scoped}, function (inherited) {
-		return {
-			
-			constructor: function (model, foreign_table, foreign_key, options) {
-				inherited.constructor.call(this, model, options);
-				this._foreign_table = foreign_table;
-				this._foreign_key = foreign_key;
-			}
+    "module:Modelling.Associations.Association"
+], function(Association, scoped) {
+    return Association.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-		};
+            constructor: function(model, foreign_table, foreign_key, options) {
+                inherited.constructor.call(this, model, options);
+                this._foreign_table = foreign_table;
+                this._foreign_key = foreign_key;
+            }
+
+        };
     });
 });
 Scoped.define("module:Modelling.ModelException", [
-                                                  "base:Exceptions.Exception"
-                                                  ], function (Exception, scoped) {
-	return Exception.extend({scoped: scoped}, function (inherited) {			
-		return {
+    "base:Exceptions.Exception"
+], function(Exception, scoped) {
+    return Exception.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-			constructor: function (model, message) {
-				inherited.constructor.call(this, message);
-				this.__model = model;
-			},
+            constructor: function(model, message) {
+                inherited.constructor.call(this, message);
+                this.__model = model;
+            },
 
-			model: function () {
-				return this.__model;
-			}
+            model: function() {
+                return this.__model;
+            }
 
-		};
-	});
+        };
+    });
 });
 
 
 Scoped.define("module:Modelling.ModelMissingIdException", [
-                                                           "module:Modelling.ModelException"
-                                                           ], function (Exception, scoped) {
-	return Exception.extend({scoped: scoped}, function (inherited) {			
-		return {
+    "module:Modelling.ModelException"
+], function(Exception, scoped) {
+    return Exception.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-			constructor: function (model) {
-				inherited.constructor.call(this, model, "No id given.");
-			}
+            constructor: function(model) {
+                inherited.constructor.call(this, model, "No id given.");
+            }
 
-		};
-	});
+        };
+    });
 });
 
 
 Scoped.define("module:Modelling.ModelInvalidException", [
-                                                         "module:Modelling.ModelException",
-                                                         "base:Objs"
-                                                         ], function (Exception, Objs, scoped) {
-	return Exception.extend({scoped: scoped}, function (inherited) {			
-		return {
+    "module:Modelling.ModelException",
+    "base:Objs"
+], function(Exception, Objs, scoped) {
+    return Exception.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-			constructor: function (model, err) {
-				var message = Objs.values(model.errors()).join("\n") || err;
-				inherited.constructor.call(this, model, message);
-			}
+            constructor: function(model, err) {
+                var message = Objs.values(model.errors()).join("\n") || err;
+                inherited.constructor.call(this, model, message);
+            }
 
-		};
-	});
+        };
+    });
 });
-
 Scoped.define("module:Modelling.Model", [
-                                         "module:Modelling.AssociatedProperties",
-                                         "module:Modelling.ModelInvalidException",
-                                         "base:Objs",
-                                         "base:Promise",
-                                         "base:Types",
-                                         "module:Modelling.Table"
-                                         ], function (AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Table, scoped) {
-	return AssociatedProperties.extend({scoped: scoped}, function (inherited) {			
-		return {
+    "module:Modelling.AssociatedProperties",
+    "module:Modelling.ModelInvalidException",
+    "base:Objs",
+    "base:Promise",
+    "base:Types",
+    "module:Modelling.Table"
+], function(AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Table, scoped) {
+    return AssociatedProperties.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-			constructor: function (attributes, table, options, ctx) {
-				this.__table = table;
-				this.__options = Objs.extend({
-					newModel: true,
-					removed: false
-				}, options);
-				this.__ctx = ctx;
-				this.__silent = 1;
-				inherited.constructor.call(this, attributes);
-				this.__silent = 0;
-				if (!this.isNew()) {
-					this._properties_changed = {};
-					this._registerEvents();
-				}
-				if (this.option("auto_create") && this.isNew())
-					this.save();
-			},
+            constructor: function(attributes, table, options, ctx) {
+                this.__table = table;
+                this.__options = Objs.extend({
+                    newModel: true,
+                    removed: false
+                }, options);
+                this.__ctx = ctx;
+                this.__silent = 1;
+                inherited.constructor.call(this, attributes);
+                this.__silent = 0;
+                if (!this.isNew()) {
+                    this._properties_changed = {};
+                    this._registerEvents();
+                }
+                if (this.option("auto_create") && this.isNew())
+                    this.save();
+            },
 
-			destroy: function () {
-				this.__table.off(null, null, this);
-				this.trigger("destroy");
-				inherited.destroy.call(this);
-			},
+            destroy: function() {
+                this.__table.off(null, null, this);
+                this.trigger("destroy");
+                inherited.destroy.call(this);
+            },
 
-			option: function (key) {
-				var opts = key in this.__options ? this.__options : this.table().options();
-				return opts[key];
-			},
+            option: function(key) {
+                var opts = key in this.__options ? this.__options : this.table().options();
+                return opts[key];
+            },
 
-			table: function () {
-				return this.__table;
-			},
+            table: function() {
+                return this.__table;
+            },
 
-			isSaved: function () {
-				return this.isRemoved() || (!this.isNew() && !this.isChanged());
-			},
+            isSaved: function() {
+                return this.isRemoved() || (!this.isNew() && !this.isChanged());
+            },
 
-			isNew: function () {
-				return this.option("newModel");
-			},
+            isNew: function() {
+                return this.option("newModel");
+            },
 
-			isRemoved: function () {
-				return this.option("removed");
-			},
+            isRemoved: function() {
+                return this.option("removed");
+            },
 
-			_registerEvents: function () {
-				this.__table.on("update:" + this.id(), function (data) {
-					if (this.isRemoved())
-						return;
-					this.__silent++;
-					for (var key in data) {
-						if (!this._properties_changed[key])
-							this.set(key, data[key]);
-					}
-					this.__silent--;
-				}, this);
-				this.__table.on("remove:" + this.id(), function () {
-					if (this.isRemoved())
-						return;
-					this.trigger("remove");
-					this.__options.removed = true;
-				}, this);
-			},
+            _registerEvents: function() {
+                this.__table.on("update:" + this.id(), function(data) {
+                    if (this.isRemoved())
+                        return;
+                    this.__silent++;
+                    for (var key in data) {
+                        if (!this._properties_changed[key])
+                            this.set(key, data[key]);
+                    }
+                    this.__silent--;
+                }, this);
+                this.__table.on("remove:" + this.id(), function() {
+                    if (this.isRemoved())
+                        return;
+                    this.trigger("remove");
+                    this.__options.removed = true;
+                }, this);
+            },
 
-			update: function (data) {
-				this.__silent++;
-				this.setAll(data);
-				this.__silent--;
-				return this.isNew() ? Promise.create(true) : this.save();
-			},
+            update: function(data) {
+                this.__silent++;
+                this.setAll(data);
+                this.__silent--;
+                return this.isNew() ? Promise.create(true) : this.save();
+            },
 
-			_afterSet: function (key, value, old_value, options) {
-				inherited._afterSet.call(this, key, value, old_value, options);
-				var scheme = this.cls.scheme();
-				if (!(key in scheme) || this.__silent > 0)
-					return;
-				if (this.option("auto_update") && !this.isNew())
-					this.save();
-			},
+            _afterSet: function(key, value, old_value, options) {
+                inherited._afterSet.call(this, key, value, old_value, options);
+                var scheme = this.cls.scheme();
+                if (!(key in scheme) || this.__silent > 0)
+                    return;
+                if (this.option("auto_update") && !this.isNew())
+                    this.save();
+            },
 
-			save: function () {
-				if (this.isRemoved())
-					return Promise.create({});
-				var promise = this.option("save_invalid") ? Promise.value(true) : this.validate();
-				return promise.mapSuccess(function (valid) {
-					if (!valid)
-						return Promise.create(null, new ModelInvalidException(this));
-					var attrs;
-					if (this.isNew()) {
-						attrs = this.cls.filterPersistent(this.get_all_properties());
-						if (this.__options.type_column)
-							attrs[this.__options.type_column] = this.cls.classname;
-					} else {
-						attrs = this.cls.filterPersistent(this.properties_changed());
-						if (Types.is_empty(attrs))
-							return Promise.create(attrs);
-					}
-					var wasNew = this.isNew();
-					var promise = this.isNew() ? this.__table.store().insert(attrs, this.__ctx) : this.__table.store().update(this.id(), attrs, this.__ctx);
-					return promise.mapCallback(function (err, result) {
-						if (this.destroyed())
-							return this;
-						if (err) {
-							if (err.data) {
-								Objs.iter(err.data, function (value, key) {
-									this.setError(key, value);
-								}, this);
-							}
-							return new ModelInvalidException(this, err);
-						}
-						this.__silent++;
-						this.setAll(result);
-						this.__silent--;
-						this._properties_changed = {};
-						this.trigger("save");
-						if (wasNew) {
-							this.__options.newModel = false;
-							this._registerEvents();
-						}
-						return this;
-					}, this);
-				}, this);
-			},
+            save: function() {
+                if (this.isRemoved())
+                    return Promise.create({});
+                var promise = this.option("save_invalid") ? Promise.value(true) : this.validate();
+                return promise.mapSuccess(function(valid) {
+                    if (!valid)
+                        return Promise.create(null, new ModelInvalidException(this));
+                    var attrs;
+                    if (this.isNew()) {
+                        attrs = this.cls.filterPersistent(this.get_all_properties());
+                        if (this.__options.type_column)
+                            attrs[this.__options.type_column] = this.cls.classname;
+                    } else {
+                        attrs = this.cls.filterPersistent(this.properties_changed());
+                        if (Types.is_empty(attrs))
+                            return Promise.create(attrs);
+                    }
+                    var wasNew = this.isNew();
+                    var promise = this.isNew() ? this.__table.store().insert(attrs, this.__ctx) : this.__table.store().update(this.id(), attrs, this.__ctx);
+                    return promise.mapCallback(function(err, result) {
+                        if (this.destroyed())
+                            return this;
+                        if (err) {
+                            if (err.data) {
+                                Objs.iter(err.data, function(value, key) {
+                                    this.setError(key, value);
+                                }, this);
+                            }
+                            return new ModelInvalidException(this, err);
+                        }
+                        this.__silent++;
+                        this.setAll(result);
+                        this.__silent--;
+                        this._properties_changed = {};
+                        this.trigger("save");
+                        if (wasNew) {
+                            this.__options.newModel = false;
+                            this._registerEvents();
+                        }
+                        return this;
+                    }, this);
+                }, this);
+            },
 
-			remove: function () {
-				if (this.isNew() || this.isRemoved())
-					return Promise.create(true);
-				return this.__table.store().remove(this.id(), this.__ctx).success(function () {
-					this.__options.removed = true;
-					this.trigger("remove");		
-				}, this);
-			}	
+            remove: function() {
+                if (this.isNew() || this.isRemoved())
+                    return Promise.create(true);
+                return this.__table.store().remove(this.id(), this.__ctx).success(function() {
+                    this.__options.removed = true;
+                    this.trigger("remove");
+                }, this);
+            }
 
-		};
-	}, {
-		
-		createTable: function (store, options) {
-			return new Table(store, this, options);
-		}
+        };
+    }, {
 
-	});
+        createTable: function(store, options) {
+            return new Table(store, this, options);
+        }
+
+    });
 });
 Scoped.define("module:Modelling.SchemedProperties", [
-                                                     "base:Properties.Properties",
-                                                     "base:Types",
-                                                     "base:Promise",
-                                                     "base:Objs"
-                                                     ], function (Properties, Types, Promise, Objs, scoped) {
-	return Properties.extend({scoped: scoped}, function (inherited) {			
-		return {
+    "base:Properties.Properties",
+    "base:Types",
+    "base:Promise",
+    "base:Objs"
+], function(Properties, Types, Promise, Objs, scoped) {
+    return Properties.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-			constructor: function (attributes) {
-				inherited.constructor.call(this);
-				var scheme = this.cls.scheme();
-				this._properties_changed = {};
-				this.__errors = {};
-				for (var key in scheme) {
-					if ("def" in scheme[key]) 
-						this.set(key, Types.is_function(scheme[key].def) ? scheme[key].def(attributes) : scheme[key].def);
-					else if (scheme[key].auto_create)
-						this.set(key, scheme[key].auto_create(this));
-					else
-						this.set(key, null);
-				}
-				this._properties_changed = {};
-				this.__errors = {};
-				for (key in attributes)
-					this.set(key, attributes[key]);
-			},
+            constructor: function(attributes) {
+                inherited.constructor.call(this);
+                var scheme = this.cls.scheme();
+                this._properties_changed = {};
+                this.__errors = {};
+                for (var key in scheme) {
+                    if ("def" in scheme[key])
+                        this.set(key, Types.is_function(scheme[key].def) ? scheme[key].def(attributes) : scheme[key].def);
+                    else if (scheme[key].auto_create)
+                        this.set(key, scheme[key].auto_create(this));
+                    else
+                        this.set(key, null);
+                }
+                this._properties_changed = {};
+                this.__errors = {};
+                for (key in attributes)
+                    this.set(key, attributes[key]);
+            },
 
-			_unsetChanged: function (key) {
-				delete this._properties_changed[key];
-			},
+            _unsetChanged: function(key) {
+                delete this._properties_changed[key];
+            },
 
-			_beforeSet: function (key, value) {
-				var scheme = this.cls.scheme();
-				if (!(key in scheme))
-					return value;
-				var sch = scheme[key];
-				if (sch.type)
-					value = Types.parseType(value, sch.type);
-				if (sch.transform)
-					value = sch.transform.apply(this, [value]);
-				return value;
-			},
+            _beforeSet: function(key, value) {
+                var scheme = this.cls.scheme();
+                if (!(key in scheme))
+                    return value;
+                var sch = scheme[key];
+                if (sch.type)
+                    value = Types.parseType(value, sch.type);
+                if (sch.transform)
+                    value = sch.transform.apply(this, [value]);
+                return value;
+            },
 
-			_afterSet: function (key, value) {
-				var scheme = this.cls.scheme();
-				if (!(key in scheme))
-					return;
-				this._properties_changed[key] = value;
-				delete this.__errors[key];
-				if (scheme[key].after_set) {
-					var f = Types.is_string(scheme[key].after_set) ? this[scheme[key].after_set] : scheme[key].after_set;
-					f.apply(this, [value]);
-				}
-			},
+            _afterSet: function(key, value) {
+                var scheme = this.cls.scheme();
+                if (!(key in scheme))
+                    return;
+                this._properties_changed[key] = value;
+                delete this.__errors[key];
+                if (scheme[key].after_set) {
+                    var f = Types.is_string(scheme[key].after_set) ? this[scheme[key].after_set] : scheme[key].after_set;
+                    f.apply(this, [value]);
+                }
+            },
 
-			isChanged: function () {
-				return !Types.is_empty(this._properties_changed);
-			},
+            isChanged: function() {
+                return !Types.is_empty(this._properties_changed);
+            },
 
-			properties_changed: function () {
-				return this._properties_changed;
-			},
+            properties_changed: function() {
+                return this._properties_changed;
+            },
 
-			get_all_properties: function () {
-				var result = {};
-				var scheme = this.cls.scheme();
-				for (var key in scheme)
-					result[key] = this.get(key);
-				return result;
-			},
+            get_all_properties: function() {
+                var result = {};
+                var scheme = this.cls.scheme();
+                for (var key in scheme)
+                    result[key] = this.get(key);
+                return result;
+            },
 
-			validate: function () {
-				this.trigger("validate");
-				var promises = [];
-				for (var key in this.cls.scheme())
-					promises.push(this._validateAttr(key));
-				promises.push(Promise.box(this._customValidate, this));
-				return Promise.and(promises).end().mapSuccess(function (arr) {
-					var valid = true;
-					Objs.iter(arr, function (entry) {
-						valid = valid && entry;
-					});
-					return valid;
-				});
-			},
+            validate: function() {
+                this.trigger("validate");
+                var promises = [];
+                for (var key in this.cls.scheme())
+                    promises.push(this._validateAttr(key));
+                promises.push(Promise.box(this._customValidate, this));
+                return Promise.and(promises).end().mapSuccess(function(arr) {
+                    var valid = true;
+                    Objs.iter(arr, function(entry) {
+                        valid = valid && entry;
+                    });
+                    return valid;
+                });
+            },
 
-			_customValidate: function () {
-				return true;
-			},
+            _customValidate: function() {
+                return true;
+            },
 
-			_validateAttr: function (attr) {
-				delete this.__errors[attr];
-				var scheme = this.cls.scheme();
-				var entry = scheme[attr];
-				var validate = entry.validate;
-				if (!validate)
-					return Promise.value(true);
-				if (!Types.is_array(validate))
-					validate = [validate];
-				var value = this.get(attr);
-				var promises = [];
-				Objs.iter(validate, function (validator) {
-					promises.push(Promise.box(validator.validate, validator, [value, this]));
-				}, this);
-				return Promise.and(promises).end().mapSuccess(function (arr) {
-					var valid = true;
-					Objs.iter(arr, function (entry) {
-						if (entry !== null) {
-							valid = false;
-							this.__errors[attr] = entry;
-						}
-					}, this);
-					this.trigger("validate:" + attr, valid, this.__errors[attr]);
-					return valid;
-				}, this);
-			},
+            _validateAttr: function(attr) {
+                delete this.__errors[attr];
+                var scheme = this.cls.scheme();
+                var entry = scheme[attr];
+                var validate = entry.validate;
+                if (!validate)
+                    return Promise.value(true);
+                if (!Types.is_array(validate))
+                    validate = [validate];
+                var value = this.get(attr);
+                var promises = [];
+                Objs.iter(validate, function(validator) {
+                    promises.push(Promise.box(validator.validate, validator, [value, this]));
+                }, this);
+                return Promise.and(promises).end().mapSuccess(function(arr) {
+                    var valid = true;
+                    Objs.iter(arr, function(entry) {
+                        if (entry !== null) {
+                            valid = false;
+                            this.__errors[attr] = entry;
+                        }
+                    }, this);
+                    this.trigger("validate:" + attr, valid, this.__errors[attr]);
+                    return valid;
+                }, this);
+            },
 
-			setError: function (attr, error) {
-				this.__errors[attr] = error;
-				this.trigger("validate:" + attr, !(attr in this.__errors), this.__errors[attr]);
-			},
+            setError: function(attr, error) {
+                this.__errors[attr] = error;
+                this.trigger("validate:" + attr, !(attr in this.__errors), this.__errors[attr]);
+            },
 
-			errors: function () {
-				return this.__errors;
-			},
+            errors: function() {
+                return this.__errors;
+            },
 
-			getError: function (attr) {
-				return this.__errors[attr];
-			},
+            getError: function(attr) {
+                return this.__errors[attr];
+            },
 
-			asRecord: function (tags) {
-				var rec = {};
-				var scheme = this.cls.scheme();
-				var props = this.get_all_properties();
-				tags = tags || [];
-				var asInner = function (key) {
-					var target = scheme[key].tags || [];
-					var tarobj = {};
-					Objs.iter(target, function (value) {
-						tarobj[value] = true;
-					});
-					var success = true;
-					Objs.iter(tags, function (x) {
-						success = success && x in tarobj;
-					}, this);
-					if (success)
-						rec[key] = props[key];
-				};
-				for (var key in props)
-					if (key in scheme)
-						asInner.call(this, key);
-				return rec;		
-			},
+            asRecord: function(tags) {
+                var rec = {};
+                var scheme = this.cls.scheme();
+                var props = this.get_all_properties();
+                tags = tags || [];
+                var asInner = function(key) {
+                    var target = scheme[key].tags || [];
+                    var tarobj = {};
+                    Objs.iter(target, function(value) {
+                        tarobj[value] = true;
+                    });
+                    var success = true;
+                    Objs.iter(tags, function(x) {
+                        success = success && x in tarobj;
+                    }, this);
+                    if (success)
+                        rec[key] = props[key];
+                };
+                for (var key in props)
+                    if (key in scheme)
+                        asInner.call(this, key);
+                return rec;
+            },
 
-			setByTags: function (data, tags) {
-				var scheme = this.cls.scheme();
-				tags = tags || {};
-				var setInner = function (key) {
-					var target = scheme[key].tags || [];
-					var tarobj = {};
-					Objs.iter(target, function (value) {
-						tarobj[value] = true;
-					});
-					var success = true;
-					Objs.iter(tags, function (x) {
-						success = success && x in tarobj;
-					}, this);
-					if (success)
-						this.set(key, data[key]);
-				};
-				for (var key in data)
-					if (key in scheme)
-						setInner.call(this, key);
-			}
+            setByTags: function(data, tags) {
+                var scheme = this.cls.scheme();
+                tags = tags || {};
+                var setInner = function(key) {
+                    var target = scheme[key].tags || [];
+                    var tarobj = {};
+                    Objs.iter(target, function(value) {
+                        tarobj[value] = true;
+                    });
+                    var success = true;
+                    Objs.iter(tags, function(x) {
+                        success = success && x in tarobj;
+                    }, this);
+                    if (success)
+                        this.set(key, data[key]);
+                };
+                for (var key in data)
+                    if (key in scheme)
+                        setInner.call(this, key);
+            }
 
-		};
-	}, {
+        };
+    }, {
 
-		_initializeScheme: function () {
-			return {};
-		},
+        _initializeScheme: function() {
+            return {};
+        },
 
-		asRecords: function (arr, tags) {
-			return arr.map(function (item) {
-				return item.asRecord(tags);
-			});
-		},
+        asRecords: function(arr, tags) {
+            return arr.map(function(item) {
+                return item.asRecord(tags);
+            });
+        },
 
-		filterPersistent: function (obj) {
-			var result = {};
-			var scheme = this.scheme();
-			for (var key in obj) {
-				if ((!Types.is_defined(scheme[key].persistent) || scheme[key].persistent) && (Types.is_defined(obj[key])))
-					result[key] = obj[key];
-			}
-			return result;
-		}
+        filterPersistent: function(obj) {
+            var result = {};
+            var scheme = this.scheme();
+            for (var key in obj) {
+                if ((!Types.is_defined(scheme[key].persistent) || scheme[key].persistent) && (Types.is_defined(obj[key])))
+                    result[key] = obj[key];
+            }
+            return result;
+        }
 
-	}, {
+    }, {
 
-		scheme: function () {
-			this.__scheme = this.__scheme || this._initializeScheme();
-			return this.__scheme;
-		}
+        scheme: function() {
+            this.__scheme = this.__scheme || this._initializeScheme();
+            return this.__scheme;
+        }
 
-	});
+    });
 });
 
 
 Scoped.define("module:Modelling.AssociatedProperties", [
-                                                        "module:Modelling.SchemedProperties"
-                                                        ], function (SchemedProperties, scoped) {
-	return SchemedProperties.extend({scoped: scoped}, function (inherited) {			
-		return {
+    "module:Modelling.SchemedProperties"
+], function(SchemedProperties, scoped) {
+    return SchemedProperties.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-			constructor: function (attributes) {
-				inherited.constructor.call(this, attributes);
-				this.assocs = this._initializeAssociations();
-				for (var key in this.assocs)
-					this.__addAssoc(key, this.assocs[key]);
-			},
+            constructor: function(attributes) {
+                inherited.constructor.call(this, attributes);
+                this.assocs = this._initializeAssociations();
+                for (var key in this.assocs)
+                    this.__addAssoc(key, this.assocs[key]);
+            },
 
-			__addAssoc: function (key, obj) {
-				this[key] = function () {
-					return obj.execute.apply(obj, arguments);
-				};
-			},
+            __addAssoc: function(key, obj) {
+                this[key] = function() {
+                    return obj.execute.apply(obj, arguments);
+                };
+            },
 
-			_initializeAssociations: function () {
-				return {};
-			},
+            _initializeAssociations: function() {
+                return {};
+            },
 
-			destroy: function () {
-				for (var key in this.assocs)
-					this.assocs[key].destroy();
-				inherited.destroy.call(this);
-			},
+            destroy: function() {
+                for (var key in this.assocs)
+                    this.assocs[key].destroy();
+                inherited.destroy.call(this);
+            },
 
-			id: function () {
-				return this.get(this.cls.primary_key());
-			},
-			
-			pid: function () {
-				return this.id();
-			},
+            id: function() {
+                return this.get(this.cls.primary_key());
+            },
 
-			hasId: function () {
-				return this.has(this.cls.primary_key());
-			}
+            pid: function() {
+                return this.id();
+            },
 
-		};
+            hasId: function() {
+                return this.has(this.cls.primary_key());
+            }
 
-	}, {
+        };
 
-		primary_key: function () {
-			return "id";
-		},
+    }, {
 
-		_initializeScheme: function () {
-			var s = {};
-			s[this.primary_key()] = {
-					type: "id",
-					tags: ["read"],
+        primary_key: function() {
+            return "id";
+        },
 
-					after_set: null,
-					persistent: true
-			};
-			return s;
-		}
+        _initializeScheme: function() {
+            var s = {};
+            s[this.primary_key()] = {
+                type: "id",
+                tags: ["read"],
 
-	});
+                after_set: null,
+                persistent: true
+            };
+            return s;
+        }
+
+    });
 });
 Scoped.define("module:Modelling.Table", [
-                                         "base:Class",
-                                         "base:Events.EventsMixin",
-                                         "base:Objs",
-                                         "base:Types",
-                                         "base:Iterators.MappedIterator",
-                                         "base:Classes.ObjectCache"
-                                         ], function (Class, EventsMixin, Objs, Types, MappedIterator, ObjectCache, scoped) {
-	return Class.extend({scoped: scoped}, [EventsMixin, function (inherited) {			
-		return {
+    "base:Class",
+    "base:Events.EventsMixin",
+    "base:Objs",
+    "base:Types",
+    "base:Iterators.MappedIterator",
+    "base:Classes.ObjectCache"
+], function(Class, EventsMixin, Objs, Types, MappedIterator, ObjectCache, scoped) {
+    return Class.extend({
+        scoped: scoped
+    }, [EventsMixin, function(inherited) {
+        return {
 
-			constructor: function (store, model_type, options) {
-				inherited.constructor.call(this);
-				this.__store = store;
-				this.__model_type = model_type;
-				this.__options = Objs.extend({
-					// Attribute that describes the type
-					type_column: null,
-					// Creation options
-					auto_create: false,
-					// Update options
-					auto_update: true,
-					// Save invalid
-					save_invalid: false,
-					// Cache Models
-					cache_models: false
-				}, options || {});
-				this.__store.on("insert", function (obj) {
-					this.trigger("create", obj);
-				}, this);
-				this.__store.on("update", function (row, data) {
-					var id = row[this.primary_key()];
-					this.trigger("update", id, data, row);
-					this.trigger("update:" + id, data);
-				}, this);
-				this.__store.on("remove", function (id) {
-					this.trigger("remove", id);
-					this.trigger("remove:" + id);
-				}, this);
-				if (this.__options.cache_models) {
-					this.model_cache = this.auto_destroy(new ObjectCache(function (model) {
-						return model.id();
-					}));
-				}
-			},
+            constructor: function(store, model_type, options) {
+                inherited.constructor.call(this);
+                this.__store = store;
+                this.__model_type = model_type;
+                this.__options = Objs.extend({
+                    // Attribute that describes the type
+                    type_column: null,
+                    // Creation options
+                    auto_create: false,
+                    // Update options
+                    auto_update: true,
+                    // Save invalid
+                    save_invalid: false,
+                    // Cache Models
+                    cache_models: false
+                }, options || {});
+                this.__store.on("insert", function(obj) {
+                    this.trigger("create", obj);
+                }, this);
+                this.__store.on("update", function(row, data) {
+                    var id = row[this.primary_key()];
+                    this.trigger("update", id, data, row);
+                    this.trigger("update:" + id, data);
+                }, this);
+                this.__store.on("remove", function(id) {
+                    this.trigger("remove", id);
+                    this.trigger("remove:" + id);
+                }, this);
+                if (this.__options.cache_models) {
+                    this.model_cache = this.auto_destroy(new ObjectCache(function(model) {
+                        return model.id();
+                    }));
+                }
+            },
 
-			modelClass: function (cls) {
-				cls = cls || this.__model_type;
-				return Types.is_string(cls) ? Scoped.getGlobal(cls) : cls;
-			},
+            modelClass: function(cls) {
+                cls = cls || this.__model_type;
+                return Types.is_string(cls) ? Scoped.getGlobal(cls) : cls;
+            },
 
-			newModel: function (attributes, cls, ctx) {
-				cls = this.modelClass(cls);
-				var model = new cls(attributes, this, {}, ctx);
-				if (this.__options.auto_create)
-					model.save();
-				if (this.model_cache) {
-					if (model.hasId())
-						this.model_cache.register(model);
-					else {
-						model.once("save", function () {
-							this.model_cache.register(model);
-						}, this);
-					}
-				}
-				return model;
-			},
+            newModel: function(attributes, cls, ctx) {
+                cls = this.modelClass(cls);
+                var model = new cls(attributes, this, {}, ctx);
+                if (this.__options.auto_create)
+                    model.save();
+                if (this.model_cache) {
+                    if (model.hasId())
+                        this.model_cache.register(model);
+                    else {
+                        model.once("save", function() {
+                            this.model_cache.register(model);
+                        }, this);
+                    }
+                }
+                return model;
+            },
 
-			materialize: function (obj, ctx) {
-				if (!obj)
-					return null;
-				var cls = this.modelClass(this.__options.type_column && obj[this.__options.type_column] ? this.__options.type_column : null);
-				if (this.model_cache) {
-					var cachedModel = this.model_cache.get(obj[this.primary_key()]);
-					if (cachedModel) {
-						cachedModel.setAll(obj);
-						return cachedModel;
-					}
-				}
-				var model = new cls(obj, this, {newModel: false}, ctx);
-				if (this.model_cache)
-					this.model_cache.register(model);
-				return model;
-			},
+            materialize: function(obj, ctx) {
+                if (!obj)
+                    return null;
+                var cls = this.modelClass(this.__options.type_column && obj[this.__options.type_column] ? this.__options.type_column : null);
+                if (this.model_cache) {
+                    var cachedModel = this.model_cache.get(obj[this.primary_key()]);
+                    if (cachedModel) {
+                        cachedModel.setAll(obj);
+                        return cachedModel;
+                    }
+                }
+                var model = new cls(obj, this, {
+                    newModel: false
+                }, ctx);
+                if (this.model_cache)
+                    this.model_cache.register(model);
+                return model;
+            },
 
-			options: function () {
-				return this.__options;
-			},
+            options: function() {
+                return this.__options;
+            },
 
-			store: function () {
-				return this.__store;
-			},
+            store: function() {
+                return this.__store;
+            },
 
-			findById: function (id, ctx) {
-				return this.__store.get(id, ctx).mapSuccess(function (obj) {
-					return this.materialize(obj, ctx);
-				}, this);
-			},
+            findById: function(id, ctx) {
+                return this.__store.get(id, ctx).mapSuccess(function(obj) {
+                    return this.materialize(obj, ctx);
+                }, this);
+            },
 
-			findBy: function (query, options, ctx) {
-				return this.allBy(query, Objs.extend({limit: 1}, options), ctx).mapSuccess(function (iter) {
-					return iter.next();
-				});
-			},
+            findBy: function(query, options, ctx) {
+                return this.allBy(query, Objs.extend({
+                    limit: 1
+                }, options), ctx).mapSuccess(function(iter) {
+                    return iter.next();
+                });
+            },
 
-			allBy: function (query, options, ctx) {
-				return this.__store.query(query, options, ctx).mapSuccess(function (iterator) {
-					return new MappedIterator(iterator, function (obj) {
-						return this.materialize(obj, ctx);
-					}, this);
-				}, this);
-			},
+            allBy: function(query, options, ctx) {
+                return this.__store.query(query, options, ctx).mapSuccess(function(iterator) {
+                    return new MappedIterator(iterator, function(obj) {
+                        return this.materialize(obj, ctx);
+                    }, this);
+                }, this);
+            },
 
-			primary_key: function () {
-				return (Types.is_string(this.__model_type) ? Scoped.getGlobal(this.__model_type) : this.__model_type).primary_key();
-			},
+            primary_key: function() {
+                return (Types.is_string(this.__model_type) ? Scoped.getGlobal(this.__model_type) : this.__model_type).primary_key();
+            },
 
-			all: function (options, ctx) {
-				return this.allBy({}, options, ctx);
-			},
+            all: function(options, ctx) {
+                return this.allBy({}, options, ctx);
+            },
 
-			query: function () {
-				// Alias
-				return this.allBy.apply(this, arguments);
-			},
+            query: function() {
+                // Alias
+                return this.allBy.apply(this, arguments);
+            },
 
-			scheme: function () {
-				return this.__model_type.scheme();
-			},
+            scheme: function() {
+                return this.__model_type.scheme();
+            },
 
-			ensure_indices: function () {
-				if (!("ensure_index" in this.__store))
-					return false;
-				var scheme = this.scheme();
-				for (var key in scheme) {
-					if (scheme[key].index)
-						this.__store.ensure_index(key);
-				}
-				return true;
-			}
+            ensure_indices: function() {
+                if (!("ensure_index" in this.__store))
+                    return false;
+                var scheme = this.scheme();
+                for (var key in scheme) {
+                    if (scheme[key].index)
+                        this.__store.ensure_index(key);
+                }
+                return true;
+            }
 
-		};
-	}]);
+        };
+    }]);
 });
 Scoped.define("module:Modelling.Validators.ConditionalValidator", [
-        "module:Modelling.Validators.Validator",
-        "base:Types"
-    ], function (Validator, Types, scoped) {
-    return Validator.extend({scoped: scoped}, function (inherited) {
-		return {
-			
-			constructor: function (condition, validator) {
-				inherited.constructor.call(this);
-				this.__condition = condition;
-				this.__validator = Types.is_array(validator) ? validator : [validator];
-			},
-		
-			validate: function (value, context) {
-				if (!this.__condition(value, context))
-					return null;
-				for (var i = 0; i < this.__validator.length; ++i) {
-					var result = this.__validator[i].validate(value, context);
-					if (result !== null)
-						return result;
-				}
-				return null;
-			}
+    "module:Modelling.Validators.Validator",
+    "base:Types"
+], function(Validator, Types, scoped) {
+    return Validator.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-		};
+            constructor: function(condition, validator) {
+                inherited.constructor.call(this);
+                this.__condition = condition;
+                this.__validator = Types.is_array(validator) ? validator : [validator];
+            },
+
+            validate: function(value, context) {
+                if (!this.__condition(value, context))
+                    return null;
+                for (var i = 0; i < this.__validator.length; ++i) {
+                    var result = this.__validator[i].validate(value, context);
+                    if (result !== null)
+                        return result;
+                }
+                return null;
+            }
+
+        };
     });
 });
 Scoped.define("module:Modelling.Validators.EmailValidator", [
-        "module:Modelling.Validators.Validator",
-        "base:Strings"
-    ], function (Validator, Strings, scoped) {
-    return Validator.extend({scoped: scoped}, function (inherited) {
-		return {
+    "module:Modelling.Validators.Validator",
+    "base:Strings"
+], function(Validator, Strings, scoped) {
+    return Validator.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-			constructor: function (error_string) {
-				inherited.constructor.call(this);
-				this.__error_string = error_string ? error_string : "Not a valid email address";
-			},
-		
-			validate: function (value, context) {
-				return Strings.is_email_address(value) ? null : this.__error_string;
-			}
+            constructor: function(error_string) {
+                inherited.constructor.call(this);
+                this.__error_string = error_string ? error_string : "Not a valid email address";
+            },
 
-		};
+            validate: function(value, context) {
+                return Strings.is_email_address(value) ? null : this.__error_string;
+            }
+
+        };
     });
 });
 Scoped.define("module:Modelling.Validators.LengthValidator", [
-        "module:Modelling.Validators.Validator",
-        "base:Types",
-        "base:Objs"
-    ], function (Validator, Types, Objs, scoped) {
-    return Validator.extend({scoped: scoped}, function (inherited) {
-		return {
-			
-			constructor: function (options) {
-				inherited.constructor.call(this);
-				options = Objs.extend({
-					min_length: null,
-					max_length: null,
-					error_string: null
-				}, options);
-				this.__min_length = options.min_length;
-				this.__max_length = options.max_length;
-				this.__error_string = options.error_string;
-				if (!this.__error_string) {
-					if (this.__min_length !== null) {
-						if (this.__max_length !== null)
-							this.__error_string = "Between " + this.__min_length + " and " + this.__max_length + " characters";
-						else
-							this.__error_string = "At least " + this.__min_length + " characters";
-					} else if (this.__max_length !== null)
-						this.__error_string = "At most " + this.__max_length + " characters";
-				}
-			},
-		
-			validate: function (value, context) {
-				if (this.__min_length !== null && (!value || value.length < this.__min_length))
-					return this.__error_string;
-				if (this.__max_length !== null && value.length > this.__max_length)
-					return this.__error_string;
-				return null;
-			}
+    "module:Modelling.Validators.Validator",
+    "base:Types",
+    "base:Objs"
+], function(Validator, Types, Objs, scoped) {
+    return Validator.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-		};
+            constructor: function(options) {
+                inherited.constructor.call(this);
+                options = Objs.extend({
+                    min_length: null,
+                    max_length: null,
+                    error_string: null
+                }, options);
+                this.__min_length = options.min_length;
+                this.__max_length = options.max_length;
+                this.__error_string = options.error_string;
+                if (!this.__error_string) {
+                    if (this.__min_length !== null) {
+                        if (this.__max_length !== null)
+                            this.__error_string = "Between " + this.__min_length + " and " + this.__max_length + " characters";
+                        else
+                            this.__error_string = "At least " + this.__min_length + " characters";
+                    } else if (this.__max_length !== null)
+                        this.__error_string = "At most " + this.__max_length + " characters";
+                }
+            },
+
+            validate: function(value, context) {
+                if (this.__min_length !== null && (!value || value.length < this.__min_length))
+                    return this.__error_string;
+                if (this.__max_length !== null && value.length > this.__max_length)
+                    return this.__error_string;
+                return null;
+            }
+
+        };
     });
 });
 Scoped.define("module:Modelling.Validators.PresentValidator", [
-        "module:Modelling.Validators.Validator",
-        "base:Types"
-    ], function (Validator, Types, scoped) {
-    return Validator.extend({scoped: scoped}, function (inherited) {
-		return {
-			
-			constructor: function (error_string) {
-				inherited.constructor.call(this);
-				this.__error_string = error_string ? error_string : "Field is required";
-			},
-		
-			validate: function (value, context) {
-				return Types.is_null(value) || value === "" ? this.__error_string : null;
-			}
+    "module:Modelling.Validators.Validator",
+    "base:Types"
+], function(Validator, Types, scoped) {
+    return Validator.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-		};
+            constructor: function(error_string) {
+                inherited.constructor.call(this);
+                this.__error_string = error_string ? error_string : "Field is required";
+            },
+
+            validate: function(value, context) {
+                return Types.is_null(value) || value === "" ? this.__error_string : null;
+            }
+
+        };
     });
 });
 Scoped.define("module:Modelling.Validators.UniqueValidator", [
-        "module:Modelling.Validators.Validator"
-    ], function (Validator, scoped) {
-    return Validator.extend({scoped: scoped}, function (inherited) {
-		return {
-			
-			constructor: function (key, error_string) {
-				inherited.constructor.call(this);
-				this.__key = key;
-				this.__error_string = error_string ? error_string : "Key already present";
-			},
-		
-			validate: function (value, context) {
-				var query = {};
-				query[this.__key] = value;
-				return context.table().findBy(query).mapSuccess(function (item) {
-					return (!item || (!context.isNew() && context.id() == item.id())) ? null : this.__error_string;
-				}, this);		
-			}
+    "module:Modelling.Validators.Validator"
+], function(Validator, scoped) {
+    return Validator.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
 
-		};
+            constructor: function(key, error_string) {
+                inherited.constructor.call(this);
+                this.__key = key;
+                this.__error_string = error_string ? error_string : "Key already present";
+            },
+
+            validate: function(value, context) {
+                var query = {};
+                query[this.__key] = value;
+                return context.table().findBy(query).mapSuccess(function(item) {
+                    return (!item || (!context.isNew() && context.id() == item.id())) ? null : this.__error_string;
+                }, this);
+            }
+
+        };
     });
 });
 Scoped.define("module:Modelling.Validators.Validator", [
-        "base:Class"
-    ], function (Class, scoped) {
-    return Class.extend({scoped: scoped}, {
-		
-		validate: function (value, context) {
-			return null;
-		}
+    "base:Class"
+], function(Class, scoped) {
+    return Class.extend({
+        scoped: scoped
+    }, {
+
+        validate: function(value, context) {
+            return null;
+        }
 
     });
 });

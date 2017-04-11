@@ -10,6 +10,7 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			options = options || {};
 			this._id_key = options.id_key || "id";
 			this._create_ids = options.create_ids || false;
+			this._id_lock = options.id_lock || false;
 			this.preserve_preupdate_data = options.preserve_preupdate_data || false;
 			if (this._create_ids)
 				this._id_generator = options.id_generator || this._auto_destroy(new TimedIdGenerator());
@@ -66,6 +67,8 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 		insert: function (data, ctx) {
 			if (!data)
 				return Promise.create(null, new StoreException("empty insert"));
+            if (this._id_key in data && data[this._id_key] && this._id_lock)
+            	return Promise.create(null, new StoreException("id lock"));
 			if (this._create_ids && !(this._id_key in data && data[this._id_key]))
 				data[this._id_key] = this._id_generator.generate();
 			return this._insert(data, ctx).success(function (row) {
