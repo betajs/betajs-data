@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.43 - 2017-04-11
+betajs-data - v1.0.44 - 2017-04-23
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1004,7 +1004,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.43 - 2017-04-11
+betajs-data - v1.0.44 - 2017-04-23
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1016,7 +1016,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.43"
+    "version": "1.0.44"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -3199,8 +3199,9 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 
 		insert_all: function (data, ctx) {
 			var promise = Promise.and();
-			for (var i = 0; i < data.length; ++i)
-				promise = promise.and(this.insert(data[i], ctx));
+			(data || []).forEach(function (item) {
+                promise = promise.and(this.insert(item, ctx));
+			}, this);
 			return promise.end();
 		},
 

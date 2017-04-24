@@ -47,8 +47,9 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 
 		insert_all: function (data, ctx) {
 			var promise = Promise.and();
-			for (var i = 0; i < data.length; ++i)
-				promise = promise.and(this.insert(data[i], ctx));
+			(data || []).forEach(function (item) {
+                promise = promise.and(this.insert(item, ctx));
+			}, this);
 			return promise.end();
 		},
 
