@@ -17,3 +17,9 @@ test("disjunctive normal form 2", function () {
 	QUnit.deepEqual(BetaJS.Data.Queries.simplifiedDNF({foobar: 42}, true), {"$or": [{foobar: 42}]});
 });
 
+
+
+test("elem match query", function () {
+    QUnit.equal(BetaJS.Data.Queries.evaluate({key: {"$elemMatch": {"$eq": 10}}}, {key: [5, 10, 20]}), true);
+    QUnit.equal(BetaJS.Data.Queries.evaluate({key: {"$elemMatch": {"$eq": 11}}}, {key: [5, 10, 20]}), false);
+});

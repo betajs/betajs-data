@@ -69,6 +69,11 @@ Scoped.define("module:Queries", [
             evaluate_single: function(object_value, condition_value) {
                 return object_value === condition_value;
             }
+        },
+        "$elemMatch": {
+            target: "queries",
+            no_index_support: true,
+            evaluate_combine: Objs.exists
         }
     };
 
@@ -157,7 +162,15 @@ Scoped.define("module:Queries", [
             if (capabilities && (!capabilities.conditions || !(key in capabilities.conditions)))
                 return false;
             var meta = this.SYNTAX_CONDITION_KEYS[key];
-            return meta && (meta.target === "atoms" ? this.validate_atoms(value) : this.validate_atom(value));
+            if (!meta)
+                return false;
+            if (meta.target === "atoms")
+                return this.validate_atoms(value);
+            else if (meta.target === "atom")
+                return this.validate_atom(value);
+            else if (meta.target === "queries")
+                return this.validate_queries(value);
+            return false;
         },
 
         normalize: function(query) {
@@ -242,8 +255,17 @@ Scoped.define("module:Queries", [
                 return rec.evaluate_combine.call(Objs, condition_value, function(condition_single_value) {
                     return rec.evaluate_single.call(this, object_value, condition_single_value);
                 }, this);
+            } else if (rec.target === "atom")
+                return rec.evaluate_single.call(this, object_value, condition_value);
+            else if (rec.target === "queries") {
+                return rec.evaluate_combine.call(Objs, object_value, function(object_single_value) {
+                    return this.evaluate_query({
+                        value: condition_value
+                    }, {
+                        value: object_single_value
+                    });
+                }, this);
             }
-            return rec.evaluate_single.call(this, object_value, condition_value);
         },
 
         subsumizes: function(query, query2) {

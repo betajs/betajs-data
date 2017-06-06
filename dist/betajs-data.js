@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.44 - 2017-04-23
+betajs-data - v1.0.45 - 2017-06-06
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1004,7 +1004,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.44 - 2017-04-23
+betajs-data - v1.0.45 - 2017-06-06
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1016,7 +1016,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.44"
+    "version": "1.0.45"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -1509,6 +1509,298 @@ Scoped.define("module:Collections.TableQueryCollection", [
         };
     });
 });
+Scoped.define("module:Stores.DatabaseStore", [
+    "module:Stores.BaseStore",
+    "base:Objs",
+    "module:Queries",
+    "module:Queries.Constrained"
+], function(BaseStore, Objs, Queries, ConstrainedQueries, scoped) {
+    return BaseStore.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            constructor: function(database, table_name, foreign_id) {
+                inherited.constructor.call(this, {
+                    id_key: foreign_id || "id"
+                });
+                this.__database = database;
+                this.__table_name = table_name;
+                this.__table = null;
+                this.__foreign_id = foreign_id;
+            },
+
+            table: function() {
+                if (!this.__table)
+                    this.__table = this.__database.getTable(this.__table_name);
+                return this.__table;
+            },
+
+            _remove: function(id) {
+                if (!this.__foreign_id)
+                    return this.table().removeById(id);
+                return this.table().removeRow(Objs.objectBy(this.__foreign_id, id));
+            },
+
+            _get: function(id) {
+                if (!this.__foreign_id)
+                    return this.table().findById(id);
+                return this.table().findOne(Objs.objectBy(this.__foreign_id, id));
+            },
+
+            _update: function(id, data) {
+                if (!this.__foreign_id)
+                    return this.table().updateById(id, data);
+                return this.table().updateRow(Objs.objectBy(this.__foreign_id, id), data);
+            },
+
+            _query_capabilities: function() {
+                return ConstrainedQueries.fullConstrainedQueryCapabilities(Queries.fullQueryCapabilities());
+            },
+
+            _insert: function(data) {
+                if (this.__foreign_id) {
+                    if (data[this.__foreign_id])
+                        return this.table().insertRow(data);
+                    else
+                        return this.table().insertRow(data);
+                } else {
+                    return this.table().insertRow(data);
+                }
+                /*
+			    if (!this.__foreign_id || !data[this.__foreign_id])
+			        return this.table().insertRow(data);
+			    return this.table().findOne(Objs.objectBy(this.__foreign_id, data[this.__foreign_id])).mapSuccess(function (result) {
+			    	return result ? result : this.table().insertRow(data);
+			    }, this);
+			    */
+            },
+
+            _query: function(query, options) {
+                return this.table().find(query, options);
+            },
+
+            _ensure_index: function(key) {
+                this.table().ensureIndex(key);
+            }
+
+        };
+    });
+});
+Scoped.define("module:Databases.DatabaseTable", [
+    "base:Class",
+    "base:Iterators.MappedIterator"
+], function(Class, MappedIterator, scoped) {
+    return Class.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            constructor: function(database, table_name) {
+                inherited.constructor.call(this);
+                this._database = database;
+                this._table_name = table_name;
+            },
+
+            findOne: function(query, options) {
+                return this._findOne(this._encode(query), options).mapSuccess(function(result) {
+                    return !result ? null : this._decode(result);
+                }, this);
+            },
+
+            _findOne: function(query, options) {
+                options = options || {};
+                options.limit = 1;
+                return this._find(query, options).mapSuccess(function(result) {
+                    return result.next();
+                });
+            },
+
+            _encode: function(data) {
+                return data;
+            },
+
+            _decode: function(data) {
+                return data;
+            },
+
+            _find: function(query, options) {},
+
+            find: function(query, options) {
+                return this._find(this._encode(query), options).mapSuccess(function(result) {
+                    return new MappedIterator(result, this._decode, this);
+                }, this);
+            },
+
+            findById: function(id) {
+                return this.findOne({
+                    id: id
+                });
+            },
+
+            count: function(query) {
+                return this._count(this._encode(query));
+            },
+
+            _insertRow: function(row) {},
+
+            _removeRow: function(query) {},
+
+            _updateRow: function(query, row) {},
+
+            _count: function(query) {},
+
+            insertRow: function(row) {
+                return this._insertRow(this._encode(row)).mapSuccess(this._decode, this);
+            },
+
+            removeRow: function(query) {
+                return this._removeRow(this._encode(query));
+            },
+
+            updateRow: function(query, row) {
+                return this._updateRow(this._encode(query), this._encode(row)).mapSuccess(this._decode, this);
+            },
+
+            removeById: function(id) {
+                return this.removeRow({
+                    id: id
+                });
+            },
+
+            updateById: function(id, data) {
+                return this.updateRow({
+                    id: id
+                }, data);
+            },
+
+            ensureIndex: function(key) {}
+
+        };
+    });
+});
+Scoped.define("module:Databases.Database", [
+    "base:Class"
+], function(Class, scoped) {
+    return Class.extend({
+        scoped: scoped
+    }, {
+
+        _tableClass: function() {
+            return null;
+        },
+
+        getTable: function(table_name) {
+            var cls = this._tableClass();
+            return new cls(this, table_name);
+        }
+
+    });
+});
+Scoped.define("module:Databases.Migrator", [
+    "base:Class",
+    "base:Types"
+], function(Class, Types, scoped) {
+    return Class.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            constructor: function() {
+                inherited.constructor.call(this);
+                this.__version = null;
+                this.__migrations = [];
+                this.__sorted = true;
+            },
+
+            version: function(offset) {
+                if (!this.__version)
+                    this.__version = this._getVersion();
+                return this.__version;
+            },
+
+            _getVersion: function() {},
+
+            _setVersion: function(version) {},
+
+            _log: function(s) {},
+
+            migrations: function() {
+                if (!this.__sorted) {
+                    this.__migrations.sort(function(x, y) {
+                        return x.version - y.version;
+                    });
+                    this.__sorted = true;
+                }
+                return this.__migrations;
+            },
+
+            register: function(migration) {
+                this.__migrations.push(migration);
+                this.__sorted = false;
+            },
+
+            _indexByVersion: function(version) {
+                for (var i = 0; i < this.__migrations.length; ++i) {
+                    if (version == this.__migrations[i].version)
+                        return i;
+                    else if (version < this.__migrations[i].version)
+                        return i - 1;
+                }
+                return this.__migrations.length;
+            },
+
+            migrate: function(version) {
+                var current = this._indexByVersion(this.version());
+                var target = Types.is_defined(version) ? this._indexByVersion(version) : this.__migrations.length - 1;
+                while (current < target) {
+                    var migration = this.__migrations[current + 1];
+                    this._log("Migrate " + migration.version + ": " + migration.title + " - " + migration.description + "...\n");
+                    try {
+                        migration.migrate();
+                        this._setVersion(this.__migrations[current + 1].version);
+                        current++;
+                        this._log("Successfully migrated " + migration.version + ".\n");
+                    } catch (e) {
+                        this._log("Failure! Rolling back " + migration.version + "...\n");
+                        try {
+                            if ("partial_rollback" in migration)
+                                migration.partial_rollback();
+                            else if ("rollback" in migration)
+                                migration.rollback();
+                            else
+                                throw "No rollback defined";
+                        } catch (ex) {
+                            this._log("Failure! Couldn't roll back " + migration.version + "!\n");
+                            throw ex;
+                        }
+                        this._log("Rolled back " + migration.version + "!\n");
+                        throw e;
+                    }
+                }
+            },
+
+            rollback: function(version) {
+                var current = this._indexByVersion(this.version());
+                var target = Types.is_defined(version) ? this._indexByVersion(version) : current - 1;
+                while (current > target) {
+                    var migration = this.__migrations[current];
+                    this._log("Rollback " + migration.version + ": " + migration.title + " - " + migration.description + "...\n");
+                    try {
+                        migration.rollback();
+                        this._setVersion(current >= 1 ? this.__migrations[current - 1].version : 0);
+                        current--;
+                        this._log("Successfully rolled back " + migration.version + ".\n");
+                    } catch (e) {
+                        this._log("Failure! Couldn't roll back " + migration.version + "!\n");
+                        throw e;
+                    }
+                }
+            }
+
+        };
+    });
+});
 Scoped.define("module:Stores.AbstractIndex", [
     "base:Class",
     "base:Comparators",
@@ -1972,6 +2264,11 @@ Scoped.define("module:Queries", [
             evaluate_single: function(object_value, condition_value) {
                 return object_value === condition_value;
             }
+        },
+        "$elemMatch": {
+            target: "queries",
+            no_index_support: true,
+            evaluate_combine: Objs.exists
         }
     };
 
@@ -2060,7 +2357,15 @@ Scoped.define("module:Queries", [
             if (capabilities && (!capabilities.conditions || !(key in capabilities.conditions)))
                 return false;
             var meta = this.SYNTAX_CONDITION_KEYS[key];
-            return meta && (meta.target === "atoms" ? this.validate_atoms(value) : this.validate_atom(value));
+            if (!meta)
+                return false;
+            if (meta.target === "atoms")
+                return this.validate_atoms(value);
+            else if (meta.target === "atom")
+                return this.validate_atom(value);
+            else if (meta.target === "queries")
+                return this.validate_queries(value);
+            return false;
         },
 
         normalize: function(query) {
@@ -2145,8 +2450,17 @@ Scoped.define("module:Queries", [
                 return rec.evaluate_combine.call(Objs, condition_value, function(condition_single_value) {
                     return rec.evaluate_single.call(this, object_value, condition_single_value);
                 }, this);
+            } else if (rec.target === "atom")
+                return rec.evaluate_single.call(this, object_value, condition_value);
+            else if (rec.target === "queries") {
+                return rec.evaluate_combine.call(Objs, object_value, function(object_single_value) {
+                    return this.evaluate_query({
+                        value: condition_value
+                    }, {
+                        value: object_single_value
+                    });
+                }, this);
             }
-            return rec.evaluate_single.call(this, object_value, condition_value);
         },
 
         subsumizes: function(query, query2) {
