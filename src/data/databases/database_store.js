@@ -9,38 +9,41 @@ Scoped.define("module:Stores.DatabaseStore", [
     }, function(inherited) {
         return {
 
-            constructor: function(database, table_name, foreign_id) {
-                inherited.constructor.call(this, {
-                    id_key: foreign_id || "id"
-                });
+            constructor: function(database, table_name, id_key, separate_ids) {
                 this.__database = database;
                 this.__table_name = table_name;
-                this.__table = null;
-                this.__foreign_id = foreign_id;
+                this.__table = this.__database.getTable(this.__table_name);
+                inherited.constructor.call(this, {
+                    id_key: id_key || this.__table.primary_key()
+                });
+                this.__separate_ids = separate_ids;
+                this.__map_ids = !this.__separate_ids && this.id_key() != this.__table.primary_key();
             },
 
             table: function() {
-                if (!this.__table)
-                    this.__table = this.__database.getTable(this.__table_name);
                 return this.__table;
             },
 
             _remove: function(id) {
-                if (!this.__foreign_id)
-                    return this.table().removeById(id);
-                return this.table().removeRow(Objs.objectBy(this.__foreign_id, id));
+                return this.__separate_ids ? this.table().removeRow(this.id_row(id)) : this.table().removeById(id);
             },
 
             _get: function(id) {
-                if (!this.__foreign_id)
-                    return this.table().findById(id);
-                return this.table().findOne(Objs.objectBy(this.__foreign_id, id));
+                var promise = this.__separate_ids ? this.table().findOne(this.id_row(id)) : this.table().findById(id);
+                return this.__map_ids ? promise.mapSuccess(function(data) {
+                    if (data) {
+                        data[this.id_key()] = data[this.table().primary_key()];
+                        delete data[this.table().primary_key()];
+                    }
+                    return data;
+                }, this) : promise;
             },
 
             _update: function(id, data) {
-                if (!this.__foreign_id)
-                    return this.table().updateById(id, data);
-                return this.table().updateRow(Objs.objectBy(this.__foreign_id, id), data);
+                var promise = this.__separate_ids ?
+                    this.table().updateRow(this.id_row(id), data) :
+                    this.table().updateById(id, data);
+                return promise;
             },
 
             _query_capabilities: function() {
@@ -48,25 +51,28 @@ Scoped.define("module:Stores.DatabaseStore", [
             },
 
             _insert: function(data) {
-                if (this.__foreign_id) {
-                    if (data[this.__foreign_id])
-                        return this.table().insertRow(data);
-                    else
-                        return this.table().insertRow(data);
-                } else {
-                    return this.table().insertRow(data);
-                }
-                /*
-			    if (!this.__foreign_id || !data[this.__foreign_id])
-			        return this.table().insertRow(data);
-			    return this.table().findOne(Objs.objectBy(this.__foreign_id, data[this.__foreign_id])).mapSuccess(function (result) {
-			    	return result ? result : this.table().insertRow(data);
-			    }, this);
-			    */
+                var promise = this.table().insertRow(data);
+                return this.__map_ids ? promise.mapSuccess(function(data) {
+                    data[this.id_key()] = data[this.table().primary_key()];
+                    delete data[this.table().primary_key()];
+                    return data;
+                }, this) : promise;
             },
 
             _query: function(query, options) {
-                return this.table().find(query, options);
+                if (this.__map_ids && query[this.id_key()]) {
+                    query = Objs.clone(query, 1);
+                    query[this.table().primary_key()] = query[this.id_key()];
+                    delete query[this.id_key()];
+                }
+                var promise = this.table().find(query, options);
+                return this.__map_ids ? promise.mapSuccess(function(results) {
+                    return new MappedIterator(results, function(data) {
+                        data[this.id_key()] = data[this.table().primary_key()];
+                        delete data[this.table().primary_key()];
+                        return data;
+                    }, this);
+                }) : promise;
             },
 
             _ensure_index: function(key) {

@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.45 - 2017-06-06
+betajs-data - v1.0.46 - 2017-06-08
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.45"
+    "version": "1.0.46"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -515,38 +515,41 @@ Scoped.define("module:Stores.DatabaseStore", [
     }, function(inherited) {
         return {
 
-            constructor: function(database, table_name, foreign_id) {
-                inherited.constructor.call(this, {
-                    id_key: foreign_id || "id"
-                });
+            constructor: function(database, table_name, id_key, separate_ids) {
                 this.__database = database;
                 this.__table_name = table_name;
-                this.__table = null;
-                this.__foreign_id = foreign_id;
+                this.__table = this.__database.getTable(this.__table_name);
+                inherited.constructor.call(this, {
+                    id_key: id_key || this.__table.primary_key()
+                });
+                this.__separate_ids = separate_ids;
+                this.__map_ids = !this.__separate_ids && this.id_key() != this.__table.primary_key();
             },
 
             table: function() {
-                if (!this.__table)
-                    this.__table = this.__database.getTable(this.__table_name);
                 return this.__table;
             },
 
             _remove: function(id) {
-                if (!this.__foreign_id)
-                    return this.table().removeById(id);
-                return this.table().removeRow(Objs.objectBy(this.__foreign_id, id));
+                return this.__separate_ids ? this.table().removeRow(this.id_row(id)) : this.table().removeById(id);
             },
 
             _get: function(id) {
-                if (!this.__foreign_id)
-                    return this.table().findById(id);
-                return this.table().findOne(Objs.objectBy(this.__foreign_id, id));
+                var promise = this.__separate_ids ? this.table().findOne(this.id_row(id)) : this.table().findById(id);
+                return this.__map_ids ? promise.mapSuccess(function(data) {
+                    if (data) {
+                        data[this.id_key()] = data[this.table().primary_key()];
+                        delete data[this.table().primary_key()];
+                    }
+                    return data;
+                }, this) : promise;
             },
 
             _update: function(id, data) {
-                if (!this.__foreign_id)
-                    return this.table().updateById(id, data);
-                return this.table().updateRow(Objs.objectBy(this.__foreign_id, id), data);
+                var promise = this.__separate_ids ?
+                    this.table().updateRow(this.id_row(id), data) :
+                    this.table().updateById(id, data);
+                return promise;
             },
 
             _query_capabilities: function() {
@@ -554,25 +557,28 @@ Scoped.define("module:Stores.DatabaseStore", [
             },
 
             _insert: function(data) {
-                if (this.__foreign_id) {
-                    if (data[this.__foreign_id])
-                        return this.table().insertRow(data);
-                    else
-                        return this.table().insertRow(data);
-                } else {
-                    return this.table().insertRow(data);
-                }
-                /*
-			    if (!this.__foreign_id || !data[this.__foreign_id])
-			        return this.table().insertRow(data);
-			    return this.table().findOne(Objs.objectBy(this.__foreign_id, data[this.__foreign_id])).mapSuccess(function (result) {
-			    	return result ? result : this.table().insertRow(data);
-			    }, this);
-			    */
+                var promise = this.table().insertRow(data);
+                return this.__map_ids ? promise.mapSuccess(function(data) {
+                    data[this.id_key()] = data[this.table().primary_key()];
+                    delete data[this.table().primary_key()];
+                    return data;
+                }, this) : promise;
             },
 
             _query: function(query, options) {
-                return this.table().find(query, options);
+                if (this.__map_ids && query[this.id_key()]) {
+                    query = Objs.clone(query, 1);
+                    query[this.table().primary_key()] = query[this.id_key()];
+                    delete query[this.id_key()];
+                }
+                var promise = this.table().find(query, options);
+                return this.__map_ids ? promise.mapSuccess(function(results) {
+                    return new MappedIterator(results, function(data) {
+                        data[this.id_key()] = data[this.table().primary_key()];
+                        delete data[this.table().primary_key()];
+                        return data;
+                    }, this);
+                }) : promise;
             },
 
             _ensure_index: function(key) {
@@ -584,8 +590,9 @@ Scoped.define("module:Stores.DatabaseStore", [
 });
 Scoped.define("module:Databases.DatabaseTable", [
     "base:Class",
+    "base:Objs",
     "base:Iterators.MappedIterator"
-], function(Class, MappedIterator, scoped) {
+], function(Class, Objs, MappedIterator, scoped) {
     return Class.extend({
         scoped: scoped
     }, function(inherited) {
@@ -595,6 +602,10 @@ Scoped.define("module:Databases.DatabaseTable", [
                 inherited.constructor.call(this);
                 this._database = database;
                 this._table_name = table_name;
+            },
+
+            primary_key: function() {
+                return "id";
             },
 
             findOne: function(query, options) {
@@ -628,9 +639,7 @@ Scoped.define("module:Databases.DatabaseTable", [
             },
 
             findById: function(id) {
-                return this.findOne({
-                    id: id
-                });
+                return this.findOne(Objs.objectBy(this.primary_key(), id));
             },
 
             count: function(query) {
@@ -658,15 +667,11 @@ Scoped.define("module:Databases.DatabaseTable", [
             },
 
             removeById: function(id) {
-                return this.removeRow({
-                    id: id
-                });
+                return this.removeRow(Objs.objectBy(this.primary_key(), id));
             },
 
             updateById: function(id, data) {
-                return this.updateRow({
-                    id: id
-                }, data);
+                return this.updateRow(Objs.objectBy(this.primary_key(), id), data);
             },
 
             ensureIndex: function(key) {}

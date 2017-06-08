@@ -1,7 +1,8 @@
 Scoped.define("module:Databases.DatabaseTable", [
     "base:Class",
+    "base:Objs",
     "base:Iterators.MappedIterator"
-], function(Class, MappedIterator, scoped) {
+], function(Class, Objs, MappedIterator, scoped) {
     return Class.extend({
         scoped: scoped
     }, function(inherited) {
@@ -11,6 +12,10 @@ Scoped.define("module:Databases.DatabaseTable", [
                 inherited.constructor.call(this);
                 this._database = database;
                 this._table_name = table_name;
+            },
+
+            primary_key: function() {
+                return "id";
             },
 
             findOne: function(query, options) {
@@ -44,9 +49,7 @@ Scoped.define("module:Databases.DatabaseTable", [
             },
 
             findById: function(id) {
-                return this.findOne({
-                    id: id
-                });
+                return this.findOne(Objs.objectBy(this.primary_key(), id));
             },
 
             count: function(query) {
@@ -74,15 +77,11 @@ Scoped.define("module:Databases.DatabaseTable", [
             },
 
             removeById: function(id) {
-                return this.removeRow({
-                    id: id
-                });
+                return this.removeRow(Objs.objectBy(this.primary_key(), id));
             },
 
             updateById: function(id, data) {
-                return this.updateRow({
-                    id: id
-                }, data);
+                return this.updateRow(Objs.objectBy(this.primary_key(), id), data);
             },
 
             ensureIndex: function(key) {}
