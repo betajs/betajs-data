@@ -2,8 +2,9 @@ Scoped.define("module:Stores.DatabaseStore", [
     "module:Stores.BaseStore",
     "base:Objs",
     "module:Queries",
-    "module:Queries.Constrained"
-], function(BaseStore, Objs, Queries, ConstrainedQueries, scoped) {
+    "module:Queries.Constrained",
+    "base:Iterators.MappedIterator"
+], function(BaseStore, Objs, Queries, ConstrainedQueries, MappedIterator, scoped) {
     return BaseStore.extend({
         scoped: scoped
     }, function(inherited) {

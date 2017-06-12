@@ -20,41 +20,41 @@ Scoped.define("module:Stores.PassthroughStore", [
 				return this.__store._query_capabilities();
 			},
 
-			_insert: function (data) {
+			_insert: function (data, ctx) {
 				return this._preInsert(data).mapSuccess(function (data) {
-					return this.__store.insert(data).mapSuccess(function (data) {
+					return this.__store.insert(data, ctx).mapSuccess(function (data) {
 						return this._postInsert(data);
 					}, this);
 				}, this);
 			},
 
-			_remove: function (id) {
+			_remove: function (id, ctx) {
 				return this._preRemove(id).mapSuccess(function (id) {
-					return this.__store.remove(id).mapSuccess(function () {
+					return this.__store.remove(id, ctx).mapSuccess(function () {
 						return this._postRemove(id);
 					}, this);
 				}, this);
 			},
 
-			_get: function (id) {
+			_get: function (id, ctx) {
 				return this._preGet(id).mapSuccess(function (id) {
-					return this.__store.get(id).mapSuccess(function (data) {
+					return this.__store.get(id, ctx).mapSuccess(function (data) {
 						return this._postGet(data);
 					}, this);
 				}, this);
 			},
 
-			_update: function (id, data) {
+			_update: function (id, data, ctx) {
 				return this._preUpdate(id, data).mapSuccess(function (args) {
-					return this.__store.update(args.id, args.data).mapSuccess(function (row) {
+					return this.__store.update(args.id, args.data, ctx).mapSuccess(function (row) {
 						return this._postUpdate(row);
 					}, this);
 				}, this);
 			},
 
-			_query: function (query, options) {
+			_query: function (query, options, ctx) {
 				return this._preQuery(query, options).mapSuccess(function (args) {
-					return this.__store.query(args.query, args.options).mapSuccess(function (results) {
+					return this.__store.query(args.query, args.options, ctx).mapSuccess(function (results) {
 						return this._postQuery(results);
 					}, this);
 				}, this);
