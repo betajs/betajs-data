@@ -73,7 +73,7 @@ Scoped.define("module:Stores.DatabaseStore", [
                         delete data[this.table().primary_key()];
                         return data;
                     }, this);
-                }) : promise;
+                }, this) : promise;
             },
 
             _ensure_index: function(key) {

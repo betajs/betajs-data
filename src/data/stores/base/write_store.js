@@ -10,10 +10,13 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			options = options || {};
 			this._id_key = options.id_key || "id";
 			this._create_ids = options.create_ids || false;
+            this._validate_ids = options.validate_ids || false;
 			this._id_lock = options.id_lock || false;
 			this.preserve_preupdate_data = options.preserve_preupdate_data || false;
 			if (this._create_ids)
 				this._id_generator = options.id_generator || this._auto_destroy(new TimedIdGenerator());
+			if (this._validate_ids)
+				this._id_validator = options.id_validator || this._id_generator;
 		},
 
 		id_key: function () {
@@ -71,7 +74,11 @@ Scoped.define("module:Stores.WriteStoreMixin", [
             if (this._id_key in data && data[this._id_key] && this._id_lock)
             	return Promise.create(null, new StoreException("id lock"));
 			if (this._create_ids && !(this._id_key in data && data[this._id_key]))
-				data[this._id_key] = this._id_generator.generate();
+				data[this._id_key] = this._id_generator.generate(ctx);
+			if (this._id_validator && this._id_key in data && data[this._id_key]) {
+				if (!this._id_validator.valid(data[this._id_key], ctx))
+	                return Promise.create(null, new StoreException("invalid id"));
+			}
 			return this._insert(data, ctx).success(function (row) {
 				this._inserted(row, ctx);
 			}, this);

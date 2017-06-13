@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.47 - 2017-06-11
+betajs-data - v1.0.48 - 2017-06-12
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.47"
+    "version": "1.0.48"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -579,7 +579,7 @@ Scoped.define("module:Stores.DatabaseStore", [
                         delete data[this.table().primary_key()];
                         return data;
                     }, this);
-                }) : promise;
+                }, this) : promise;
             },
 
             _ensure_index: function(key) {
@@ -2477,10 +2477,13 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			options = options || {};
 			this._id_key = options.id_key || "id";
 			this._create_ids = options.create_ids || false;
+            this._validate_ids = options.validate_ids || false;
 			this._id_lock = options.id_lock || false;
 			this.preserve_preupdate_data = options.preserve_preupdate_data || false;
 			if (this._create_ids)
 				this._id_generator = options.id_generator || this._auto_destroy(new TimedIdGenerator());
+			if (this._validate_ids)
+				this._id_validator = options.id_validator || this._id_generator;
 		},
 
 		id_key: function () {
@@ -2538,7 +2541,11 @@ Scoped.define("module:Stores.WriteStoreMixin", [
             if (this._id_key in data && data[this._id_key] && this._id_lock)
             	return Promise.create(null, new StoreException("id lock"));
 			if (this._create_ids && !(this._id_key in data && data[this._id_key]))
-				data[this._id_key] = this._id_generator.generate();
+				data[this._id_key] = this._id_generator.generate(ctx);
+			if (this._id_validator && this._id_key in data && data[this._id_key]) {
+				if (!this._id_validator.valid(data[this._id_key], ctx))
+	                return Promise.create(null, new StoreException("invalid id"));
+			}
 			return this._insert(data, ctx).success(function (row) {
 				this._inserted(row, ctx);
 			}, this);
