@@ -23,11 +23,11 @@ Scoped.define("module:Stores.TransformationStore", [
 			},
 			
 			_encodeId: function (id) {
-				return this.id_of(this._encodeData(Objs.objectBy(this.id_key(), id)));
+				return this._store().id_of(this._encodeData(Objs.objectBy(this.id_key(), id)));
 			},
 			
 			_decodeId: function (id) {
-				return this.id_of(this._decodeData(Objs.objectBy(this.id_key(), id)));
+				return this.id_of(this._decodeData(Objs.objectBy(this._store().id_key(), id)));
 			},
 			
 			_encodeQuery: function (query, options) {

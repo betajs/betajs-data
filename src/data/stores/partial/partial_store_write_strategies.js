@@ -19,8 +19,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.WriteStrategy", [
 });
 
 Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
-                                                                              "module:Stores.PartialStoreWriteStrategies.WriteStrategy"
-                                                                              ], function (Class, scoped) {
+	"module:Stores.PartialStoreWriteStrategies.WriteStrategy",
+	"base:Types"
+], function (Class, Types, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -47,17 +48,23 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
 			},
 
 			update: function (cachedId, data, ctx) {
+				var inner = function () {
+                    return this.partialStore.cachedStore.cacheUpdate(cachedId, data, {
+                        ignoreLock: false,
+                        lockAttrs: false,
+                        silent: true,
+                        refreshMeta: true,
+                        accessMeta: true
+                    }, ctx);
+				};
+                var remoteRequired = !Types.is_empty(this.partialStore.cachedStore.removeItemSupp(data));
+                if (!remoteRequired)
+                	return inner.call(this);
 				return this.partialStore.cachedStore.cachedIdToRemoteId(cachedId).mapSuccess(function (remoteId) {
 					return this.partialStore.remoteStore.update(remoteId, data, ctx).mapSuccess(function () {
-						return this.partialStore.cachedStore.cacheUpdate(cachedId, data, {
-							ignoreLock: false,
-							lockAttrs: false,
-							silent: true,
-							refreshMeta: true,
-							accessMeta: true
-						}, ctx);
+						return inner.call(this);
 					}, this);
-				});
+				}, this);
 			}
 
 		};

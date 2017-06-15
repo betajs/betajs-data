@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.48 - 2017-06-12
+betajs-data - v1.0.49 - 2017-06-14
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1004,7 +1004,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.48 - 2017-06-12
+betajs-data - v1.0.49 - 2017-06-14
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1016,7 +1016,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.48"
+    "version": "1.0.49"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -4353,11 +4353,11 @@ Scoped.define("module:Stores.TransformationStore", [
 			},
 			
 			_encodeId: function (id) {
-				return this.id_of(this._encodeData(Objs.objectBy(this.id_key(), id)));
+				return this._store().id_of(this._encodeData(Objs.objectBy(this.id_key(), id)));
 			},
 			
 			_decodeId: function (id) {
-				return this.id_of(this._decodeData(Objs.objectBy(this.id_key(), id)));
+				return this.id_of(this._decodeData(Objs.objectBy(this._store().id_key(), id)));
 			},
 			
 			_encodeQuery: function (query, options) {
@@ -5783,8 +5783,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.WriteStrategy", [
 });
 
 Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
-                                                                              "module:Stores.PartialStoreWriteStrategies.WriteStrategy"
-                                                                              ], function (Class, scoped) {
+	"module:Stores.PartialStoreWriteStrategies.WriteStrategy",
+	"base:Types"
+], function (Class, Types, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -5811,17 +5812,23 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
 			},
 
 			update: function (cachedId, data, ctx) {
+				var inner = function () {
+                    return this.partialStore.cachedStore.cacheUpdate(cachedId, data, {
+                        ignoreLock: false,
+                        lockAttrs: false,
+                        silent: true,
+                        refreshMeta: true,
+                        accessMeta: true
+                    }, ctx);
+				};
+                var remoteRequired = !Types.is_empty(this.partialStore.cachedStore.removeItemSupp(data));
+                if (!remoteRequired)
+                	return inner.call(this);
 				return this.partialStore.cachedStore.cachedIdToRemoteId(cachedId).mapSuccess(function (remoteId) {
 					return this.partialStore.remoteStore.update(remoteId, data, ctx).mapSuccess(function () {
-						return this.partialStore.cachedStore.cacheUpdate(cachedId, data, {
-							ignoreLock: false,
-							lockAttrs: false,
-							silent: true,
-							refreshMeta: true,
-							accessMeta: true
-						}, ctx);
+						return inner.call(this);
 					}, this);
-				});
+				}, this);
 			}
 
 		};
