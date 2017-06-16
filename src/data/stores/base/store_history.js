@@ -48,15 +48,17 @@ Scoped.define("module:Stores.StoreHistory", [
 				if (this._options.combine_insert_update || this._options.combine_update_update) {
 					var types = [];
 					if (this._options.combine_insert_update)
-						types.push("insert");
+						types.push({"type": "insert"});
 					if (this._options.combine_update_update)
-						types.push("update");
+						types.push({"type": "update"});
 					var combined_data = {};
 					var delete_ids = [];
-					var iter = this.historyStore.query(Objs.extend({
-						type: {"$or": types},
-						row_id: row_id
-					}, this._options.filter_data), {sort: {commit_id: 1}}).value();
+					var query = Objs.extend({ row_id: row_id }, this._options.filter_data);
+					if (types.length === 1)
+						query.type = types[0];
+					else
+						query.$or = types;
+					var iter = this.historyStore.query(query, {sort: {commit_id: 1}}).value();
 					while (iter.hasNext()) {
 						var itemData = iter.next();
 						if (itemData.type === "insert")

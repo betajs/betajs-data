@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.49 - 2017-06-14
+betajs-data - v1.0.50 - 2017-06-15
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.49"
+    "version": "1.0.50"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -2121,8 +2121,9 @@ Scoped.define("module:Stores.MemoryStore", [
     //"base:Iterators.ObjectValuesIterator",
     "base:Iterators.FilteredIterator",
     "base:Iterators.ArrayIterator",
-    "base:Objs"
-], function (AssocStore, FilteredIterator, ArrayIterator, Objs, scoped) {
+    "base:Objs",
+	"base:Promise"
+], function (AssocStore, FilteredIterator, ArrayIterator, Objs, Promise, scoped) {
 	return AssocStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -2166,7 +2167,7 @@ Scoped.define("module:Stores.MemoryStore", [
 			},
 			
 			_count: function (query) {
-				return query ? inherited._count.call(this, query) : this.__count;
+				return query ? inherited._count.call(this, query) : Promise.value(this.__count);
 			}
 
 		};
@@ -2368,15 +2369,17 @@ Scoped.define("module:Stores.StoreHistory", [
 				if (this._options.combine_insert_update || this._options.combine_update_update) {
 					var types = [];
 					if (this._options.combine_insert_update)
-						types.push("insert");
+						types.push({"type": "insert"});
 					if (this._options.combine_update_update)
-						types.push("update");
+						types.push({"type": "update"});
 					var combined_data = {};
 					var delete_ids = [];
-					var iter = this.historyStore.query(Objs.extend({
-						type: {"$or": types},
-						row_id: row_id
-					}, this._options.filter_data), {sort: {commit_id: 1}}).value();
+					var query = Objs.extend({ row_id: row_id }, this._options.filter_data);
+					if (types.length === 1)
+						query.type = types[0];
+					else
+						query.$or = types;
+					var iter = this.historyStore.query(query, {sort: {commit_id: 1}}).value();
 					while (iter.hasNext()) {
 						var itemData = iter.next();
 						if (itemData.type === "insert")
@@ -4896,12 +4899,12 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
 
 
 Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
-                                                                           "module:Stores.PartialStoreWriteStrategies.WriteStrategy",
-                                                                           "module:Stores.StoreHistory",
-                                                                           "module:Stores.MemoryStore",
-                                                                           "base:Objs",
-                                                                           "base:Timers.Timer"
-                                                                           ], function (Class, StoreHistory, MemoryStore, Objs, Timer, scoped) {
+	"module:Stores.PartialStoreWriteStrategies.WriteStrategy",
+	"module:Stores.StoreHistory",
+	"module:Stores.MemoryStore",
+	"base:Objs",
+	"base:Timers.Timer"
+], function (Class, StoreHistory, MemoryStore, Objs, Timer, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -4913,7 +4916,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 			
 			init: function (partialStore) {
 				inherited.init.call(this, partialStore);
-				this.storeHistory = this.auto_destroy(new StoreHistory(null, this.historyStore, {
+				this.storeHistory = this.auto_destroy(new StoreHistory(null, this.historyStore, Objs.extend({
 					source_id_key: partialStore.cachedStore.itemCache.id_key(),
 					row_data: {
 						pushed: false,
@@ -4922,7 +4925,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					filter_data: {
 						pushed: false
 					}
-				}));
+				}, this._options)));
 				if (this._options.auto_push) {
 					this.auto_destroy(new Timer({
 						fire: function () {

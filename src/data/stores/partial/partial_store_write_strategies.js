@@ -137,12 +137,12 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
 
 
 Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
-                                                                           "module:Stores.PartialStoreWriteStrategies.WriteStrategy",
-                                                                           "module:Stores.StoreHistory",
-                                                                           "module:Stores.MemoryStore",
-                                                                           "base:Objs",
-                                                                           "base:Timers.Timer"
-                                                                           ], function (Class, StoreHistory, MemoryStore, Objs, Timer, scoped) {
+	"module:Stores.PartialStoreWriteStrategies.WriteStrategy",
+	"module:Stores.StoreHistory",
+	"module:Stores.MemoryStore",
+	"base:Objs",
+	"base:Timers.Timer"
+], function (Class, StoreHistory, MemoryStore, Objs, Timer, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -154,7 +154,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 			
 			init: function (partialStore) {
 				inherited.init.call(this, partialStore);
-				this.storeHistory = this.auto_destroy(new StoreHistory(null, this.historyStore, {
+				this.storeHistory = this.auto_destroy(new StoreHistory(null, this.historyStore, Objs.extend({
 					source_id_key: partialStore.cachedStore.itemCache.id_key(),
 					row_data: {
 						pushed: false,
@@ -163,7 +163,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					filter_data: {
 						pushed: false
 					}
-				}));
+				}, this._options)));
 				if (this._options.auto_push) {
 					this.auto_destroy(new Timer({
 						fire: function () {

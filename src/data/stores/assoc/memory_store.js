@@ -5,8 +5,9 @@ Scoped.define("module:Stores.MemoryStore", [
     //"base:Iterators.ObjectValuesIterator",
     "base:Iterators.FilteredIterator",
     "base:Iterators.ArrayIterator",
-    "base:Objs"
-], function (AssocStore, FilteredIterator, ArrayIterator, Objs, scoped) {
+    "base:Objs",
+	"base:Promise"
+], function (AssocStore, FilteredIterator, ArrayIterator, Objs, Promise, scoped) {
 	return AssocStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -50,7 +51,7 @@ Scoped.define("module:Stores.MemoryStore", [
 			},
 			
 			_count: function (query) {
-				return query ? inherited._count.call(this, query) : this.__count;
+				return query ? inherited._count.call(this, query) : Promise.value(this.__count);
 			}
 
 		};
