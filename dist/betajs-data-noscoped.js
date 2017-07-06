@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.50 - 2017-06-15
+betajs-data - v1.0.51 - 2017-07-05
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.50"
+    "version": "1.0.51"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -5303,8 +5303,11 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 				}
 			},
 
-			_watchItem : function(id) {
-				this.__itemCache[id] = null;
+			_watchItem : function(id, context) {
+				this.__itemCache[id] = {
+					context: context,
+					value: null
+                };
 			},
 
 			_unwatchItem : function(id) {
@@ -5341,13 +5344,14 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 
 			poll: function () {
 				if (!this.__ignoreUpdates) {
-					Objs.iter(this.__itemCache, function (value, id) {
-						this._store.get(id).success(function (data) {
-							if (!data) 
+					Objs.iter(this.__itemCache, function (cached, id) {
+						this._store.get(id, cached.context).success(function (data) {
+							if (!data)
 								this._removedItem(id);
 							else {
-								this.__itemCache[id] = Objs.clone(data, 1);
-								if (value && !Comparators.deepEqual(value, data, -1))
+								var updatable = cached.value && !Comparators.deepEqual(cached.value, data, -1);
+                                cached.value = Objs.clone(data, 1);
+								if (updatable)
 									this._updatedItem(data, data);
 							}
 						}, this);
