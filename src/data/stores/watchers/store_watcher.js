@@ -61,8 +61,8 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			},
 
 			destroy: function () {
-				this.__inserts.iterator().iterate(this.unwatchInsert, this);
-				this.__items.iterator().iterate(this.unwatchItem, this);
+				this.insertsIterator().iterate(this.unwatchInsert, this);
+				this.itemsIterator().iterate(this.unwatchItem, this);
 				this.__inserts.destroy();
 				this.__items.destroy();
 				inherited.destroy.call(this);
@@ -71,6 +71,10 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			insertsIterator: function () {
 				return this.__inserts.iterator();
 			},
+
+            itemsIterator: function () {
+                return this.__items.iterator();
+            },
 
 			watchItem : function(id, context) {
 				if (this.__items.register(id, context))

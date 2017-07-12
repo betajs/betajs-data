@@ -8,21 +8,38 @@ Scoped.define("module:Stores.Watchers.ListWatcher", [
 			constructor: function (store, watchers, options) {
 				options = options || {};
 				options.id_key = store.id_key();
-				this.__watchers = watchers;
+				this.__watchers = {};
 				inherited.constructor.call(this, options);
-				this.__forEachWatcher(function (watcher) {
-					this.delegateEvents(["insert", "update", "remove"], watcher);
-				});
+				if (watchers)
+					watchers.forEach(this.addWatcher, this);
 			},
-			
-			__forEachWatcher: function (f) {
-				Objs.iter(this.__watchers, f, this);
+
+			addWatcher: function (watcher) {
+				if (!this.__watchers[watcher.cid()]) {
+					this.delegateEvents(["insert", "update", "remove"], watcher);
+					this.itemsIterator().iterate(watcher.watchItem, watcher);
+					this.insertsIterator().iterate(watcher.watchInsert, watcher);
+                    this.__watchers[watcher.cid()] = watcher;
+                }
+                return this;
+			},
+
+            removeWatcher: function (watcher) {
+                if (this.__watchers[watcher.cid()]) {
+					watcher.off(null, null, this);
+					this.itemsIterator().iterate(watcher.unwatchItem, watcher);
+					this.insertsIterator().iterate(watcher.unwatchInsert, watcher);
+                    delete this.__watchers[watcher.cid()];
+                }
+                return this;
+            },
+
+			__forEachWatcher: function (f, ctx) {
+				Objs.iter(this.__watchers, f, ctx || this);
 			},
 
 			destroy: function () {
-				this.__forEachWatcher(function (watcher) {
-					watcher.off(null, null, this);
-				});
+				this.__forEachWatcher(this.removeWatcher);
 				inherited.destroy.apply(this);
 			},
 			

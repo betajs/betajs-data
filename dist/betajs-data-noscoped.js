@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.51 - 2017-07-05
+betajs-data - v1.0.52 - 2017-07-11
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.51"
+    "version": "1.0.52"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -5198,21 +5198,38 @@ Scoped.define("module:Stores.Watchers.ListWatcher", [
 			constructor: function (store, watchers, options) {
 				options = options || {};
 				options.id_key = store.id_key();
-				this.__watchers = watchers;
+				this.__watchers = {};
 				inherited.constructor.call(this, options);
-				this.__forEachWatcher(function (watcher) {
-					this.delegateEvents(["insert", "update", "remove"], watcher);
-				});
+				if (watchers)
+					watchers.forEach(this.addWatcher, this);
 			},
-			
-			__forEachWatcher: function (f) {
-				Objs.iter(this.__watchers, f, this);
+
+			addWatcher: function (watcher) {
+				if (!this.__watchers[watcher.cid()]) {
+					this.delegateEvents(["insert", "update", "remove"], watcher);
+					this.itemsIterator().iterate(watcher.watchItem, watcher);
+					this.insertsIterator().iterate(watcher.watchInsert, watcher);
+                    this.__watchers[watcher.cid()] = watcher;
+                }
+                return this;
+			},
+
+            removeWatcher: function (watcher) {
+                if (this.__watchers[watcher.cid()]) {
+					watcher.off(null, null, this);
+					this.itemsIterator().iterate(watcher.unwatchItem, watcher);
+					this.insertsIterator().iterate(watcher.unwatchInsert, watcher);
+                    delete this.__watchers[watcher.cid()];
+                }
+                return this;
+            },
+
+			__forEachWatcher: function (f, ctx) {
+				Objs.iter(this.__watchers, f, ctx || this);
 			},
 
 			destroy: function () {
-				this.__forEachWatcher(function (watcher) {
-					watcher.off(null, null, this);
-				});
+				this.__forEachWatcher(this.removeWatcher);
 				inherited.destroy.apply(this);
 			},
 			
@@ -5451,8 +5468,8 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			},
 
 			destroy: function () {
-				this.__inserts.iterator().iterate(this.unwatchInsert, this);
-				this.__items.iterator().iterate(this.unwatchItem, this);
+				this.insertsIterator().iterate(this.unwatchInsert, this);
+				this.itemsIterator().iterate(this.unwatchItem, this);
 				this.__inserts.destroy();
 				this.__items.destroy();
 				inherited.destroy.call(this);
@@ -5461,6 +5478,10 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			insertsIterator: function () {
 				return this.__inserts.iterator();
 			},
+
+            itemsIterator: function () {
+                return this.__items.iterator();
+            },
 
 			watchItem : function(id, context) {
 				if (this.__items.register(id, context))
