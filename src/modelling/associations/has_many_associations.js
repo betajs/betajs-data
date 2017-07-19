@@ -34,7 +34,19 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
             newCollection: function(query, options) {
                 var result = this.buildQuery(query, options);
                 return new TableQueryCollection(this._foreign_table, result.query, Objs.extend(result.options, this._options.collectionOptions));
-            }
+            },
+
+            remove: function(item) {
+                return this._remove(item);
+            },
+
+            _remove: function(item) {},
+
+            add: function(item) {
+                return this._add(item);
+            },
+
+            _add: function(item) {}
 
         };
     });
