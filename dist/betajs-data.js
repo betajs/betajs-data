@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.52 - 2017-07-11
+betajs-data - v1.0.53 - 2017-07-18
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1004,7 +1004,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.52 - 2017-07-11
+betajs-data - v1.0.53 - 2017-07-18
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1016,7 +1016,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.52"
+    "version": "1.0.53"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -6550,10 +6550,8 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 
 
 Scoped.define("module:Modelling.Associations.Association", [
-    "base:Class",
-    "base:Promise",
-    "base:Iterators"
-], function(Class, Promise, Iterators, scoped) {
+    "base:Class"
+], function(Class, scoped) {
     return Class.extend({
         scoped: scoped
     }, function(inherited) {
@@ -6563,86 +6561,6 @@ Scoped.define("module:Modelling.Associations.Association", [
                 inherited.constructor.call(this);
                 this._model = model;
                 this._options = options || {};
-                if (options.delete_cascade) {
-                    model.on("remove", function() {
-                        this.__delete_cascade();
-                    }, this);
-                }
-            },
-
-            __delete_cascade: function() {
-                this.execute().success(function(iter) {
-                    iter = Iterators.ensure(iter);
-                    while (iter.hasNext())
-                        iter.next().remove({});
-                }, this);
-            },
-
-            execute: function() {
-                if ("__cache" in this)
-                    return Promise.create(this.__cache);
-                var promise = this._execute();
-                if (this._options.cached) {
-                    promise.callback(function(error, value) {
-                        this.__cache = error ? null : value;
-                    }, this);
-                }
-                return promise;
-            },
-
-            invalidate: function() {
-                delete this.__cache;
-            }
-
-        };
-    });
-});
-Scoped.define("module:Modelling.Associations.BelongsToAssociation", [
-    "module:Modelling.Associations.TableAssociation",
-    "base:Promise",
-    "base:Objs"
-], function(TableAssociation, Promise, Objs, scoped) {
-    return TableAssociation.extend({
-        scoped: scoped
-    }, function(inherited) {
-        return {
-
-            _execute: function() {
-                var value = this._model.get(this._foreign_key);
-                if (!value)
-                    return Promise.value(null);
-                return this._primary_key ?
-                    this._foreign_table.findBy(Objs.objectBy(this._primary_key, value)) :
-                    this._foreign_table.findById(value);
-            }
-
-        };
-    });
-});
-Scoped.define("module:Modelling.Associations.ConditionalAssociation", [
-    "module:Modelling.Associations.Association",
-    "base:Objs"
-], function(Associations, Objs, scoped) {
-    return Associations.extend({
-        scoped: scoped
-    }, function(inherited) {
-        return {
-
-            constructor: function(model, options) {
-                inherited.constructor.call(this, model, Objs.extend({
-                    conditional: function() {
-                        return true;
-                    }
-                }, options));
-            },
-
-            _execute: function() {
-                var assoc = this.assoc();
-                return assoc.execute.apply(assoc, arguments);
-            },
-
-            assoc: function() {
-                return this._model.assocs[this._options.conditional(this._model)];
             }
 
         };
@@ -6650,34 +6568,40 @@ Scoped.define("module:Modelling.Associations.ConditionalAssociation", [
 });
 Scoped.define("module:Modelling.Associations.HasManyAssociation", [
     "module:Modelling.Associations.TableAssociation",
-    "base:Objs",
-    "base:Iterators.ArrayIterator"
-], function(TableAssociation, Objs, ArrayIterator, scoped) {
+    "base:Classes.SharedObjectFactory",
+    "module:Collections.TableQueryCollection",
+    "base:Objs"
+], function(TableAssociation, SharedObjectFactory, TableQueryCollection, Objs, scoped) {
     return TableAssociation.extend({
         scoped: scoped
     }, function(inherited) {
         return {
 
-            _id: function() {
-                return this._primary_key ? this._model.get(this._primary_key) : this._model.id();
+            constructor: function() {
+                inherited.constructor.apply(this, arguments);
+                this.collection = new SharedObjectFactory(this.newCollection, this);
             },
 
-            _execute: function() {
-                return this.allBy();
+            _buildQuery: function(query, options) {},
+
+            buildQuery: function(query, options) {
+                return this._buildQuery(Objs.extend(query, this._options.query), Objs.extend(options, this._options.queryOptions));
             },
 
-            execute: function() {
-                return inherited.execute.call(this).mapSuccess(function(items) {
-                    return new ArrayIterator(items);
-                });
+            _queryChanged: function() {
+                var collection = this.collection.value();
+                if (collection)
+                    collection.update(this.buildQuery());
             },
 
-            findBy: function(query) {
-                return this._foreign_table.findBy(Objs.objectBy(this._foreign_key, this._id()));
+            allBy: function(query, options) {
+                var result = this.buildQuery(query, options);
+                return this._foreign_table.allBy(result.query, result.options);
             },
 
-            allBy: function(query, id) {
-                return this._foreign_table.allBy(Objs.extend(Objs.objectBy(this._foreign_key, id ? id : this._id(), query)));
+            newCollection: function(query, options) {
+                var result = this.buildQuery(query, options);
+                return new TableQueryCollection(this._foreign_table, result.query, Objs.extend(result.options, this._options.collectionOptions));
             }
 
         };
@@ -6685,123 +6609,24 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
 });
 Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
     "module:Modelling.Associations.HasManyAssociation",
-    "base:Promise",
     "base:Objs"
-], function(HasManyAssociation, Promise, Objs, scoped) {
-    return HasManyAssociation.extend({
-        scoped: scoped
-    }, {
-
-        _execute: function() {
-            var returnPromise = Promise.create();
-            var promises = Promise.and();
-            Objs.iter(this._model.get(this._foreign_key), function(id) {
-                promises = promises.and(this._foreign_table.findById(id));
-            }, this);
-            promises.forwardError(returnPromise).success(function(result) {
-                returnPromise.asyncSuccess(Objs.filter(result, function(item) {
-                    return !!item;
-                }));
-            });
-            return returnPromise;
-        }
-
-    });
-});
-Scoped.define("module:Modelling.Associations.HasManyViaAssociation", [
-    "module:Modelling.Associations.HasManyAssociation",
-    "base:Objs",
-    "base:Promise"
-], function(HasManyAssociation, Objs, Promise, scoped) {
+], function(HasManyAssociation, Objs, scoped) {
     return HasManyAssociation.extend({
         scoped: scoped
     }, function(inherited) {
         return {
 
-            constructor: function(model, intermediate_table, intermediate_key, foreign_table, foreign_key, options) {
-                inherited.constructor.call(this, model, foreign_table, foreign_key, options);
-                this._intermediate_table = intermediate_table;
-                this._intermediate_key = intermediate_key;
+            constructor: function() {
+                inherited.constructor.apply(this, arguments);
+                this._model.on("change:" + this._foreign_key, this._queryChanged, this);
             },
 
-            findBy: function(query) {
-                var returnPromise = Promise.create();
-                var intermediateQuery = Objs.objectBy(this._intermediate_key, this._id());
-                this._intermediate_table.findBy(intermediateQuery).forwardError(returnPromise).success(function(intermediate) {
-                    if (intermediate) {
-                        var full_query = Objs.extend(
-                            Objs.clone(query, 1),
-                            Objs.objectBy(this._foreign_table.primary_key(), intermediate.get(this._foreign_key)));
-                        this._foreign_table.findBy(full_query).forwardCallback(returnPromise);
-                    } else
-                        returnPromise.asyncSuccess(null);
-                }, this);
-                return returnPromise;
-            },
-
-            allBy: function(query, id) {
-                var returnPromise = Promise.create();
-                var intermediateQuery = Objs.objectBy(this._intermediate_key, id ? id : this._id());
-                this._intermediate_table.allBy(intermediateQuery).forwardError(returnPromise).success(function(intermediates) {
-                    var promises = Promise.and();
-                    while (intermediates.hasNext()) {
-                        var intermediate = intermediates.next();
-                        var full_query = Objs.extend(
-                            Objs.clone(query, 1),
-                            Objs.objectBy(this._foreign_table.primary_key(), intermediate.get(this._foreign_key)));
-                        promises = promises.and(this._foreign_table.allBy(full_query));
-                    }
-                    promises.forwardError(returnPromise).success(function(foreignss) {
-                        var results = [];
-                        Objs.iter(foreignss, function(foreigns) {
-                            while (foreigns.hasNext())
-                                results.push(foreigns.next());
-                        });
-                        returnPromise.asyncSuccess(results);
-                    }, this);
-                }, this);
-                return returnPromise;
-            }
-
-        };
-    });
-});
-Scoped.define("module:Modelling.Associations.HasOneAssociation", [
-    "module:Modelling.Associations.TableAssociation",
-    "base:Objs"
-], function(TableAssociation, Objs, scoped) {
-    return TableAssociation.extend({
-        scoped: scoped
-    }, {
-
-        _execute: function(id) {
-            var value = id ? id : (this._primary_key ? this._model.get(this._primary_key) : this._model.id());
-            return this._foreign_table.findBy(Objs.objectBy(this._foreign_key, value));
-        }
-
-    });
-});
-Scoped.define("module:Modelling.Associations.PolymorphicHasOneAssociation", [
-    "module:Modelling.Associations.Association",
-    "base:Objs"
-], function(Association, Objs, scoped) {
-    return Association.extend({
-        scoped: scoped
-    }, function(inherited) {
-        return {
-
-            constructor: function(model, foreign_table_key, foreign_key, options) {
-                inherited.constructor.call(this, model, options);
-                this._foreign_table_key = foreign_table_key;
-                this._foreign_key = foreign_key;
-                if (options.primary_key)
-                    this._primary_key = options.primary_key;
-            },
-
-            _execute: function(id) {
-                var value = id ? id : (this._primary_key ? this._model.get(this._primary_key) : this._model.id());
-                var foreign_table = Scoped.getGlobal(this._model.get(this._foreign_table_key));
-                return foreign_table.findBy(Objs.objectBy(this._foreign_key, value));
+            _buildQuery: function(query, options) {
+                return {
+                    "query": Objs.objectBy(this._foreign_table.primary_key(), {
+                        "$in": this._model.get(this._foreign_key)
+                    })
+                };
             }
 
         };
@@ -7258,14 +7083,6 @@ Scoped.define("module:Modelling.AssociatedProperties", [
             constructor: function(attributes) {
                 inherited.constructor.call(this, attributes);
                 this.assocs = this._initializeAssociations();
-                for (var key in this.assocs)
-                    this.__addAssoc(key, this.assocs[key]);
-            },
-
-            __addAssoc: function(key, obj) {
-                this[key] = function() {
-                    return obj.execute.apply(obj, arguments);
-                };
             },
 
             _initializeAssociations: function() {

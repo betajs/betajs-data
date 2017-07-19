@@ -1,33 +1,39 @@
 Scoped.define("module:Modelling.Associations.HasManyAssociation", [
     "module:Modelling.Associations.TableAssociation",
-    "base:Objs",
-    "base:Iterators.ArrayIterator"
-], function(TableAssociation, Objs, ArrayIterator, scoped) {
+    "base:Classes.SharedObjectFactory",
+    "module:Collections.TableQueryCollection",
+    "base:Objs"
+], function(TableAssociation, SharedObjectFactory, TableQueryCollection, Objs, scoped) {
     return TableAssociation.extend({
         scoped: scoped
     }, function(inherited) {
         return {
 
-            _id: function() {
-                return this._primary_key ? this._model.get(this._primary_key) : this._model.id();
+            constructor: function() {
+                inherited.constructor.apply(this, arguments);
+                this.collection = new SharedObjectFactory(this.newCollection, this);
             },
 
-            _execute: function() {
-                return this.allBy();
+            _buildQuery: function(query, options) {},
+
+            buildQuery: function(query, options) {
+                return this._buildQuery(Objs.extend(query, this._options.query), Objs.extend(options, this._options.queryOptions));
             },
 
-            execute: function() {
-                return inherited.execute.call(this).mapSuccess(function(items) {
-                    return new ArrayIterator(items);
-                });
+            _queryChanged: function() {
+                var collection = this.collection.value();
+                if (collection)
+                    collection.update(this.buildQuery());
             },
 
-            findBy: function(query) {
-                return this._foreign_table.findBy(Objs.objectBy(this._foreign_key, this._id()));
+            allBy: function(query, options) {
+                var result = this.buildQuery(query, options);
+                return this._foreign_table.allBy(result.query, result.options);
             },
 
-            allBy: function(query, id) {
-                return this._foreign_table.allBy(Objs.extend(Objs.objectBy(this._foreign_key, id ? id : this._id(), query)));
+            newCollection: function(query, options) {
+                var result = this.buildQuery(query, options);
+                return new TableQueryCollection(this._foreign_table, result.query, Objs.extend(result.options, this._options.collectionOptions));
             }
 
         };

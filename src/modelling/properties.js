@@ -221,14 +221,6 @@ Scoped.define("module:Modelling.AssociatedProperties", [
             constructor: function(attributes) {
                 inherited.constructor.call(this, attributes);
                 this.assocs = this._initializeAssociations();
-                for (var key in this.assocs)
-                    this.__addAssoc(key, this.assocs[key]);
-            },
-
-            __addAssoc: function(key, obj) {
-                this[key] = function() {
-                    return obj.execute.apply(obj, arguments);
-                };
             },
 
             _initializeAssociations: function() {
