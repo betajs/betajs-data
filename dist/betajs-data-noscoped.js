@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.54 - 2017-07-19
+betajs-data - v1.0.55 - 2017-07-20
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.54"
+    "version": "1.0.55"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -5544,6 +5544,94 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 });
 
 
+Scoped.extend("module:Modelling.ActiveModel", [
+    "base:Properties.Properties",
+    "base:Async",
+    "module:Queries"
+], function(Properties, Async, Queries, scoped) {
+    return Properties.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            constructor: function(table, query) {
+                inherited.constructor.call(this);
+                this._table = table;
+                this._watcher = table.store().watcher();
+                this._query = query;
+                this.set("model", null);
+                this._unregisterModel();
+            },
+
+            destroy: function() {
+                if (this._watcher) {
+                    this._watcher.unwatchInsert(null, this);
+                    this._watcher.unwatchItem(null, this);
+                }
+                if (this.get("model"))
+                    this.get("model").weakDestroy();
+                this._table.off(null, null, this);
+                inherited.destroy.call(this);
+            },
+
+            _watcher: function() {
+                return this._table.store().watcher();
+            },
+
+            update: function(query) {
+                this._query = query;
+                if (!this.get("model") || !Properties.is_class_instance(this.get("model")) || !Queries.evaluate(this._query, this.get("model").data()))
+                    this._unregisterModel();
+            },
+
+            _registerModel: function(model) {
+                this.set("model", model);
+                if (this._watcher) {
+                    this._watcher.unwatchInsert(null, this);
+                    this._watcher.watchItem(model.id(), this);
+                }
+                this._table.off(null, null, this);
+                model.on("change", function() {
+                    if (!Queries.evaluate(this._query, model.data()))
+                        this._unregisterModel();
+                }, this);
+                model.on("remove", function() {
+                    this._unregisterModel();
+                }, this);
+            },
+
+            _unregisterModel: function() {
+                var model = this.get("model");
+                if (model && Properties.is_class_instance(model)) {
+                    Async.eventually(function() {
+                        model.weakDestroy();
+                    });
+                }
+                if (this._watcher)
+                    this._watcher.unwatchItem(null, this);
+                this.set("model", null);
+                this._table.findBy(this._query).success(function(model) {
+                    if (model)
+                        this._registerModel(model);
+                    else {
+                        if (this._watcher) {
+                            this._watcher.watchInsert({
+                                query: this._query,
+                                options: {
+                                    limit: 1
+                                }
+                            }, this);
+                        }
+                        this._table.on("create", function(data) {
+                            this._registerModel(this._table.materialize(data));
+                        }, this);
+                    }
+                }, this);
+            }
+
+        };
+    });
+});
 Scoped.define("module:Modelling.Associations.Association", [
     "base:Class"
 ], function(Class, scoped) {
@@ -5556,6 +5644,35 @@ Scoped.define("module:Modelling.Associations.Association", [
                 inherited.constructor.call(this);
                 this._model = model;
                 this._options = options || {};
+            }
+
+        };
+    });
+});
+Scoped.define("module:Modelling.Associations.BelongsToAssociation", [
+    "module:Modelling.Associations.OneAssociation",
+    "base:Objs"
+], function(OneAssociation, Objs, scoped) {
+    return OneAssociation.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            constructor: function() {
+                inherited.constructor.apply(this, arguments);
+                this._model.on("change:" + this._foreign_key, this._queryChanged, this);
+            },
+
+            _buildQuery: function(query) {
+                return Objs.objectBy(this._foreign_table.primary_key(), this._model.get(this._foreign_key));
+            },
+
+            _unset: function() {
+                this._model.set(this._foreign_key, null);
+            },
+
+            _set: function(model) {
+                this._model.set(this._foreign_key, model.id());
             }
 
         };
@@ -5715,6 +5832,85 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                     this._model.set(this._foreign_key, current);
                 }
             }
+
+        };
+    });
+});
+Scoped.define("module:Modelling.Associations.HasOneAssociation", [
+    "module:Modelling.Associations.OneAssociation",
+    "base:Objs"
+], function(HasManyAssociation, Objs, scoped) {
+    return HasManyAssociation.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            _buildQuery: function(query, options) {
+                return Objs.objectBy(this._foreign_key, this._model.id());
+            },
+
+            _unset: function() {
+                if (this.active.value() && this.active.value().get("model"))
+                    this.active.value().get("model").set(this._foreign_key, null);
+            },
+
+            _set: function(model) {
+                model.set(this._foreign_key, this._model.id());
+                this._unset();
+            }
+
+        };
+    });
+});
+Scoped.define("module:Modelling.Associations.OneAssociation", [
+    "module:Modelling.Associations.TableAssociation",
+    "base:Classes.SharedObjectFactory",
+    "module:Modelling.ActiveModel",
+    "base:Objs"
+], function(TableAssociation, SharedObjectFactory, ActiveModel, Objs, scoped) {
+    return TableAssociation.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            constructor: function() {
+                inherited.constructor.apply(this, arguments);
+                this.active = new SharedObjectFactory(this.newActiveModel, this);
+            },
+
+            _buildQuery: function(query) {},
+
+            buildQuery: function(query) {
+                return this._buildQuery(Objs.extend(query, this._options.query));
+            },
+
+            _queryChanged: function() {
+                var active = this.active.value();
+                if (active)
+                    active.update(this.buildQuery());
+            },
+
+            findBy: function(query) {
+                var result = this.buildQuery(query);
+                return this._foreign_table.findBy(result);
+            },
+
+            newActiveModel: function(query) {
+                var result = this.buildQuery(query);
+                return new ActiveModel(this._foreign_table, result);
+            },
+
+            unset: function() {
+                return this._unset();
+            },
+
+            _unset: function() {},
+
+            set: function(model) {
+                return this._set(model);
+            },
+
+            _set: function(model) {}
 
         };
     });
