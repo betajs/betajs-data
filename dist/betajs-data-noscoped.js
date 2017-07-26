@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.55 - 2017-07-20
+betajs-data - v1.0.55 - 2017-07-26
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -653,7 +653,16 @@ Scoped.define("module:Databases.DatabaseTable", [
 
             _updateRow: function(query, row) {},
 
-            _count: function(query) {},
+            _count: function(query) {
+                return this.find(query).mapSuccess(function(iter) {
+                    var count = 0;
+                    while (iter.hasNext()) {
+                        count++;
+                        iter.next();
+                    }
+                    return count;
+                });
+            },
 
             insertRow: function(row) {
                 return this._insertRow(this._encode(row)).mapSuccess(this._decode, this);
