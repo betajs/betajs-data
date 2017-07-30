@@ -1,0 +1,15 @@
+require("betajs");
+require(__dirname + "/../dist/betajs-data-noscoped.js");
+require(__dirname + "/general/scoped.js");
+require(__dirname + "/data/queries.js");
+require(__dirname + "/data/stores.js");
+require(__dirname + "/data/indices.js");
+require(__dirname + "/data/store_watcher.js");
+require(__dirname + "/data/cached_stores.js");
+require(__dirname + "/data/partial_stores.js");
+require(__dirname + "/data/invokers.js");
+require(__dirname + "/data/store_history.js");
+require(__dirname + "/modelling/tables.js");
+require(__dirname + "/modelling/model_validations.js");
+require(__dirname + "/collections/collections.js");
+require(__dirname + "/data/complex_store_uses.js");

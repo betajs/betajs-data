@@ -1,48 +1,46 @@
-test("test store update sync", function() {
+QUnit.test("test store update sync", function (assert) {
 	var store = new BetaJS.Data.Stores.MemoryStore();
 	var object = store.insert({x: 5}).value();
-	ok(!!object.id);
-	QUnit.equal(object.x, 5);
+	assert.ok(!!object.id);
+	assert.equal(object.x, 5);
 	store.update(object.id, {y: 7});
-	QUnit.equal(object.y, 7);
+	assert.equal(object.y, 7);
 });
 
 
-test("test store update async", function() {
+QUnit.test("test store update async", function (assert) {
 	var store = new BetaJS.Data.Stores.MemoryStore();
-	stop();
 	store.insert({x: 5}).success(function (object) {
-		ok(!!object.id);
-		QUnit.equal(object.x, 5);
+		assert.ok(!!object.id);
+		assert.equal(object.x, 5);
 		var updated = false;
 		store.update(object.id, {
 			y: 7
 		}).success(function (row) {
 			updated = true;
-			QUnit.equal(row.y, 7);
-			QUnit.equal(this.z, 3);
-			start();
+			assert.equal(row.y, 7);
+			assert.equal(this.z, 3);
 		}, {z: 3});
-		ok(updated);
+		assert.ok(updated);
 	});
 });
 
 
 
-test("test store update async 2", function() {
+QUnit.test("test store update async 2", function (assert) {
 	var store = new BetaJS.Data.Stores.AsyncStore(new BetaJS.Data.Stores.MemoryStore());
-	stop();
+    var done = assert.async();
 	store.insert({x: 5}).success(function (object) {
-		ok(!!object.id, "has object id");
-		QUnit.equal(object.x, 5, "x has right value");
+		assert.ok(!!object.id, "has object id");
+		assert.equal(object.x, 5, "x has right value");
 		var updated = false;
 		store.update(object.id, {
 			y: 7
 		}).success(function (row) {
 			updated = true;
-			QUnit.equal(row.y, 7, "updated value");
-			QUnit.equal(this.z, 3, "context okay");
-			start();
+			assert.equal(row.y, 7, "updated value");
+			assert.equal(this.z, 3, "context assert.okay");
+            done();
 		}, {z: 3});
 	});
 });

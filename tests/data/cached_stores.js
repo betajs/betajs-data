@@ -1,9 +1,9 @@
-test("test cached stores with same id", function() {
-	var remoteStore = new BetaJS.Data.Stores.MemoryStore({id_key: "token"});
+QUnit.test("test cached stores with same id", function (assert) {
+	var remoteStore = new BetaJS.Data.Stores.MemoryStore({id_key: "tassert.oken"});
 	for (var i = 0; i <= 4; ++i)
 		for (var j = 0; j <= 9; ++j)
 			remoteStore.insert({i:i,j:j});
-	var itemCache = new BetaJS.Data.Stores.MemoryStore({id_key: "token"});
+	var itemCache = new BetaJS.Data.Stores.MemoryStore({id_key: "tassert.oken"});
 	var queryCache = new BetaJS.Data.Stores.MemoryStore();
 	var globalTime = 0;
 	var strategy = new BetaJS.Data.Stores.CacheStrategies.ExpiryCacheStrategy({
@@ -20,23 +20,23 @@ test("test cached stores with same id", function() {
 		queryCache: queryCache,
 		cacheStrategy: strategy
 	});
-	QUnit.equal(itemCache.query().value().asArray().length, 0);
-	QUnit.equal(cachedStore.query({i: 1}).value().asArray().length, 10);
-	QUnit.equal(itemCache.query().value().asArray().length, 10);
+	assert.equal(itemCache.query().value().asArray().length, 0);
+	assert.equal(cachedStore.query({i: 1}).value().asArray().length, 10);
+	assert.equal(itemCache.query().value().asArray().length, 10);
 	globalTime = 1;
-	QUnit.equal(itemCache.query({j: 1}).value().asArray().length, 1);
-	QUnit.equal(cachedStore.query({j: 1}).value().asArray().length, 5);
-	QUnit.equal(itemCache.query().value().asArray().length, 14);
+	assert.equal(itemCache.query({j: 1}).value().asArray().length, 1);
+	assert.equal(cachedStore.query({j: 1}).value().asArray().length, 5);
+	assert.equal(itemCache.query().value().asArray().length, 14);
 	cachedStore.cleanup();
-	QUnit.equal(itemCache.query().value().asArray().length, 14);
+	assert.equal(itemCache.query().value().asArray().length, 14);
 	globalTime = 11;
 	cachedStore.cleanup();
-	QUnit.equal(itemCache.query().value().asArray().length, 5);
+	assert.equal(itemCache.query().value().asArray().length, 5);
 });
 
 
-test("test cached stores with different ids", function() {
-	var remoteStore = new BetaJS.Data.Stores.MemoryStore({id_key: "token"});
+QUnit.test("test cached stores with different ids", function (assert) {
+	var remoteStore = new BetaJS.Data.Stores.MemoryStore({id_key: "tassert.oken"});
 	for (var i = 0; i <= 4; ++i)
 		for (var j = 0; j <= 9; ++j)
 			remoteStore.insert({i:i,j:j});
@@ -57,27 +57,27 @@ test("test cached stores with different ids", function() {
 		queryCache: queryCache,
 		cacheStrategy: strategy
 	});
-	QUnit.equal(itemCache.query().value().asArray().length, 0);
-	QUnit.equal(cachedStore.query({i: 1}).value().asArray().length, 10);
-	QUnit.equal(itemCache.query().value().asArray().length, 10);
+	assert.equal(itemCache.query().value().asArray().length, 0);
+	assert.equal(cachedStore.query({i: 1}).value().asArray().length, 10);
+	assert.equal(itemCache.query().value().asArray().length, 10);
 	globalTime = 1;
-	QUnit.equal(itemCache.query({j: 1}).value().asArray().length, 1);
-	QUnit.equal(cachedStore.query({j: 1}).value().asArray().length, 5);
-	QUnit.equal(itemCache.query().value().asArray().length, 14);
+	assert.equal(itemCache.query({j: 1}).value().asArray().length, 1);
+	assert.equal(cachedStore.query({j: 1}).value().asArray().length, 5);
+	assert.equal(itemCache.query().value().asArray().length, 14);
 	cachedStore.cleanup();
-	QUnit.equal(itemCache.query().value().asArray().length, 14);
+	assert.equal(itemCache.query().value().asArray().length, 14);
 	globalTime = 11;
 	cachedStore.cleanup();
-	QUnit.equal(itemCache.query().value().asArray().length, 5);
+	assert.equal(itemCache.query().value().asArray().length, 5);
 });
 
 
-test("test cached stores with supplementary attrs", function() {
-	var remoteStore = new BetaJS.Data.Stores.MemoryStore({id_key: "token"});
+QUnit.test("test cached stores with supplementary attrs", function (assert) {
+	var remoteStore = new BetaJS.Data.Stores.MemoryStore({id_key: "tassert.oken"});
 	for (var i = 0; i <= 4; ++i)
 		for (var j = 0; j <= 9; ++j)
 			remoteStore.insert({i:i,j:j});
-	var itemCache = new BetaJS.Data.Stores.MemoryStore({id_key: "token"});
+	var itemCache = new BetaJS.Data.Stores.MemoryStore({id_key: "tassert.oken"});
 	var queryCache = new BetaJS.Data.Stores.MemoryStore();
 	var globalTime = 0;
 	var strategy = new BetaJS.Data.Stores.CacheStrategies.ExpiryCacheStrategy({
@@ -97,20 +97,20 @@ test("test cached stores with supplementary attrs", function() {
 			adder: "foobar"
 		}
 	});
-	QUnit.equal(itemCache.query().value().asArray().length, 0);
-	QUnit.equal(cachedStore.query({i: 1}).value().asArray().length, 10);
-	QUnit.equal(itemCache.query().value().asArray().length, 10);
+	assert.equal(itemCache.query().value().asArray().length, 0);
+	assert.equal(cachedStore.query({i: 1}).value().asArray().length, 10);
+	assert.equal(itemCache.query().value().asArray().length, 10);
 	globalTime = 1;
-	QUnit.equal(itemCache.query({j: 1}).value().asArray().length, 1);
-	QUnit.equal(cachedStore.query({j: 1}).value().asArray().length, 5);
-	QUnit.equal(itemCache.query().value().asArray().length, 14);
+	assert.equal(itemCache.query({j: 1}).value().asArray().length, 1);
+	assert.equal(cachedStore.query({j: 1}).value().asArray().length, 5);
+	assert.equal(itemCache.query().value().asArray().length, 14);
 	cachedStore.cleanup();
-	QUnit.equal(itemCache.query().value().asArray().length, 14);
+	assert.equal(itemCache.query().value().asArray().length, 14);
 	globalTime = 11;
 	cachedStore.cleanup();
-	QUnit.equal(itemCache.query().value().asArray().length, 5);
-	QUnit.equal(itemCache.query().value().next().adder, "foobar");
-	QUnit.equal(remoteStore.query().value().next().adder, undefined);
-	QUnit.equal(remoteStore.query({adder: "foobar"}).value().asArray().length, 0);
-	QUnit.equal(itemCache.query({adder: "foobar"}).value().asArray().length, 5);
+	assert.equal(itemCache.query().value().asArray().length, 5);
+	assert.equal(itemCache.query().value().next().adder, "foobar");
+	assert.equal(remoteStore.query().value().next().adder, undefined);
+	assert.equal(remoteStore.query({adder: "foobar"}).value().asArray().length, 0);
+	assert.equal(itemCache.query({adder: "foobar"}).value().asArray().length, 5);
 });

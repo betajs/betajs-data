@@ -1,4 +1,4 @@
-test("test indices query", function() {
+QUnit.test("test indices query", function (assert) {
 	var store = new BetaJS.Data.Stores.MemoryStore();
 	var first = new BetaJS.Data.Stores.MemoryIndex(store, "first");
 	var last = new BetaJS.Data.Stores.MemoryIndex(store, "last");
@@ -14,53 +14,53 @@ test("test indices query", function() {
 	first.itemIterate("Louie", true, function (key, item) {
 		list.push(item);
 	});
-	QUnit.deepEqual(list, [louie, ludwig, scrooge]);
+	assert.deepEqual(list, [louie, ludwig, scrooge]);
 	
 	list = [];
 	first.itemIterate("Louid", false, function (key, item) {
 		list.push(item);
 	});
-	QUnit.deepEqual(list, [huey, donald, dewey, daisy]);
+	assert.deepEqual(list, [huey, donald, dewey, daisy]);
 
 	list = [];
 	last.itemIterate("E", true, function (key, item) {
 		list.push(item);
 	});
-	QUnit.deepEqual(list, [scrooge, ludwig]);
+	assert.deepEqual(list, [scrooge, ludwig]);
 });
 
 
-test("test index performance", function () {
+QUnit.test("test index performance", function (assert) {
 	var store = new BetaJS.Data.Stores.MemoryStore();
 		
 	for (var i = 1; i <= 2000; ++i)
 		store.insert({data: i});
 	store.query({"data": 1000}).success(function (iter) {
-		QUnit.equal(iter.asArray().length, 1);
+		assert.equal(iter.asArray().length, 1);
 	});
 	store.query({"data": {"$eq": 1000}}).success(function (iter) {
-		QUnit.equal(iter.asArray().length, 1);
+		assert.equal(iter.asArray().length, 1);
 	});
 	
 	store.indices.data = new BetaJS.Data.Stores.MemoryIndex(store, "data");
 	
 	store.query({"data": {"$eq": 1000}}).success(function (iter) {
-		QUnit.equal(iter.asArray().length, 1);
+		assert.equal(iter.asArray().length, 1);
 	});
 
 });
 
-test("test index queries x", function () {
+QUnit.test("test index queries x", function (assert) {
 	var store = new BetaJS.Data.Stores.MemoryStore();
 	store.indices.j = new BetaJS.Data.Stores.MemoryIndex(store, "j");
 	for (var i = 0; i < 100; ++i)
 		for (var j = 0; j < 100; ++j)
 			store.insert({i:i,j:j});
-	QUnit.equal(store.query({j: 50}).value().asArray().length, 100);
-	QUnit.equal(store.query({j: {"$eq": 50}}).value().asArray().length, 100);
+	assert.equal(store.query({j: 50}).value().asArray().length, 100);
+	assert.equal(store.query({j: {"$eq": 50}}).value().asArray().length, 100);
 });
 
-test("test index queries", function() {
+QUnit.test("test index queries", function (assert) {
 	var store = new BetaJS.Data.Stores.MemoryStore();
 	store.indices.i = new BetaJS.Data.Stores.MemoryIndex(store, "i");
 	var c = 4;
@@ -69,6 +69,6 @@ test("test index queries", function() {
 			store.insert({i:i,j:j});
 
 	for (i = 0; i < c; ++i) {
-		QUnit.equal(store.query({}, {skip: i * c, limit: c, sort: {i: -1}}).value().asArray().length, c, i);
+		assert.equal(store.query({}, {skip: i * c, limit: c, sort: {i: -1}}).value().asArray().length, c, i);
 	}
 });

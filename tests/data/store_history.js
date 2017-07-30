@@ -1,15 +1,15 @@
-test("test store history no combine", function() {
+QUnit.test("test store history no combine", function (assert) {
 	var sourceStore = new BetaJS.Data.Stores.MemoryStore();
 	var historyStore = new BetaJS.Data.Stores.MemoryStore();
 	var storeHistory = new BetaJS.Data.Stores.StoreHistory(sourceStore, historyStore, {
 	});
 	var row = sourceStore.insert({foobar: 1234}).value();
-	QUnit.equal(historyStore.count().value(), 1);
+	assert.equal(historyStore.count().value(), 1);
 	sourceStore.update(row.id, {foobar: 2345});
-    QUnit.equal(historyStore.count().value(), 2);
+    assert.equal(historyStore.count().value(), 2);
 });
 
-test("test store history combine insert and update", function() {
+QUnit.test("test store history combine insert and update", function (assert) {
     var sourceStore = new BetaJS.Data.Stores.MemoryStore();
     var historyStore = new BetaJS.Data.Stores.MemoryStore();
     var storeHistory = new BetaJS.Data.Stores.StoreHistory(sourceStore, historyStore, {
@@ -17,7 +17,7 @@ test("test store history combine insert and update", function() {
         combine_update_update: true
     });
     var row = sourceStore.insert({foobar: 1234}).value();
-    QUnit.equal(historyStore.count().value(), 1);
+    assert.equal(historyStore.count().value(), 1);
     sourceStore.update(row.id, {foobar: 2345});
-    QUnit.equal(historyStore.count().value(), 1);
+    assert.equal(historyStore.count().value(), 1);
 });

@@ -1,4 +1,4 @@
-test("client server cache with different ids", function () {
+QUnit.test("client server cache with different ids", function (assert) {
 	
 	var transport = {
 		receiver_x: new BetaJS.Channels.Receiver(),
@@ -55,17 +55,17 @@ test("client server cache with different ids", function () {
 		limit: 1000
 	});
 
-	QUnit.equal(client.collection.count(), 10);
-	QUnit.equal(client.client_item_cache.query({last_name: "Last-1"}).value().asArray().length, 10);
+	assert.equal(client.collection.count(), 10);
+	assert.equal(client.client_item_cache.query({last_name: "Last-1"}).value().asArray().length, 10);
 	client.store.cleanup();
-	QUnit.equal(client.collection.count(), 10);
-	QUnit.equal(client.client_item_cache.query().value().asArray().length, 0);
+	assert.equal(client.collection.count(), 10);
+	assert.equal(client.client_item_cache.query().value().asArray().length, 0);
 });
 
 
 
 
-test("client server partial with different ids", function () {
+QUnit.test("client server partial with different ids", function (assert) {
 	
 	var transport = {
 		receiver_x: new BetaJS.Channels.Receiver(),
@@ -132,32 +132,32 @@ test("client server partial with different ids", function () {
 	 * 
 	 */
 	// Initial Size
-	QUnit.equal(client.collection.count(), 10);
+	assert.equal(client.collection.count(), 10);
 	// Server gets an email
 	var server_inserted_item_11 = server.store.insert({first_name: "First-11", last_name: "Last-1"}).value();
 	// Client should receive the email automatically via consumer watcher.
-	QUnit.equal(client.collection.count(), 11);
+	assert.equal(client.collection.count(), 11);
 	// Let's also poll.
 	client.poll_watcher.poll();
 	// And make sure we don't get more.
-	QUnit.equal(client.collection.count(), 11);
+	assert.equal(client.collection.count(), 11);
 	// Now we interrupt the transport handler
 	transport.sender_y.online = false;
 	// Server gets an email
 	var server_inserted_item_12 = server.store.insert({first_name: "First-12", last_name: "Last-1"}).value();
 	// Client should not receive the email via consumer watcher.
-	QUnit.equal(client.collection.count(), 11);
+	assert.equal(client.collection.count(), 11);
 	// Let's poll now.
 	client.poll_watcher.poll();
 	// Now we should have the email
-	QUnit.equal(client.collection.count(), 12);
+	assert.equal(client.collection.count(), 12);
 	// Restore transport handler
 	transport.sender_y.online = true;
 	// We should have 102 emails on the server now
-	QUnit.equal(server.store.query().value().asArray().length, 102);
+	assert.equal(server.store.query().value().asArray().length, 102);
 	// Syncing the client to the server shouldn't change this.
 	client.write_strategy.push();
-	QUnit.equal(server.store.query().value().asArray().length, 102);
+	assert.equal(server.store.query().value().asArray().length, 102);
 	
 	/*
 	 * Client --> Server (Insert)
@@ -166,30 +166,30 @@ test("client server partial with different ids", function () {
 	// Create an email on the client site.
 	var client_inserted_item_13 = client.store.insert({first_name: "First-13", last_name: "Last-1"}).value();
 	// Now we should have the email
-	QUnit.equal(client.collection.count(), 13);
+	assert.equal(client.collection.count(), 13);
 	// But not on the server side.
-	QUnit.equal(server.store.query().value().asArray().length, 102);
+	assert.equal(server.store.query().value().asArray().length, 102);
 	// We should after syncinc.
 	client.write_strategy.push();
-	QUnit.equal(server.store.query().value().asArray().length, 103);
+	assert.equal(server.store.query().value().asArray().length, 103);
 	// Pulling it back should not change anything.
 	client.poll_watcher.poll();
-	QUnit.equal(client.collection.count(), 13);
+	assert.equal(client.collection.count(), 13);
 	// Create another email on the client site.
 	var client_inserted_item_14 = client.store.insert({first_name: "First-14", last_name: "Last-1"}).value();
-	QUnit.equal(client.collection.count(), 14);
+	assert.equal(client.collection.count(), 14);
 	// Let's break the connection
 	transport.server_store.online = false;
 	// Syncing it should not be successful.
 	client.write_strategy.push();
-	QUnit.equal(server.store.query().value().asArray().length, 103);
+	assert.equal(server.store.query().value().asArray().length, 103);
 	// Go online again.
 	transport.server_store.online = true;
 	// Let's try again.
 	client.write_strategy.push();
-	QUnit.equal(server.store.query().value().asArray().length, 104);
+	assert.equal(server.store.query().value().asArray().length, 104);
 	// Client side should not have changed.
-	QUnit.equal(client.collection.count(), 14);
+	assert.equal(client.collection.count(), 14);
 	
 	/*
 	 * Server --> Client (Delete)
@@ -199,9 +199,9 @@ test("client server partial with different ids", function () {
 	// Delete on the server
 	server.store.remove(server_inserted_item_11.server_id);
 	// It should be gone on the server side
-	QUnit.equal(server.store.query().value().asArray().length, 103);
+	assert.equal(server.store.query().value().asArray().length, 103);
 	// It should also be gone on the client side.
-	QUnit.equal(client.collection.count(), 13);
+	assert.equal(client.collection.count(), 13);
 	
 	/*
 	 * Client --> Server (Delete)
@@ -211,21 +211,21 @@ test("client server partial with different ids", function () {
 	// Delete on the client
 	client.store.remove(client_inserted_item_14.client_id);
 	// It should be gone on the client side.
-	QUnit.equal(client.collection.count(), 12);
+	assert.equal(client.collection.count(), 12);
 	// It should still exist on the server side.
-	QUnit.equal(server.store.query().value().asArray().length, 103);
+	assert.equal(server.store.query().value().asArray().length, 103);
 	// Let's break the connection
 	transport.server_store.online = false;
 	// Syncing it should not be successful.
 	client.write_strategy.push();
-	QUnit.equal(server.store.query().value().asArray().length, 103);
+	assert.equal(server.store.query().value().asArray().length, 103);
 	// Go online again.
 	transport.server_store.online = true;
 	// Let's try again.
 	client.write_strategy.push();
-	QUnit.equal(server.store.query().value().asArray().length, 102);
+	assert.equal(server.store.query().value().asArray().length, 102);
 	// It should be gone on the client side.
-	QUnit.equal(client.collection.count(), 12);
+	assert.equal(client.collection.count(), 12);
 	
 	
 	/*
@@ -237,9 +237,9 @@ test("client server partial with different ids", function () {
 		"first_name": "First-12-B"
 	});
 	// Should be in the client store
-	QUnit.equal(client.store.query({"first_name": "First-12-B"}).value().asArray().length, 1);
+	assert.equal(client.store.query({"first_name": "First-12-B"}).value().asArray().length, 1);
 	// It should be updated on the client side
-	QUnit.equal(client.collection.getByIndex(10).get("first_name"), "First-12-B");
+	assert.equal(client.collection.getByIndex(10).get("first_name"), "First-12-B");
 	
 	
 	/*
@@ -251,8 +251,8 @@ test("client server partial with different ids", function () {
 	});
 	client.write_strategy.push();
 	var server_items = server.store.query({"first_name": "First-13-B"}).value().asArray(); 
-	QUnit.equal(server_items.length, 1);
-	QUnit.equal(!server_items[0].local_attr, true);
+	assert.equal(server_items.length, 1);
+	assert.equal(!server_items[0].local_attr, true);
 	
 	// Release resources
 	client.collection.destroy();

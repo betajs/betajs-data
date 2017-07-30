@@ -1,4 +1,4 @@
-test("test partial stores, post write strategy, no watchers", function() {
+QUnit.test("test partial stores, post write strategy, no watchers", function (assert) {
 	var remoteStore = new BetaJS.Data.Stores.SimulatorStore(new BetaJS.Data.Stores.MemoryStore({
 		id_generator: new BetaJS.IdGenerators.PrefixedIdGenerator(
 			"remote_id",
@@ -31,42 +31,42 @@ test("test partial stores, post write strategy, no watchers", function() {
 		})
 	});
 	// Queries remote store, caches locally
-	QUnit.equal(store.query({i: 0}).value().asArray().length, 10);
+	assert.equal(store.query({i: 0}).value().asArray().length, 10);
 	
 	remoteStore.online = false;
 	
 	// Failover to local cache
-	QUnit.equal(store.query({i: 1}).value().asArray().length, 0);
-	QUnit.equal(store.query({j: 0}).value().asArray().length, 1);
+	assert.equal(store.query({i: 1}).value().asArray().length, 0);
+	assert.equal(store.query({j: 0}).value().asArray().length, 1);
 	// Cleanup should not delete anything since we have a failover
 	globalTime = 50;
 	store.cachedStore.cleanup();	
-	QUnit.equal(store.query({i: 0}).value().asArray().length, 10);
+	assert.equal(store.query({i: 0}).value().asArray().length, 10);
 	// Back online
 	remoteStore.online = true;	
-	QUnit.equal(store.query({j: 4}).value().asArray().length, 5);
+	assert.equal(store.query({j: 4}).value().asArray().length, 5);
 	// Now it should clean everything, since we are online
 	globalTime = 100;
 	store.cachedStore.cleanup();
 	remoteStore.online = false;
-	QUnit.equal(store.query({i: 0}).value().asArray().length, 0);
+	assert.equal(store.query({i: 0}).value().asArray().length, 0);
 	// Online again
 	remoteStore.online = true;
-	QUnit.equal(store.query({i: 1}).value().asArray().length, 10);
-	QUnit.equal(store.query({j: 0}).value().asArray().length, 5);
-	QUnit.equal(remoteStore.query().value().asArray().length, 50);
+	assert.equal(store.query({i: 1}).value().asArray().length, 10);
+	assert.equal(store.query({j: 0}).value().asArray().length, 5);
+	assert.equal(remoteStore.query().value().asArray().length, 50);
 	// Insert locally
 	store.insert({i: 5, j: 0});
-	QUnit.equal(remoteStore.query().value().asArray().length, 51);
+	assert.equal(remoteStore.query().value().asArray().length, 51);
 	// Offline insert should fail
 	remoteStore.online = false;
 	store.insert({i: 5, j: 1}).success(function () {
-		ok(false, "Insert has to fail");
+		assert.ok(false, "Insert has to fail");
 	});
 });
 
 
-test("test partial stores, pre write strategy, no watchers", function() {
+QUnit.test("test partial stores, pre write strategy, no watchers", function (assert) {
 	var remoteStore = new BetaJS.Data.Stores.SimulatorStore(new BetaJS.Data.Stores.MemoryStore({
 		id_generator: new BetaJS.IdGenerators.PrefixedIdGenerator(
 			"remote_id",
@@ -100,18 +100,18 @@ test("test partial stores, pre write strategy, no watchers", function() {
 		})
 	});
 	store.insert({i: 5, j: 0});
-	QUnit.equal(remoteStore.query().value().asArray().length, 51);
+	assert.equal(remoteStore.query().value().asArray().length, 51);
 	remoteStore.online = false;
-	QUnit.equal(store.query().value().asArray().length, 1);
+	assert.equal(store.query().value().asArray().length, 1);
 	store.insert({i: 5, j: 1});
-	QUnit.equal(store.query().value().asArray().length, 1);
+	assert.equal(store.query().value().asArray().length, 1);
 	remoteStore.online = true;
-	QUnit.equal(remoteStore.query().value().asArray().length, 51);
+	assert.equal(remoteStore.query().value().asArray().length, 51);
 });
 
 
 
-test("test partial stores, commit write strategy, no watchers", function() {
+QUnit.test("test partial stores, commit write strategy, no watchers", function (assert) {
 	var remoteStore = new BetaJS.Data.Stores.SimulatorStore(new BetaJS.Data.Stores.MemoryStore({
 		id_generator: new BetaJS.IdGenerators.PrefixedIdGenerator(
 			"remote_id",
@@ -145,19 +145,19 @@ test("test partial stores, commit write strategy, no watchers", function() {
 		})
 	});
 	store.insert({i: 5, j: 0});
-	QUnit.equal(remoteStore.query().value().asArray().length, 50);
+	assert.equal(remoteStore.query().value().asArray().length, 50);
 	store.writeStrategy.push();
-	QUnit.equal(remoteStore.query().value().asArray().length, 51);
-	QUnit.equal(remoteStore.query({i: 5}).value().asArray().length, 1);
-	QUnit.equal(store.query({i: 5}).value().asArray().length, 1);
+	assert.equal(remoteStore.query().value().asArray().length, 51);
+	assert.equal(remoteStore.query({i: 5}).value().asArray().length, 1);
+	assert.equal(store.query({i: 5}).value().asArray().length, 1);
 	remoteStore.insert({i: 5, j: 1});
-	QUnit.equal(remoteStore.query({i: 5}).value().asArray().length, 2);
-	QUnit.equal(store.query({i: 5}).value().asArray().length, 1);
+	assert.equal(remoteStore.query({i: 5}).value().asArray().length, 2);
+	assert.equal(store.query({i: 5}).value().asArray().length, 1);
 });
 
 
 
-test("test partial stores, commit write strategy, with watchers", function() {
+QUnit.test("test partial stores, commit write strategy, with watchers", function (assert) {
 	var remoteStore = new BetaJS.Data.Stores.SimulatorStore(new BetaJS.Data.Stores.MemoryStore({
 		id_generator: new BetaJS.IdGenerators.PrefixedIdGenerator(
 			"remote_id",
@@ -193,25 +193,25 @@ test("test partial stores, commit write strategy, with watchers", function() {
 		remoteWatcher: remoteWatcher
 	});
 	store.insert({i: 5, j: 0});
-	QUnit.equal(remoteStore.query().value().asArray().length, 50);
+	assert.equal(remoteStore.query().value().asArray().length, 50);
 	store.writeStrategy.push();
-	QUnit.equal(remoteStore.query().value().asArray().length, 51);
-	QUnit.equal(remoteStore.query({i: 5}).value().asArray().length, 1);
-	QUnit.equal(store.query({i: 5}).value().asArray().length, 1);
+	assert.equal(remoteStore.query().value().asArray().length, 51);
+	assert.equal(remoteStore.query({i: 5}).value().asArray().length, 1);
+	assert.equal(store.query({i: 5}).value().asArray().length, 1);
 	remoteStore.insert({i: 5, j: 1});
-	QUnit.equal(remoteStore.query({i: 5}).value().asArray().length, 2);
+	assert.equal(remoteStore.query({i: 5}).value().asArray().length, 2);
 	remoteWatcher.poll();
-	QUnit.equal(store.query({i: 5}).value().asArray().length, 1);
+	assert.equal(store.query({i: 5}).value().asArray().length, 1);
 	remoteWatcher.watchInsert({i: 5}, {});
 	remoteStore.insert({i: 5, j: 2});
-	QUnit.equal(store.query({i: 5}).value().asArray().length, 1);
+	assert.equal(store.query({i: 5}).value().asArray().length, 1);
 	remoteWatcher.poll();
-	QUnit.equal(store.query({i: 5}).value().asArray().length, 3);
+	assert.equal(store.query({i: 5}).value().asArray().length, 3);
 });
 
 
 
-test("test partial stores, different ids, post write strategy, no watchers", function () {
+QUnit.test("test partial stores, different ids, post write strategy, no watchers", function (assert) {
 	var remoteStore = new BetaJS.Data.Stores.SimulatorStore(new BetaJS.Data.Stores.MemoryStore({
 		id_key: "remote_id",
 		id_generator: new BetaJS.IdGenerators.PrefixedIdGenerator(
@@ -241,25 +241,25 @@ test("test partial stores, different ids, post write strategy, no watchers", fun
 	});
 
 	store.insert({foo: "bar"}).success(function (item) {
-		QUnit.equal(!!item.remote_id, true);
-		QUnit.equal(!!item.local_id, true);
-		QUnit.equal(item.foo, "bar");
-		QUnit.equal(remoteStore.query({},{}).value().asArray().length, 1);
-		QUnit.equal(itemCache.query({},{}).value().asArray().length, 1);
+		assert.equal(!!item.remote_id, true);
+		assert.equal(!!item.local_id, true);
+		assert.equal(item.foo, "bar");
+		assert.equal(remoteStore.query({},{}).value().asArray().length, 1);
+		assert.equal(itemCache.query({},{}).value().asArray().length, 1);
 		store.remove(item.local_id).success(function () {
-			QUnit.equal(remoteStore.query({},{}).value().asArray().length, 0);
-			QUnit.equal(itemCache.query({},{}).value().asArray().length, 0);
+			assert.equal(remoteStore.query({},{}).value().asArray().length, 0);
+			assert.equal(itemCache.query({},{}).value().asArray().length, 0);
 		}).error(function () {
-			ok(false);
+			assert.ok(false);
 		});
 	}).error(function () {
-		ok(false);
+		assert.ok(false);
 	});
 });
 
 
 
-test("test partial stores, different ids, pre write strategy, no watchers", function () {
+QUnit.test("test partial stores, different ids, pre write strategy, no watchers", function (assert) {
 	var remoteStore = new BetaJS.Data.Stores.SimulatorStore(new BetaJS.Data.Stores.MemoryStore({
 		id_key: "remote_id",
 		id_generator: new BetaJS.IdGenerators.PrefixedIdGenerator(
@@ -290,24 +290,24 @@ test("test partial stores, different ids, pre write strategy, no watchers", func
 	});
 
 	store.insert({foo: "bar"}).success(function (item) {
-		QUnit.equal(!!item.remote_id, true);
-		QUnit.equal(!!item.local_id, true);
-		QUnit.equal(item.foo, "bar");
-		QUnit.equal(remoteStore.query({},{}).value().asArray().length, 1);
-		QUnit.equal(itemCache.query({},{}).value().asArray().length, 1);
+		assert.equal(!!item.remote_id, true);
+		assert.equal(!!item.local_id, true);
+		assert.equal(item.foo, "bar");
+		assert.equal(remoteStore.query({},{}).value().asArray().length, 1);
+		assert.equal(itemCache.query({},{}).value().asArray().length, 1);
 		store.remove(item.local_id).success(function () {
-			QUnit.equal(remoteStore.query({},{}).value().asArray().length, 0);
-			QUnit.equal(itemCache.query({},{}).value().asArray().length, 0);
+			assert.equal(remoteStore.query({},{}).value().asArray().length, 0);
+			assert.equal(itemCache.query({},{}).value().asArray().length, 0);
 		}).error(function () {
-			ok(false);
+			assert.ok(false);
 		});
 	}).error(function () {
-		ok(false);
+		assert.ok(false);
 	});
 });
 
 
-test("test partial stores, different ids, commit write strategy, no watchers", function () {
+QUnit.test("test partial stores, different ids, commit write strategy, no watchers", function (assert) {
 	var remoteStore = new BetaJS.Data.Stores.SimulatorStore(new BetaJS.Data.Stores.MemoryStore({
 		id_key: "remote_id",
 		id_generator: new BetaJS.IdGenerators.PrefixedIdGenerator(
@@ -338,24 +338,24 @@ test("test partial stores, different ids, commit write strategy, no watchers", f
 	});
 
 	store.insert({foo: "bar"}).success(function (item) {
-		QUnit.equal(!!item.remote_id, false, "has remote id");
-		QUnit.equal(!!item.local_id, true, "no local id");
-		QUnit.equal(item.foo, "bar");
-		QUnit.equal(itemCache.query({},{}).value().asArray().length, 1);
-		QUnit.equal(remoteStore.query({},{}).value().asArray().length, 0);
+		assert.equal(!!item.remote_id, false, "has remote id");
+		assert.equal(!!item.local_id, true, "no local id");
+		assert.equal(item.foo, "bar");
+		assert.equal(itemCache.query({},{}).value().asArray().length, 1);
+		assert.equal(remoteStore.query({},{}).value().asArray().length, 0);
 		store.writeStrategy.push();
 		item = itemCache.query({},{}).value().next();
-		QUnit.equal(!!item.remote_id, true, "item should now have a remote id");
-		QUnit.equal(remoteStore.query({},{}).value().asArray().length, 1);
+		assert.equal(!!item.remote_id, true, "item should now have a remote id");
+		assert.equal(remoteStore.query({},{}).value().asArray().length, 1);
 		store.remove(item.local_id).success(function () {
-			QUnit.equal(remoteStore.query({},{}).value().asArray().length, 1);
-			QUnit.equal(itemCache.query({},{}).value().asArray().length, 0);
+			assert.equal(remoteStore.query({},{}).value().asArray().length, 1);
+			assert.equal(itemCache.query({},{}).value().asArray().length, 0);
 			store.writeStrategy.push();
-			QUnit.equal(remoteStore.query({},{}).value().asArray().length, 0);
+			assert.equal(remoteStore.query({},{}).value().asArray().length, 0);
 		}).error(function () {
-			ok(false);
+			assert.ok(false);
 		});
 	}).error(function () {
-		ok(false);
+		assert.ok(false);
 	});
 });

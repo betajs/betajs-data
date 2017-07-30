@@ -1,4 +1,4 @@
-test("test watcher items read store polling", function() {
+QUnit.test("test watcher items read store polling", function (assert) {
 	var store = new BetaJS.Data.Stores.MemoryStore();
 	var counts = {
 		insert: 0,
@@ -19,7 +19,7 @@ test("test watcher items read store polling", function() {
 	var item2_id = store.insert({"first":"def"}).value().id;
 	var item3_id = store.insert({"first":"geh"}).value().id;
 	watcherItems.poll();
-	QUnit.deepEqual(counts, {insert: 0, update: 0, remove: 0});
+	assert.deepEqual(counts, {insert: 0, update: 0, remove: 0});
 	
 	watcherItems.watchItem(item1_id);
 	watcherItems.watchItem(item2_id);
@@ -27,34 +27,34 @@ test("test watcher items read store polling", function() {
 
 	store.update(item3_id, {"first": "ijk"});
 	watcherItems.poll();
-	QUnit.deepEqual(counts, {insert: 0, update: 0, remove: 0});
+	assert.deepEqual(counts, {insert: 0, update: 0, remove: 0});
 
 	store.update(item1_id, {"first": "mno"});
-	QUnit.deepEqual(counts, {insert: 0, update: 0, remove: 0});	
+	assert.deepEqual(counts, {insert: 0, update: 0, remove: 0});
 	watcherItems.poll();
-	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 0});
+	assert.deepEqual(counts, {insert: 0, update: 1, remove: 0});
 
 	store.remove(item2_id);
-	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 0});
+	assert.deepEqual(counts, {insert: 0, update: 1, remove: 0});
 	watcherItems.poll();
-	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 1});
+	assert.deepEqual(counts, {insert: 0, update: 1, remove: 1});
 	watcherItems.unwatchItem(item2_id);
 	
 	watcherItems.watchInsert({query: {"first": "foobar"}});
 	watcherItems.poll();
-	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 1});
+	assert.deepEqual(counts, {insert: 0, update: 1, remove: 1});
 	store.insert({"first":"testtest"});
 	watcherItems.poll();
-	QUnit.deepEqual(counts, {insert: 0, update: 1, remove: 1});
+	assert.deepEqual(counts, {insert: 0, update: 1, remove: 1});
 	store.insert({"first":"foobar"});
 	watcherItems.poll();
-	QUnit.deepEqual(counts, {insert: 1, update: 1, remove: 1});
+	assert.deepEqual(counts, {insert: 1, update: 1, remove: 1});
 	
 });
 
 
 
-test("test watcher items read store local", function() {
+QUnit.test("test watcher items read store local", function (assert) {
 	var store = new BetaJS.Data.Stores.MemoryStore();
 	var counts = {
 		update: 0,
@@ -70,23 +70,23 @@ test("test watcher items read store local", function() {
 	var item1_id = store.insert({"first":"abc"}).value().id;
 	var item2_id = store.insert({"first":"def"}).value().id;
 	var item3_id = store.insert({"first":"geh"}).value().id;
-	QUnit.deepEqual(counts, {update: 0, remove: 0});
+	assert.deepEqual(counts, {update: 0, remove: 0});
 	
 	watcherItems.watchItem(item1_id);
 	watcherItems.watchItem(item2_id);
 
 	store.update(item3_id, {"first": "ijk"});
-	QUnit.deepEqual(counts, {update: 0, remove: 0});
+	assert.deepEqual(counts, {update: 0, remove: 0});
 
 	store.update(item1_id, {"first": "mno"});
-	QUnit.deepEqual(counts, {update: 1, remove: 0});
+	assert.deepEqual(counts, {update: 1, remove: 0});
 
 	store.remove(item2_id);
-	QUnit.deepEqual(counts, {update: 1, remove: 1});
+	assert.deepEqual(counts, {update: 1, remove: 1});
 });
 
 
-test("test watcher items read store push", function() {
+QUnit.test("test watcher items read store push", function (assert) {
 	var store = new BetaJS.Data.Stores.MemoryStore();
 	var receiver_x = new BetaJS.Channels.Receiver();
 	var receiver_y = new BetaJS.Channels.Receiver();
@@ -108,17 +108,17 @@ test("test watcher items read store push", function() {
 	var item1_id = store.insert({"first":"abc"}).value().id;
 	var item2_id = store.insert({"first":"def"}).value().id;
 	var item3_id = store.insert({"first":"geh"}).value().id;
-	QUnit.deepEqual(counts, {update: 0, remove: 0});
+	assert.deepEqual(counts, {update: 0, remove: 0});
 	
 	watcherItems.watchItem(item1_id);
 	watcherItems.watchItem(item2_id);
 
 	store.update(item3_id, {"first": "ijk"});
-	QUnit.deepEqual(counts, {update: 0, remove: 0});
+	assert.deepEqual(counts, {update: 0, remove: 0});
 
 	store.update(item1_id, {"first": "mno"});
-	QUnit.deepEqual(counts, {update: 1, remove: 0});
+	assert.deepEqual(counts, {update: 1, remove: 0});
 
 	store.remove(item2_id);
-	QUnit.deepEqual(counts, {update: 1, remove: 1});
+	assert.deepEqual(counts, {update: 1, remove: 1});
 });
