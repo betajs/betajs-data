@@ -7,3 +7,4 @@ node_modules
 browserstack*.*
 BrowserStackLocal
 jsdoc.conf.json
+*.log

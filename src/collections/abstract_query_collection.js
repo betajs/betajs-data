@@ -12,8 +12,9 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
     "base:Promise",
     "base:Class",
     "module:Queries.Constrained",
-    "module:Queries"
-], function(Collection, Objs, Types, Comparators, Promise, Class, Constrained, Queries, scoped) {
+    "module:Queries",
+    "module:Queries.ConstrainedQueryBuilder"
+], function(Collection, Objs, Types, Comparators, Promise, Class, Constrained, Queries, ConstrainedQueryBuilder, scoped) {
     return Collection.extend({
         scoped: scoped
     }, function(inherited) {
@@ -43,6 +44,14 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                     release_references: true
                 });
                 options = options || {};
+                if (ConstrainedQueryBuilder.is_instance_of(query)) {
+                    this.__queryBuilder = query;
+                    query = this.__queryBuilder.getQuery();
+                    options = Objs.extend(options, this.__queryBuilder.getOptions());
+                    this.__queryBuilder.on("change", function() {
+                        this.update(this.__queryBuilder.getConstrainedQuery());
+                    }, this);
+                }
                 this._id_key = this._id_key || options.id_key || "id";
                 this._source = source;
                 this._complete = false;
@@ -90,6 +99,8 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                     this._watcher().unwatchInsert(null, this);
                     this._watcher().unwatchItem(null, this);
                 }
+                if (this.__queryBuilder)
+                    this.__queryBuilder.off(null, null, this);
                 inherited.destroy.call(this);
             },
 
