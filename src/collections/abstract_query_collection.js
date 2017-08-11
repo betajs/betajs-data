@@ -205,6 +205,13 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
              * collectionQuery.update({query: {'queryField': 'queryValue'}, options: {skip: 10}});
              */
             update: function(constrainedQuery) {
+                this.trigger("collection-updating");
+                return this.__update(constrainedQuery).callback(function() {
+                    this.trigger("collection-updated");
+                }, this);
+            },
+
+            __update: function(constrainedQuery) {
                 var hasQuery = !!constrainedQuery.query;
                 constrainedQuery = Constrained.rectify(constrainedQuery);
                 var currentSkip = this._query.options.skip || 0;

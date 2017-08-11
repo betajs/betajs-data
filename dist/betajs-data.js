@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.57 - 2017-08-09
+betajs-data - v1.0.58 - 2017-08-10
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1007,7 +1007,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.57 - 2017-08-09
+betajs-data - v1.0.58 - 2017-08-10
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1019,7 +1019,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.57"
+    "version": "1.0.58"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -1230,6 +1230,13 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
              * collectionQuery.update({query: {'queryField': 'queryValue'}, options: {skip: 10}});
              */
             update: function(constrainedQuery) {
+                this.trigger("collection-updating");
+                return this.__update(constrainedQuery).callback(function() {
+                    this.trigger("collection-updated");
+                }, this);
+            },
+
+            __update: function(constrainedQuery) {
                 var hasQuery = !!constrainedQuery.query;
                 constrainedQuery = Constrained.rectify(constrainedQuery);
                 var currentSkip = this._query.options.skip || 0;
