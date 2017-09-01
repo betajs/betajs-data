@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.58 - 2017-08-10
+betajs-data - v1.0.59 - 2017-09-01
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.58"
+    "version": "1.0.59"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -6275,9 +6275,11 @@ Scoped.define("module:Modelling.Model", [
 
             update: function(data) {
                 this.__silent++;
+                this.suspendEvents();
                 this.setAll(data);
                 this.__silent--;
-                return this.isNew() ? Promise.create(true) : this.save();
+                var promise = this.isNew() ? Promise.create(true) : this.save();
+                return promise.callback(this.resumeEvents, this);
             },
 
             _afterSet: function(key, value, old_value, options) {
@@ -6333,10 +6335,19 @@ Scoped.define("module:Modelling.Model", [
                 }, this);
             },
 
+            isRemoving: function() {
+                return this.__removing;
+            },
+
             remove: function() {
                 if (this.isNew() || this.isRemoved())
                     return Promise.create(true);
-                return this.__table.store().remove(this.id(), this.__ctx).success(function() {
+                this.__removing = true;
+                return this.__table.store().remove(this.id(), this.__ctx).callback(function() {
+                    this.__removing = false;
+                }, this).success(function() {
+                    if (this.destroyed())
+                        return;
                     this.__options.removed = true;
                     this.trigger("remove");
                 }, this);

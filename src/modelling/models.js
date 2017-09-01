@@ -77,9 +77,11 @@ Scoped.define("module:Modelling.Model", [
 
             update: function(data) {
                 this.__silent++;
+                this.suspendEvents();
                 this.setAll(data);
                 this.__silent--;
-                return this.isNew() ? Promise.create(true) : this.save();
+                var promise = this.isNew() ? Promise.create(true) : this.save();
+                return promise.callback(this.resumeEvents, this);
             },
 
             _afterSet: function(key, value, old_value, options) {
@@ -135,10 +137,19 @@ Scoped.define("module:Modelling.Model", [
                 }, this);
             },
 
+            isRemoving: function() {
+                return this.__removing;
+            },
+
             remove: function() {
                 if (this.isNew() || this.isRemoved())
                     return Promise.create(true);
-                return this.__table.store().remove(this.id(), this.__ctx).success(function() {
+                this.__removing = true;
+                return this.__table.store().remove(this.id(), this.__ctx).callback(function() {
+                    this.__removing = false;
+                }, this).success(function() {
+                    if (this.destroyed())
+                        return;
                     this.__options.removed = true;
                     this.trigger("remove");
                 }, this);
