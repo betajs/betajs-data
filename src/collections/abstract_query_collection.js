@@ -216,7 +216,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 constrainedQuery = Constrained.rectify(constrainedQuery);
                 var currentSkip = this._query.options.skip || 0;
                 var currentLimit = this._query.options.limit || null;
-                if (constrainedQuery.query)
+                if (hasQuery)
                     this._query.query = constrainedQuery.query;
                 this._query.options = Objs.extend(this._query.options, constrainedQuery.options);
                 if (!this._enabled)
