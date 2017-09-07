@@ -318,12 +318,12 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                     }, this);
                 }
                 return this._subExecute(constrainedQuery.query, constrainedQuery.options).mapSuccess(function(iter) {
-                    if (!iter.hasNext()) {
-                        this._complete = true;
-                        return true;
-                    }
                     if (!keep_others || !this._async) {
                         this.replace_objects(iter.asArray(), keep_others);
+                        return true;
+                    }
+                    if (!iter.hasNext()) {
+                        this._complete = true;
                         return true;
                     }
                     this.__executePromise = iter.asyncIterate(this.replace_object, this);

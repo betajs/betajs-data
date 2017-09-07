@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.60 - 2017-09-02
+betajs-data - v1.0.61 - 2017-09-07
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1007,7 +1007,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.60 - 2017-09-02
+betajs-data - v1.0.61 - 2017-09-07
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1019,7 +1019,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.60"
+    "version": "1.0.61"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -1343,12 +1343,12 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                     }, this);
                 }
                 return this._subExecute(constrainedQuery.query, constrainedQuery.options).mapSuccess(function(iter) {
-                    if (!iter.hasNext()) {
-                        this._complete = true;
-                        return true;
-                    }
                     if (!keep_others || !this._async) {
                         this.replace_objects(iter.asArray(), keep_others);
+                        return true;
+                    }
+                    if (!iter.hasNext()) {
+                        this._complete = true;
                         return true;
                     }
                     this.__executePromise = iter.asyncIterate(this.replace_object, this);
