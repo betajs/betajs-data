@@ -144,7 +144,7 @@ The BetaJS Data module contains the following subsystems:
 | Yandex | Latest |
 | iOS | 3.0 - Latest |
 | Android | 2.2 - Latest |
-| NodeJS | 0.11 - Latest |
+| NodeJS | 4.0 - Latest |
 
 
 ## CDN
@@ -172,6 +172,7 @@ The BetaJS Data module contains the following subsystems:
 | Name | URL |
 | :----- | -------: |
 | betajs-scoped | [Open](https://github.com/betajs/betajs-scoped) |
+| betajs-shims | [Open](https://github.com/betajs/betajs-shims) |
 
 
 ## Main Contributors
