@@ -1657,6 +1657,10 @@ Scoped.define("module:Databases.DatabaseTable", [
                 return data;
             },
 
+            _decodeMany: function(data) {
+                return data;
+            },
+
             _find: function(query, options) {},
 
             find: function(query, options) {
@@ -1675,6 +1679,8 @@ Scoped.define("module:Databases.DatabaseTable", [
 
             _insertRow: function(row) {},
 
+            _insertRows: function(rows) {},
+
             _removeRow: function(query) {},
 
             _updateRow: function(query, row) {},
@@ -1692,6 +1698,14 @@ Scoped.define("module:Databases.DatabaseTable", [
 
             insertRow: function(row) {
                 return this._insertRow(this._encode(row)).mapSuccess(this._decode, this);
+            },
+
+            insertRows: function(rows) {
+                var encodedRows = [];
+                Objs.iter(rows, function(obj, ind) {
+                    encodedRows.push(this._encode(obj));
+                }, this);
+                return this._insertRows(encodedRows).mapSuccess(this._decodeMany, this);
             },
 
             removeRow: function(query) {
