@@ -27,7 +27,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
             },
 
             _add: function(item) {
-                var current = Objs.clone(this._model.get(this._foreign_key), 1);
+                var current = Objs.clone(this._model.get(this._foreign_key) || [], 1);
                 var exists = current.some(function(key) {
                     return key === item.id();
                 });

@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.61 - 2017-09-07
+betajs-data - v1.0.62 - 2017-09-13
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.61"
+    "version": "1.0.62"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -6031,7 +6031,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
             },
 
             _add: function(item) {
-                var current = Objs.clone(this._model.get(this._foreign_key), 1);
+                var current = Objs.clone(this._model.get(this._foreign_key) || [], 1);
                 var exists = current.some(function(key) {
                     return key === item.id();
                 });
