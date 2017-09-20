@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.62 - 2017-09-13
+betajs-data - v1.0.63 - 2017-09-19
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.62"
+    "version": "1.0.63"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -6247,6 +6247,10 @@ Scoped.define("module:Modelling.Model", [
                 inherited.destroy.call(this);
             },
 
+            saveOnChange: function() {
+                this.__saveOnChange = true;
+            },
+
             option: function(key) {
                 var opts = key in this.__options ? this.__options : this.table().options();
                 return opts[key];
@@ -6301,7 +6305,7 @@ Scoped.define("module:Modelling.Model", [
                 var scheme = this.cls.scheme();
                 if (!(key in scheme) || this.__silent > 0)
                     return;
-                if (this.option("auto_update") && !this.isNew())
+                if (this.option("auto_update") && (!this.isNew() || this.__saveOnChange))
                     this.save();
             },
 

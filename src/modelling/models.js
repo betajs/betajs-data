@@ -35,6 +35,10 @@ Scoped.define("module:Modelling.Model", [
                 inherited.destroy.call(this);
             },
 
+            saveOnChange: function() {
+                this.__saveOnChange = true;
+            },
+
             option: function(key) {
                 var opts = key in this.__options ? this.__options : this.table().options();
                 return opts[key];
@@ -89,7 +93,7 @@ Scoped.define("module:Modelling.Model", [
                 var scheme = this.cls.scheme();
                 if (!(key in scheme) || this.__silent > 0)
                     return;
-                if (this.option("auto_update") && !this.isNew())
+                if (this.option("auto_update") && (!this.isNew() || this.__saveOnChange))
                     this.save();
             },
 
