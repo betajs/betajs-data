@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.63 - 2017-09-19
+betajs-data - v1.0.64 - 2017-10-18
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1007,7 +1007,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.63 - 2017-09-19
+betajs-data - v1.0.64 - 2017-10-18
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1019,7 +1019,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.63"
+    "version": "1.0.64"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -2511,6 +2511,76 @@ Scoped.define("module:Queries", [
                     });
                 }, this);
             }
+        },
+
+        rangeSuperQueryDiffQuery: function(superCandidate, subCandidate) {
+            if (!Objs.keyEquals(superCandidate, subCandidate))
+                return false;
+            var rangeKey = Objs.objectify(["$gt", "$lt", "$gte", "$le"]);
+            var ors = [];
+            var result = {};
+            var iterResult = Objs.iter(superCandidate, function(superValue, key) {
+                var subValue = subCandidate[key];
+                if (Comparators.deepEqual(superValue, subValue, -1)) {
+                    result[key] = superValue;
+                    return true;
+                }
+                var splitSuper = Objs.filter(superValue, function(dummy, key) {
+                    return !rangeKey[key];
+                });
+                var splitSub = Objs.filter(subValue, function(dummy, key) {
+                    return !rangeKey[key];
+                });
+                if (!Comparators.deepEqual(splitSuper, splitSub, -1))
+                    return false;
+                var ret = Objs.clone(superValue, 1);
+                if (subValue.$gt || subValue.$gte) {
+                    if (subValue.$lt || subValue.$le) {
+                        if (superValue.$gt || superValue.$gte) {
+                            if ((superValue.$gt || superValue.$gte) > (subValue.$gt || subValue.$gte))
+                                return false;
+                        }
+                        if (superValue.$lt || superValue.$le) {
+                            if ((superValue.$lt || superValue.$le) < (subValue.$lt || subValue.$le))
+                                return false;
+                        }
+                        var retLow = Objs.clone(ret, 1);
+                        var retHigh = Objs.clone(ret, 1);
+                        delete retLow.$lt;
+                        delete retLow.$le;
+                        retLow[subValue.$gt ? "$le" : "$lt"] = subValue.$gt || subValue.$gte;
+                        delete retHigh.$gt;
+                        delete retHigh.$gte;
+                        retHigh[subValue.$lt ? "$gte" : "$gt"] = subValue.$lt || subValue.$le;
+                        ors.push(Objs.objectBy(key, retLow));
+                        ors.push(Objs.objectBy(key, retHigh));
+                        return true;
+                    } else {
+                        if (superValue.$lt || superValue.$le)
+                            return false;
+                        if (superValue.$gt || superValue.$gte) {
+                            if ((superValue.$gt || superValue.$gte) > (subValue.$gt || subValue.$gte))
+                                return false;
+                        }
+                        ret[subValue.$gt ? "$le" : "$lt"] = subValue.$gt || subValue.$gte;
+                    }
+                } else if (subValue.$lt || subValue.$le) {
+                    if (superValue.$gt || superValue.$gte)
+                        return false;
+                    if (superValue.$lt || superValue.$le) {
+                        if ((superValue.$lt || superValue.$le) < (subValue.$lt || subValue.$le))
+                            return false;
+                    }
+                    ret[subValue.$lt ? "$gte" : "$gt"] = subValue.$lt || subValue.$le;
+                } else
+                    return false;
+                result[key] = ret;
+            });
+            if (!iterResult)
+                return false;
+            if (ors.length > 0)
+                result.$or = result.$or ? result.$or.concat(ors) : ors;
+            return result;
         },
 
         subsumizes: function(query, query2) {
