@@ -194,3 +194,31 @@ QUnit.test("test collection remove", function (assert) {
 	assert.equal(coll.count(), 0);
 	assert.equal(model0.destroyed(), true);
 });
+
+
+
+QUnit.test("test query collection super increase", function (assert) {
+    var store = new BetaJS.Data.Stores.MemoryStore();
+    var c = 100;
+    for (var i = 0; i < c; ++i)
+            store.insert({i:i});
+    var coll = new BetaJS.Data.Collections.StoreQueryCollection(store, {
+    	"i": {
+    		"$gte": 25,
+			"$lt": 75
+		}
+	}, {
+    	auto: true
+	});
+
+    assert.equal(coll.count(), 75-25);
+
+    coll.rangeSuperQueryIncrease({
+        "i": {
+            "$gte": 25,
+            "$lt": 95
+        }
+	});
+
+    assert.equal(coll.count(), 95-25);
+});

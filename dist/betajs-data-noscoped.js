@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.64 - 2017-10-18
+betajs-data - v1.0.65 - 2017-10-19
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.64"
+    "version": "1.0.65"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -310,6 +310,20 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 if (this._active)
                     this._watchInsert(this._query);
                 return this._execute(this._query, !(clear && this._incremental));
+            },
+
+            rangeSuperQueryIncrease: function(query) {
+                var diffQuery = Queries.rangeSuperQueryDiffQuery(query, this._query.query);
+                if (!diffQuery)
+                    throw "Range Super Query expected";
+                this._query.query = query;
+                this._unwatchInsert();
+                if (this._active)
+                    this._watchInsert(this._query);
+                return this._execute({
+                    query: diffQuery,
+                    options: this._query.options
+                }, true);
             },
 
             isEnabled: function() {
@@ -1512,7 +1526,14 @@ Scoped.define("module:Queries", [
             var ors = [];
             var result = {};
             var iterResult = Objs.iter(superCandidate, function(superValue, key) {
-                var subValue = subCandidate[key];
+                superValue = Objs.clone(superValue, 1);
+                var subValue = Objs.clone(subCandidate[key], 1);
+                Objs.iter(rangeKey, function(dummy, k) {
+                    if (superValue[k] && subValue[k] && superValue[k] === subValue[k]) {
+                        delete superValue[k];
+                        delete subValue[k];
+                    }
+                });
                 if (Comparators.deepEqual(superValue, subValue, -1)) {
                     result[key] = superValue;
                     return true;

@@ -275,7 +275,14 @@ Scoped.define("module:Queries", [
             var ors = [];
             var result = {};
             var iterResult = Objs.iter(superCandidate, function(superValue, key) {
-                var subValue = subCandidate[key];
+                superValue = Objs.clone(superValue, 1);
+                var subValue = Objs.clone(subCandidate[key], 1);
+                Objs.iter(rangeKey, function(dummy, k) {
+                    if (superValue[k] && subValue[k] && superValue[k] === subValue[k]) {
+                        delete superValue[k];
+                        delete subValue[k];
+                    }
+                });
                 if (Comparators.deepEqual(superValue, subValue, -1)) {
                     result[key] = superValue;
                     return true;

@@ -102,3 +102,29 @@ QUnit.test("query diff both", function (assert) {
     };
     assert.deepEqual(BetaJS.Data.Queries.rangeSuperQueryDiffQuery(supr, sub), diff);
 });
+
+QUnit.test("query diff both", function (assert) {
+    var sub = {
+        "date": {
+            "$gte": 10000,
+            "$lt": 20000
+        },
+        "foo": "bar"
+    };
+    var supr = {
+        "foo": "bar",
+        "date": {
+            "$gte": 10000,
+            "$lt": 21000
+        }
+    };
+    var diff = {
+        "foo": "bar",
+        "date": {
+            "$lt": 21000,
+            "$gte": 20000
+        }
+    };
+    assert.deepEqual(BetaJS.Data.Queries.rangeSuperQueryDiffQuery(supr, sub), diff);
+});
+

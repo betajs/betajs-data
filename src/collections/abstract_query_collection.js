@@ -295,6 +295,20 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 return this._execute(this._query, !(clear && this._incremental));
             },
 
+            rangeSuperQueryIncrease: function(query) {
+                var diffQuery = Queries.rangeSuperQueryDiffQuery(query, this._query.query);
+                if (!diffQuery)
+                    throw "Range Super Query expected";
+                this._query.query = query;
+                this._unwatchInsert();
+                if (this._active)
+                    this._watchInsert(this._query);
+                return this._execute({
+                    query: diffQuery,
+                    options: this._query.options
+                }, true);
+            },
+
             isEnabled: function() {
                 return this._enabled;
             },
