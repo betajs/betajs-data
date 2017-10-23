@@ -45,12 +45,24 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 });
                 options = options || {};
                 if (ConstrainedQueryBuilder.is_instance_of(query)) {
+                    this._rangeQueryBuilder = options.range_query_builder;
                     this.__queryBuilder = query;
                     query = this.__queryBuilder.getQuery();
+                    if (this._rangeQueryBuilder)
+                        query = Objs.extend(query, this._rangeQueryBuilder.getQuery());
                     options = Objs.extend(options, this.__queryBuilder.getOptions());
                     this.__queryBuilder.on("change", function() {
-                        this.update(this.__queryBuilder.getConstrainedQuery());
+                        var cQ = this.__queryBuilder.getConstrainedQuery();
+                        if (this._rangeQueryBuilder)
+                            cQ.query = Objs.extend(this._rangeQueryBuilder.getQuery(), cQ.query);
+                        this.update(cQ);
                     }, this);
+                    if (this._rangeQueryBuilder) {
+                        this._rangeQueryBuilder.on("change", function() {
+                            var cQ = this.__queryBuilder.getConstrainedQuery();
+                            this.rangeSuperQueryIncrease(Objs.extend(this._rangeQueryBuilder.getQuery(), cQ.query));
+                        }, this);
+                    }
                 }
                 this._id_key = this._id_key || options.id_key || "id";
                 this._source = source;

@@ -1,10 +1,10 @@
 /*!
-betajs-data - v1.0.65 - 2017-10-19
+betajs-data - v1.0.65 - 2017-10-22
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
 /** @flow **//*!
-betajs-scoped - v0.0.16 - 2017-07-23
+betajs-scoped - v0.0.17 - 2017-10-22
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -16,7 +16,7 @@ var Globals = (function () {
  * @module Globals
  * @access private
  */
-return { 
+return {
 		
 	/**
 	 * Returns the value of a global variable.
@@ -26,11 +26,11 @@ return {
 	 */
 	get : function(key/* : string */) {
 		if (typeof window !== "undefined")
-			return window[key];
+			return key ? window[key] : window;
 		if (typeof global !== "undefined")
-			return global[key];
+			return key ? global[key] : global;
 		if (typeof self !== "undefined")
-			return self[key];
+			return key ? self[key] : self;
 		return undefined;
 	},
 
@@ -64,6 +64,8 @@ return {
 	 * Globals.getPath("foo.bar")
 	 */
 	getPath: function (path/* : string */) {
+		if (!path)
+			return this.get();
 		var args = path.split(".");
 		if (args.length == 1)
 			return this.get(path);		
@@ -965,7 +967,7 @@ var Public = Helper.extend(rootScope, (function () {
 return {
 		
 	guid: "4b6878ee-cb6a-46b3-94ac-27d91f58d666",
-	version: '0.0.16',
+	version: '0.0.17',
 		
 	upgrade: Attach.upgrade,
 	attach: Attach.attach,
@@ -1007,7 +1009,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.65 - 2017-10-19
+betajs-data - v1.0.65 - 2017-10-22
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1070,12 +1072,24 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 });
                 options = options || {};
                 if (ConstrainedQueryBuilder.is_instance_of(query)) {
+                    this._rangeQueryBuilder = options.range_query_builder;
                     this.__queryBuilder = query;
                     query = this.__queryBuilder.getQuery();
+                    if (this._rangeQueryBuilder)
+                        query = Objs.extend(query, this._rangeQueryBuilder.getQuery());
                     options = Objs.extend(options, this.__queryBuilder.getOptions());
                     this.__queryBuilder.on("change", function() {
-                        this.update(this.__queryBuilder.getConstrainedQuery());
+                        var cQ = this.__queryBuilder.getConstrainedQuery();
+                        if (this._rangeQueryBuilder)
+                            cQ.query = Objs.extend(this._rangeQueryBuilder.getQuery(), cQ.query);
+                        this.update(cQ);
                     }, this);
+                    if (this._rangeQueryBuilder) {
+                        this._rangeQueryBuilder.on("change", function() {
+                            var cQ = this.__queryBuilder.getConstrainedQuery();
+                            this.rangeSuperQueryIncrease(Objs.extend(this._rangeQueryBuilder.getQuery(), cQ.query));
+                        }, this);
+                    }
                 }
                 this._id_key = this._id_key || options.id_key || "id";
                 this._source = source;
@@ -3055,6 +3069,60 @@ Scoped.extend("module:Queries.ConstrainedQueryBuilder", [
 
         };
     }]);
+});
+
+
+Scoped.extend("module:Queries.RangeQueryBuilder", [
+    "module:Queries.AbstractQueryBuilder",
+    "base:Objs"
+], function(AbstractQueryBuilder, Objs, scoped) {
+    return AbstractQueryBuilder.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            constructor: function(key, lowerBound, upperBound) {
+                inherited.constructor.call(this);
+                this.__key = key;
+                this.__lowerBound = lowerBound;
+                this.__upperBound = upperBound;
+                this._queryChanged();
+            },
+
+            _buildQuery: function() {
+                return Objs.objectBy(this.__key, {
+                    "$gte": this.__lowerBound,
+                    "$le": this.__upperBound
+                });
+            },
+
+            touch: function(lowerBound, upperBound) {
+                upperBound = upperBound || lowerBound;
+                var changed = false;
+                if (lowerBound < this.__lowerBound) {
+                    changed = true;
+                    this.__lowerBound = lowerBound;
+                }
+                if (upperBound > this.__upperBound) {
+                    changed = true;
+                    this.__upperBound = upperBound;
+                }
+                if (changed)
+                    this._queryChanged();
+            },
+
+            setLowerBound: function(lowerBound) {
+                this.__lowerBound = lowerBound;
+                this._queryChanged();
+            },
+
+            setUpperBound: function(upperBound) {
+                this.__upperBound = upperBound;
+                this._queryChanged();
+            }
+
+        };
+    });
 });
 Scoped.define("module:Queries.Engine", [
     "module:Queries",

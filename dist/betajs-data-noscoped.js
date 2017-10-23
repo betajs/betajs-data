@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.65 - 2017-10-19
+betajs-data - v1.0.65 - 2017-10-22
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -62,12 +62,24 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 });
                 options = options || {};
                 if (ConstrainedQueryBuilder.is_instance_of(query)) {
+                    this._rangeQueryBuilder = options.range_query_builder;
                     this.__queryBuilder = query;
                     query = this.__queryBuilder.getQuery();
+                    if (this._rangeQueryBuilder)
+                        query = Objs.extend(query, this._rangeQueryBuilder.getQuery());
                     options = Objs.extend(options, this.__queryBuilder.getOptions());
                     this.__queryBuilder.on("change", function() {
-                        this.update(this.__queryBuilder.getConstrainedQuery());
+                        var cQ = this.__queryBuilder.getConstrainedQuery();
+                        if (this._rangeQueryBuilder)
+                            cQ.query = Objs.extend(this._rangeQueryBuilder.getQuery(), cQ.query);
+                        this.update(cQ);
                     }, this);
+                    if (this._rangeQueryBuilder) {
+                        this._rangeQueryBuilder.on("change", function() {
+                            var cQ = this.__queryBuilder.getConstrainedQuery();
+                            this.rangeSuperQueryIncrease(Objs.extend(this._rangeQueryBuilder.getQuery(), cQ.query));
+                        }, this);
+                    }
                 }
                 this._id_key = this._id_key || options.id_key || "id";
                 this._source = source;
@@ -2047,6 +2059,60 @@ Scoped.extend("module:Queries.ConstrainedQueryBuilder", [
 
         };
     }]);
+});
+
+
+Scoped.extend("module:Queries.RangeQueryBuilder", [
+    "module:Queries.AbstractQueryBuilder",
+    "base:Objs"
+], function(AbstractQueryBuilder, Objs, scoped) {
+    return AbstractQueryBuilder.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            constructor: function(key, lowerBound, upperBound) {
+                inherited.constructor.call(this);
+                this.__key = key;
+                this.__lowerBound = lowerBound;
+                this.__upperBound = upperBound;
+                this._queryChanged();
+            },
+
+            _buildQuery: function() {
+                return Objs.objectBy(this.__key, {
+                    "$gte": this.__lowerBound,
+                    "$le": this.__upperBound
+                });
+            },
+
+            touch: function(lowerBound, upperBound) {
+                upperBound = upperBound || lowerBound;
+                var changed = false;
+                if (lowerBound < this.__lowerBound) {
+                    changed = true;
+                    this.__lowerBound = lowerBound;
+                }
+                if (upperBound > this.__upperBound) {
+                    changed = true;
+                    this.__upperBound = upperBound;
+                }
+                if (changed)
+                    this._queryChanged();
+            },
+
+            setLowerBound: function(lowerBound) {
+                this.__lowerBound = lowerBound;
+                this._queryChanged();
+            },
+
+            setUpperBound: function(upperBound) {
+                this.__upperBound = upperBound;
+                this._queryChanged();
+            }
+
+        };
+    });
 });
 Scoped.define("module:Queries.Engine", [
     "module:Queries",
