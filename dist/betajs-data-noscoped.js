@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.66 - 2017-10-22
+betajs-data - v1.0.67 - 2017-10-26
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.66"
+    "version": "1.0.67"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -1882,8 +1882,9 @@ Scoped.define("module:Queries", [
 Scoped.extend("module:Queries.AbstractQueryBuilder", [
     "base:Class",
     "base:Comparators",
-    "base:Events.EventsMixin"
-], function(Class, Comparators, EventsMixin, scoped) {
+    "base:Events.EventsMixin",
+    "base:Objs"
+], function(Class, Comparators, EventsMixin, Objs, scoped) {
     return Class.extend({
         scoped: scoped
     }, [EventsMixin, function(inherited) {
@@ -1903,7 +1904,7 @@ Scoped.extend("module:Queries.AbstractQueryBuilder", [
             },
 
             getQuery: function() {
-                return this.__query;
+                return Objs.clone(this.__query, 1);
             },
 
             _buildQuery: function() {

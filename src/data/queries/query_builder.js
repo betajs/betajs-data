@@ -1,8 +1,9 @@
 Scoped.extend("module:Queries.AbstractQueryBuilder", [
     "base:Class",
     "base:Comparators",
-    "base:Events.EventsMixin"
-], function(Class, Comparators, EventsMixin, scoped) {
+    "base:Events.EventsMixin",
+    "base:Objs"
+], function(Class, Comparators, EventsMixin, Objs, scoped) {
     return Class.extend({
         scoped: scoped
     }, [EventsMixin, function(inherited) {
@@ -22,7 +23,7 @@ Scoped.extend("module:Queries.AbstractQueryBuilder", [
             },
 
             getQuery: function() {
-                return this.__query;
+                return Objs.clone(this.__query, 1);
             },
 
             _buildQuery: function() {
