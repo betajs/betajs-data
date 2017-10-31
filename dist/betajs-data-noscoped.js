@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.67 - 2017-10-26
+betajs-data - v1.0.68 - 2017-10-30
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.67"
+    "version": "1.0.68"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -5927,18 +5927,20 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 Scoped.extend("module:Modelling.ActiveModel", [
     "base:Properties.Properties",
     "base:Async",
+    "base:Objs",
     "module:Queries"
-], function(Properties, Async, Queries, scoped) {
+], function(Properties, Async, Objs, Queries, scoped) {
     return Properties.extend({
         scoped: scoped
     }, function(inherited) {
         return {
 
-            constructor: function(table, query) {
+            constructor: function(table, query, queryopts) {
                 inherited.constructor.call(this);
                 this._table = table;
                 this._watcher = table.store().watcher();
                 this._query = query;
+                this._queryopts = queryopts || {};
                 this.set("model", null);
                 this._unregisterModel();
             },
@@ -5990,16 +5992,16 @@ Scoped.extend("module:Modelling.ActiveModel", [
                 if (this._watcher)
                     this._watcher.unwatchItem(null, this);
                 this.set("model", null);
-                this._table.findBy(this._query).success(function(model) {
+                this._table.findBy(this._query, this._queryopts).success(function(model) {
                     if (model)
                         this._registerModel(model);
                     else {
                         if (this._watcher) {
                             this._watcher.watchInsert({
                                 query: this._query,
-                                options: {
+                                options: Objs.extend({
                                     limit: 1
-                                }
+                                }, this._queryopts)
                             }, this);
                         }
                         this._table.on("create", function(data) {
@@ -6258,6 +6260,10 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
                 this.active = new SharedObjectFactory(this.newActiveModel, this);
             },
 
+            _queryopts: function() {
+                return this._options.queryopts;
+            },
+
             _buildQuery: function(query) {},
 
             buildQuery: function(query) {
@@ -6277,7 +6283,7 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
 
             newActiveModel: function(query) {
                 var result = this.buildQuery(query);
-                return new ActiveModel(this._foreign_table, result);
+                return new ActiveModel(this._foreign_table, result, this._queryopts());
             },
 
             unset: function() {

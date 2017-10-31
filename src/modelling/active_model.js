@@ -1,18 +1,20 @@
 Scoped.extend("module:Modelling.ActiveModel", [
     "base:Properties.Properties",
     "base:Async",
+    "base:Objs",
     "module:Queries"
-], function(Properties, Async, Queries, scoped) {
+], function(Properties, Async, Objs, Queries, scoped) {
     return Properties.extend({
         scoped: scoped
     }, function(inherited) {
         return {
 
-            constructor: function(table, query) {
+            constructor: function(table, query, queryopts) {
                 inherited.constructor.call(this);
                 this._table = table;
                 this._watcher = table.store().watcher();
                 this._query = query;
+                this._queryopts = queryopts || {};
                 this.set("model", null);
                 this._unregisterModel();
             },
@@ -64,16 +66,16 @@ Scoped.extend("module:Modelling.ActiveModel", [
                 if (this._watcher)
                     this._watcher.unwatchItem(null, this);
                 this.set("model", null);
-                this._table.findBy(this._query).success(function(model) {
+                this._table.findBy(this._query, this._queryopts).success(function(model) {
                     if (model)
                         this._registerModel(model);
                     else {
                         if (this._watcher) {
                             this._watcher.watchInsert({
                                 query: this._query,
-                                options: {
+                                options: Objs.extend({
                                     limit: 1
-                                }
+                                }, this._queryopts)
                             }, this);
                         }
                         this._table.on("create", function(data) {
