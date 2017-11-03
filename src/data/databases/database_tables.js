@@ -107,7 +107,15 @@ Scoped.define("module:Databases.DatabaseTable", [
                 return this.updateRow(Objs.objectBy(this.primary_key(), id), data);
             },
 
-            ensureIndex: function(key) {}
+            ensureIndex: function(key) {},
+
+            _clear: function() {
+                return this._removeRow({});
+            },
+
+            clear: function() {
+                return this._clear();
+            }
 
         };
     });

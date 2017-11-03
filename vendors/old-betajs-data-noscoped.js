@@ -14,7 +14,6 @@ Scoped.define("module:", function () {
     "version": "81.1465523890512"
 };
 });
-Scoped.assumeVersion('base:version', 496);
 /**
  * @class AbstractQueryCollection
  *

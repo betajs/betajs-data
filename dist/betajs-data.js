@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.68 - 2017-10-30
+betajs-data - v1.0.69 - 2017-11-02
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1009,7 +1009,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.68 - 2017-10-30
+betajs-data - v1.0.69 - 2017-11-02
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1021,7 +1021,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.68"
+    "version": "1.0.69"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -1638,6 +1638,10 @@ Scoped.define("module:Stores.DatabaseStore", [
 
             _ensure_index: function(key) {
                 this.table().ensureIndex(key);
+            },
+
+            clear: function(ctx) {
+                return ctx ? inherited.clear.call(ctx) : this.table().clear();
             }
 
         };
@@ -1752,7 +1756,15 @@ Scoped.define("module:Databases.DatabaseTable", [
                 return this.updateRow(Objs.objectBy(this.primary_key(), id), data);
             },
 
-            ensureIndex: function(key) {}
+            ensureIndex: function(key) {},
+
+            _clear: function() {
+                return this._removeRow({});
+            },
+
+            clear: function() {
+                return this._clear();
+            }
 
         };
     });

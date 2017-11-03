@@ -78,6 +78,10 @@ Scoped.define("module:Stores.DatabaseStore", [
 
             _ensure_index: function(key) {
                 this.table().ensureIndex(key);
+            },
+
+            clear: function(ctx) {
+                return ctx ? inherited.clear.call(ctx) : this.table().clear();
             }
 
         };
