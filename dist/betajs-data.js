@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.70 - 2017-11-09
+betajs-data - v1.0.71 - 2017-11-16
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1009,7 +1009,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.70 - 2017-11-09
+betajs-data - v1.0.71 - 2017-11-16
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1021,7 +1021,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.70"
+    "version": "1.0.71"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -7115,9 +7115,16 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
                 return this._foreign_table.allBy(result.query, result.options);
             },
 
+            _queryCollectionUpdated: function(coll) {},
+
             newCollection: function(query, options) {
                 var result = this.buildQuery(query, options);
-                return new TableQueryCollection(this._foreign_table, result.query, Objs.extend(result.options, this._options.collectionOptions));
+                var coll = new TableQueryCollection(this._foreign_table, result.query, Objs.extend(result.options, this._options.collectionOptions));
+                coll.on("replaced-objects collection-updated", function() {
+                    this._queryCollectionUpdated(coll);
+                }, this);
+                this._queryCollectionUpdated(coll);
+                return coll;
             },
 
             remove: function(item) {
@@ -7213,27 +7220,59 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
             },
 
             _buildQuery: function(query, options) {
+                var arr = this._model.get(this._foreign_key);
+                if (this._options.map)
+                    arr = arr.map(this._options.map, this._options.mapctx || this);
                 return {
-                    "query": Objs.objectBy(this._foreign_table.primary_key(), {
-                        "$in": this._model.get(this._foreign_key)
-                    })
+                    "query": Objs.objectBy(
+                        this._options.foreign_attr || this._foreign_table.primary_key(), Objs.objectBy(
+                            this._options.ignore_case ? "$inic" : "$in",
+                            arr
+                        ))
                 };
+            },
+
+            _queryCollectionUpdated: function(coll) {
+                if (this._options.create_virtual) {
+                    this._model.get(this._foreign_key).filter(function(key) {
+                        return !coll.has(function(item) {
+                            return this._matchItem(item, key);
+                        }, this);
+                    }, this).forEach(function(key) {
+                        coll.add(this._options.create_virtual.call(this._options.create_virtual_ctx || this, key));
+                    }, this);
+                }
+            },
+
+            _matchItem: function(item, key) {
+                var value = item.get(this._options.foreign_attr || this._foreign_table.primary_key());
+                if (this._options.map)
+                    key = this._options.map.call(this._options.mapctx || this, key);
+                if (this._options.ignore_case) {
+                    key = key.toLowerCase();
+                    value = value.toLowerCase();
+                }
+                return value === key;
             },
 
             _remove: function(item) {
                 this._model.set(this._foreign_key, this._model.get(this._foreign_key).filter(function(key) {
-                    return key !== item.id();
-                }));
+                    return !this._matchItem(item, key);
+                }, this));
+                if (this._options.create_virtual && this.collection.value())
+                    this.collection.value().remove(item);
             },
 
             _add: function(item) {
                 var current = Objs.clone(this._model.get(this._foreign_key) || [], 1);
                 var exists = current.some(function(key) {
-                    return key === item.id();
-                });
+                    return this._matchItem(item, key);
+                }, this);
                 if (!exists) {
-                    current.push(item.id());
+                    current.push(item.get(this._options.foreign_attr || this._foreign_table.primary_key()));
                     this._model.set(this._foreign_key, current);
+                    if (this._options.create_virtual && this.collection.value())
+                        this.collection.value().add(item);
                 }
             }
 
