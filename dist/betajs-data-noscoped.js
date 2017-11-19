@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.71 - 2017-11-16
+betajs-data - v1.0.72 - 2017-11-19
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.71"
+    "version": "1.0.72"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -6210,7 +6210,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
             },
 
             _buildQuery: function(query, options) {
-                var arr = this._model.get(this._foreign_key);
+                var arr = this._model.get(this._foreign_key) || [];
                 if (this._options.map)
                     arr = arr.map(this._options.map, this._options.mapctx || this);
                 return {
@@ -6224,7 +6224,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
 
             _queryCollectionUpdated: function(coll) {
                 if (this._options.create_virtual) {
-                    this._model.get(this._foreign_key).filter(function(key) {
+                    (this._model.get(this._foreign_key) || []).filter(function(key) {
                         return !coll.has(function(item) {
                             return this._matchItem(item, key);
                         }, this);
@@ -6249,7 +6249,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                 this._model.set(this._foreign_key, this._model.get(this._foreign_key).filter(function(key) {
                     return !this._matchItem(item, key);
                 }, this));
-                if (this._options.create_virtual && this.collection.value())
+                if (this._options.create_virtual && this.collection.value() && !item.destroyed())
                     this.collection.value().remove(item);
             },
 

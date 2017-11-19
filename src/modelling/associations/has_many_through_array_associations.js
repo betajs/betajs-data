@@ -13,7 +13,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
             },
 
             _buildQuery: function(query, options) {
-                var arr = this._model.get(this._foreign_key);
+                var arr = this._model.get(this._foreign_key) || [];
                 if (this._options.map)
                     arr = arr.map(this._options.map, this._options.mapctx || this);
                 return {
@@ -27,7 +27,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
 
             _queryCollectionUpdated: function(coll) {
                 if (this._options.create_virtual) {
-                    this._model.get(this._foreign_key).filter(function(key) {
+                    (this._model.get(this._foreign_key) || []).filter(function(key) {
                         return !coll.has(function(item) {
                             return this._matchItem(item, key);
                         }, this);
@@ -52,7 +52,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                 this._model.set(this._foreign_key, this._model.get(this._foreign_key).filter(function(key) {
                     return !this._matchItem(item, key);
                 }, this));
-                if (this._options.create_virtual && this.collection.value())
+                if (this._options.create_virtual && this.collection.value() && !item.destroyed())
                     this.collection.value().remove(item);
             },
 
