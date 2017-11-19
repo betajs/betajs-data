@@ -2,8 +2,9 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
     "module:Modelling.Associations.TableAssociation",
     "base:Classes.SharedObjectFactory",
     "module:Collections.TableQueryCollection",
-    "base:Objs"
-], function(TableAssociation, SharedObjectFactory, TableQueryCollection, Objs, scoped) {
+    "base:Objs",
+    "base:Functions"
+], function(TableAssociation, SharedObjectFactory, TableQueryCollection, Objs, Functions, scoped) {
     return TableAssociation.extend({
         scoped: scoped
     }, function(inherited) {
@@ -12,12 +13,14 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
             constructor: function() {
                 inherited.constructor.apply(this, arguments);
                 this.collection = new SharedObjectFactory(this.newCollection, this);
+                this.collection.add = Functions.as_method(this.add, this);
+                this.collection.remove = Functions.as_method(this.remove, this);
             },
 
             _buildQuery: function(query, options) {},
 
             buildQuery: function(query, options) {
-                return this._buildQuery(Objs.extend(query, this._options.query), Objs.extend(options, this._options.queryOptions));
+                return this._buildQuery(Objs.extend(query, this._options.query), Objs.extend(options, this._options.queryOpts));
             },
 
             _queryChanged: function() {

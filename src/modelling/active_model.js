@@ -17,6 +17,24 @@ Scoped.extend("module:Modelling.ActiveModel", [
                 this._queryopts = queryopts || {};
                 this.set("model", null);
                 this._unregisterModel();
+                if (this._watcher) {
+                    this._watcher.watchInsert({
+                        query: this._query,
+                        options: Objs.extend({
+                            limit: 1
+                        }, this._queryopts)
+                    }, this);
+                }
+                this._table.on("create", function(data) {
+                    if (!Queries.evaluate(this._query, data))
+                        return;
+                    if (!this._queryopts.sort && this.get("model"))
+                        return;
+                    if (this.get("model"))
+                        this._unregisterModel();
+                    else
+                        this._registerModel(this._table.materialize(data));
+                }, this);
             },
 
             destroy: function() {
@@ -42,11 +60,8 @@ Scoped.extend("module:Modelling.ActiveModel", [
 
             _registerModel: function(model) {
                 this.set("model", model);
-                if (this._watcher) {
-                    this._watcher.unwatchInsert(null, this);
+                if (this._watcher)
                     this._watcher.watchItem(model.id(), this);
-                }
-                this._table.off(null, null, this);
                 model.on("change", function() {
                     if (!Queries.evaluate(this._query, model.data()))
                         this._unregisterModel();
@@ -69,19 +84,6 @@ Scoped.extend("module:Modelling.ActiveModel", [
                 this._table.findBy(this._query, this._queryopts).success(function(model) {
                     if (model)
                         this._registerModel(model);
-                    else {
-                        if (this._watcher) {
-                            this._watcher.watchInsert({
-                                query: this._query,
-                                options: Objs.extend({
-                                    limit: 1
-                                }, this._queryopts)
-                            }, this);
-                        }
-                        this._table.on("create", function(data) {
-                            this._registerModel(this._table.materialize(data));
-                        }, this);
-                    }
                 }, this);
             }
 

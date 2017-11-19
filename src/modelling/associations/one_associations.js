@@ -14,10 +14,6 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
                 this.active = new SharedObjectFactory(this.newActiveModel, this);
             },
 
-            _queryopts: function() {
-                return this._options.queryopts;
-            },
-
             _buildQuery: function(query) {},
 
             buildQuery: function(query) {
@@ -37,7 +33,7 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
 
             newActiveModel: function(query) {
                 var result = this.buildQuery(query);
-                return new ActiveModel(this._foreign_table, result, this._queryopts());
+                return new ActiveModel(this._foreign_table, result, this._options.queryOpts);
             },
 
             unset: function() {
