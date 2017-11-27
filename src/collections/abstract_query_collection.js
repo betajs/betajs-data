@@ -116,6 +116,17 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 inherited.destroy.call(this);
             },
 
+            /**
+             * @method source
+             *
+             * Returns the source (a store or a table)
+             *
+             * @return {object} Data source
+             */
+
+            source: function() {
+                return this._source;
+            },
 
             /**
              * @method paginate

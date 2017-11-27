@@ -1,19 +1,34 @@
 Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
     "module:Modelling.Associations.HasManyAssociation",
-    "base:Objs"
-], function(HasManyAssociation, Objs, scoped) {
+    "base:Objs",
+    "base:Types"
+], function(HasManyAssociation, Objs, Types, scoped) {
     return HasManyAssociation.extend({
         scoped: scoped
     }, function(inherited) {
         return {
 
+            __foreignKeyArray: function() {
+                return Types.is_array(this._foreign_key) ? this._foreign_key : [this._foreign_key];
+            },
+
+            __readForeignKey: function() {
+                var result = [];
+                this.__foreignKeyArray().forEach(function(fk) {
+                    result = result.concat(this._model.get(fk) || []);
+                }, this);
+                return result;
+            },
+
             constructor: function() {
                 inherited.constructor.apply(this, arguments);
-                this._model.on("change:" + this._foreign_key, this._queryChanged, this);
+                this.__foreignKeyArray().forEach(function(fk) {
+                    this._model.on("change:" + fk, this._queryChanged, this);
+                }, this);
             },
 
             _buildQuery: function(query, options) {
-                var arr = this._model.get(this._foreign_key) || [];
+                var arr = this.__readForeignKey();
                 if (this._options.map)
                     arr = arr.map(this._options.map, this._options.mapctx || this);
                 return {
@@ -27,7 +42,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
 
             _queryCollectionUpdated: function(coll) {
                 if (this._options.create_virtual) {
-                    (this._model.get(this._foreign_key) || []).filter(function(key) {
+                    this.__readForeignKey().filter(function(key) {
                         return !coll.has(function(item) {
                             return this._matchItem(item, key);
                         }, this);
@@ -49,21 +64,23 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
             },
 
             _remove: function(item) {
-                this._model.set(this._foreign_key, this._model.get(this._foreign_key).filter(function(key) {
-                    return !this._matchItem(item, key);
-                }, this));
+                this.__foreignKeyArray().forEach(function(fk) {
+                    this._model.set(fk, this._model.get(fk).filter(function(key) {
+                        return !this._matchItem(item, key);
+                    }, this));
+                }, this);
                 if (this._options.create_virtual && this.collection.value() && !item.destroyed())
                     this.collection.value().remove(item);
             },
 
             _add: function(item) {
-                var current = Objs.clone(this._model.get(this._foreign_key) || [], 1);
-                var exists = current.some(function(key) {
-                    return this._matchItem(item, key);
-                }, this);
-                if (!exists) {
+                if (!this.__readForeignKey().some(function(key) {
+                        return this._matchItem(item, key);
+                    }, this)) {
+                    var fk = Types.is_array(this._foreign_key) ? this._foreign_key[0] : this._foreign_key;
+                    var current = Objs.clone(this._model.get(fk), 1);
                     current.push(item.get(this._options.foreign_attr || this._foreign_table.primary_key()));
-                    this._model.set(this._foreign_key, current);
+                    this._model.set(fk, current);
                     if (this._options.create_virtual && this.collection.value())
                         this.collection.value().add(item);
                 }
