@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.74 - 2017-11-27
+betajs-data - v1.0.75 - 2017-11-30
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1009,7 +1009,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.74 - 2017-11-27
+betajs-data - v1.0.75 - 2017-11-30
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1021,7 +1021,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.74"
+    "version": "1.0.75"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -7158,6 +7158,23 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
         };
     });
 });
+Scoped.define("module:Modelling.Associations.HasManyCustomAssociation", [
+    "module:Modelling.Associations.HasManyAssociation"
+], function(HasManyAssociation, scoped) {
+    return HasManyAssociation.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            _buildQuery: function(query, options) {
+                return {
+                    "query": this._foreign_key
+                };
+            }
+
+        };
+    });
+});
 Scoped.define("module:Modelling.Associations.HasManyInArrayAssociation", [
     "module:Modelling.Associations.HasManyAssociation",
     "base:Objs"
@@ -7301,7 +7318,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                         return this._matchItem(item, key);
                     }, this)) {
                     var fk = Types.is_array(this._foreign_key) ? this._foreign_key[0] : this._foreign_key;
-                    var current = Objs.clone(this._model.get(fk), 1);
+                    var current = Objs.clone(this._model.get(fk) || [], 1);
                     current.push(item.get(this._options.foreign_attr || this._foreign_table.primary_key()));
                     this._model.set(fk, current);
                     if (this._options.create_virtual && this.collection.value())
@@ -7487,7 +7504,7 @@ Scoped.define("module:Modelling.GroupedProperties", [
                 }, this);
 
                 /* Methods */
-                Objs.extend(this, Objs.map(this.cls.groupedMethods, function(methodFunc) {
+                Objs.extend(this, Objs.map(this.cls.groupedMethods, function(methodFunc, methodKey) {
                     if (Types.is_string(methodFunc))
                         methodFunc = this.cls.methodsHelper[methodFunc];
                     return function() {
@@ -7575,7 +7592,7 @@ Scoped.define("module:Modelling.GroupedProperties", [
             all: function(items, methodName, methodArgs) {
                 var result = null;
                 items.iterate(function(item) {
-                    result = item[methodName].apply(item, methodsArgs) || result;
+                    result = item[methodName].apply(item, methodArgs) || result;
                 });
                 return result;
             },

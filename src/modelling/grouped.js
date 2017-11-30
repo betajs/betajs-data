@@ -21,7 +21,7 @@ Scoped.define("module:Modelling.GroupedProperties", [
                 }, this);
 
                 /* Methods */
-                Objs.extend(this, Objs.map(this.cls.groupedMethods, function(methodFunc) {
+                Objs.extend(this, Objs.map(this.cls.groupedMethods, function(methodFunc, methodKey) {
                     if (Types.is_string(methodFunc))
                         methodFunc = this.cls.methodsHelper[methodFunc];
                     return function() {
@@ -109,7 +109,7 @@ Scoped.define("module:Modelling.GroupedProperties", [
             all: function(items, methodName, methodArgs) {
                 var result = null;
                 items.iterate(function(item) {
-                    result = item[methodName].apply(item, methodsArgs) || result;
+                    result = item[methodName].apply(item, methodArgs) || result;
                 });
                 return result;
             },
