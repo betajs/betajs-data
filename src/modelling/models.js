@@ -135,11 +135,14 @@ Scoped.define("module:Modelling.Model", [
                         if (wasNew) {
                             this.__options.newModel = false;
                             this._registerEvents();
+                            this._createdModel();
                         }
                         return this;
                     }, this);
                 }, this);
             },
+
+            _createdModel: function() {},
 
             isRemoving: function() {
                 return this.__removing;
