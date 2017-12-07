@@ -86,3 +86,57 @@ QUnit.test("test schemed prop length validation from min", function (assert) {
 		done2();
 	});
 });
+
+
+QUnit.test("test schemed prop length validation max action", function (assert) {
+	var done = assert.async();
+	var done1 = assert.async();
+	var done2 = assert.async();
+	var schemedProp = BetaJS.Data.Modelling.SchemedProperties.extend(null, {}, function (inherited) {
+		return {
+			_initializeScheme: function () {
+				var scheme = inherited._initializeScheme.call(this);
+				scheme.first_prop = {
+					type: "string",
+					validate: new BetaJS.Data.Modelling.Validators.LengthValidator({min_length: 4, max_length: 5, max_action: "truncate"})
+				};
+				scheme.second_prop = {
+					type: "string",
+					validate: new BetaJS.Data.Modelling.Validators.LengthValidator({min_length: null, max_length: 8, max_action: "empty"})
+				};
+				scheme.third_prop = {
+					type: "string",
+					validate: new BetaJS.Data.Modelling.Validators.LengthValidator({min_length: 4, max_length: 10})
+				};
+				return scheme;
+			}
+		};
+	});
+	
+	var example = new schemedProp({"first_prop": "valueeeeeeeee", "second_prop" : "iamgettingerased", "third_prop" : "something"});
+	example.validate().mapSuccess(function (val) {
+		assert.ok(val);
+		done();
+	}).mapError(function () {
+		assert.ok(false);
+		done();
+	});
+	
+	var example2 = new schemedProp({"first_prop": "min", "second_prop" : "iamgettingerased"});
+	example2.validate().mapSuccess(function (val) {
+		assert.ok(!val);
+		done1();
+	}).mapError(function () {
+		assert.ok(false);
+		done1();
+	});
+	
+	var example3 = new schemedProp({"first_prop": "valueeeeeeeee", "second_prop" : "iamgettingerased", "third_prop" : "verylongprop"});
+	example3.validate().mapSuccess(function (val) {
+		assert.ok(!val);
+		done2();
+	}).mapError(function () {
+		assert.ok(false);
+		done2();
+	});
+});

@@ -103,7 +103,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
                 var value = this.get(attr);
                 var promises = [];
                 Objs.iter(validate, function(validator) {
-                    promises.push(Promise.box(validator.validate, validator, [value, this]));
+                    promises.push(Promise.box(validator.validate, validator, [value, this, attr]));
                 }, this);
                 return Promise.and(promises).end().mapSuccess(function(arr) {
                     var valid = true;
