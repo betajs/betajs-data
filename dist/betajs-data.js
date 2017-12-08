@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.76 - 2017-12-04
+betajs-data - v1.0.77 - 2017-12-07
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1009,7 +1009,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.76 - 2017-12-04
+betajs-data - v1.0.77 - 2017-12-07
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1021,7 +1021,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.76"
+    "version": "1.0.77"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -7990,7 +7990,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
                 var value = this.get(attr);
                 var promises = [];
                 Objs.iter(validate, function(validator) {
-                    promises.push(Promise.box(validator.validate, validator, [value, this]));
+                    promises.push(Promise.box(validator.validate, validator, [value, this, attr]));
                 }, this);
                 return Promise.and(promises).end().mapSuccess(function(arr) {
                     var valid = true;
@@ -8369,11 +8369,13 @@ Scoped.define("module:Modelling.Validators.LengthValidator", [
                 options = Objs.extend({
                     min_length: null,
                     max_length: null,
-                    error_string: null
+                    error_string: null,
+                    max_action: null
                 }, options);
                 this.__min_length = options.min_length;
                 this.__max_length = options.max_length;
                 this.__error_string = options.error_string;
+                this.__max_action = options.max_action;
                 if (!this.__error_string) {
                     if (this.__min_length !== null) {
                         if (this.__max_length !== null)
@@ -8385,12 +8387,28 @@ Scoped.define("module:Modelling.Validators.LengthValidator", [
                 }
             },
 
-            validate: function(value, context) {
+            validate: function(value, context, key) {
                 if (this.__min_length !== null && (!value || (value && value.length < this.__min_length)))
                     return this.__error_string;
-                if (this.__max_length !== null && (value && (value.length > this.__max_length)))
-                    return this.__error_string;
-                return null;
+                var resp = null;
+                if (this.__max_length !== null && (value && (value.length > this.__max_length))) {
+                    resp = this.__error_string;
+                    if (this.__max_action) {
+                        switch (this.__max_action) {
+                            case "truncate":
+                                context.set(key, value.substr(0, this.__max_length));
+                                resp = null;
+                                break;
+                            case "empty":
+                                context.set(key, "");
+                                resp = null;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+                return resp;
             }
 
         };
