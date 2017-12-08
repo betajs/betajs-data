@@ -34,7 +34,7 @@ Scoped.define("module:Modelling.Validators.LengthValidator", [
             validate: function(value, context, key) {
                 if (this.__min_length !== null && (!value || (value && value.length < this.__min_length)))
                     return this.__error_string;
-	            var resp = null;
+                var resp = null;
                 if (this.__max_length !== null && (value && (value.length > this.__max_length))) {
                     resp = this.__error_string;
                     if (this.__max_action) {
