@@ -31,6 +31,7 @@ module.exports = function(grunt) {
     .codeclimateTask()
     .travisTask(null, "4.0")
     .packageTask()
+	.autoincreasepackageTask(null, "package-source.json")
 	.githookTask(null, "pre-commit", "check")
     
     /* Markdown Files */
@@ -42,7 +43,7 @@ module.exports = function(grunt) {
 
 	grunt.initConfig(gruntHelper.config);	
 
-	grunt.registerTask('default', ['package', 'readme', 'license', 'githook', 'codeclimate', 'travis', 'beautify1', 'beautify2', 'scopedclosurerevision', 'concat-scoped', 'uglify-noscoped', 'uglify-scoped']);
+	grunt.registerTask('default', ['autoincreasepackage', 'package', 'readme', 'license', 'githook', 'codeclimate', 'travis', 'beautify1', 'beautify2', 'scopedclosurerevision', 'concat-scoped', 'uglify-noscoped', 'uglify-scoped']);
 	grunt.registerTask('check', [ 'lint', 'qunitjs' ]);
 
 };

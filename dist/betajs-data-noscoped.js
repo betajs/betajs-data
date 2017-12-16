@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.77 - 2017-12-07
+betajs-data - v1.0.78 - 2017-12-16
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.77"
+    "version": "1.0.78"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -6482,13 +6482,13 @@ Scoped.define("module:Modelling.GroupedProperties", [
     }, function(inherited) {
         return {
 
-            constructor: function() {
-                inherited.constructor.apply(this, arguments);
+            constructor: function(attributes, collection) {
+                inherited.constructor.call(this, attributes);
 
                 var silent = false;
-                var items = this.auto_destroy(new Collection());
+                var items = collection || this.auto_destroy(new Collection());
                 this[this.cls.groupedItemsKey] = items;
-                this.set(this.cls.groupedItemsCount, 0);
+                this.set(this.cls.groupedItemsCount, items.count());
                 items.on("add remove", function() {
                     this.set(this.cls.groupedItemsCount, items.count());
                 }, this);
@@ -6524,7 +6524,7 @@ Scoped.define("module:Modelling.GroupedProperties", [
                     }
                     var groupValue = null;
                     if (metaAttr.add) {
-                        items.on("add", function(item) {
+                        this.on("items:add", function(item) {
                             groupValue = metaAttr.add(groupValue, item.get(attrKey), item);
                             silent = true;
                             this.set(attrKey, metaAttr.map ? metaAttr.map(groupValue) : groupValue);
@@ -6532,7 +6532,7 @@ Scoped.define("module:Modelling.GroupedProperties", [
                         }, this);
                     }
                     if (metaAttr.remove) {
-                        items.on("remove", function(item) {
+                        this.on("items:remove", function(item) {
                             groupValue = metaAttr.remove(groupValue, item.get(attrKey), item);
                             silent = true;
                             this.set(attrKey, metaAttr.map ? metaAttr.map(groupValue) : groupValue);
@@ -6548,7 +6548,7 @@ Scoped.define("module:Modelling.GroupedProperties", [
                         }, this);
                     }
                     if (metaAttr.first) {
-                        items.on("add reindexed", function(item) {
+                        this.on("items:add items:reindexed", function(item) {
                             if (items.getIndex(item) === 0)
                                 groupValue = metaAttr.first(groupValue, item.get(attrKey));
                             silent = true;
@@ -6557,7 +6557,7 @@ Scoped.define("module:Modelling.GroupedProperties", [
                         }, this);
                     }
                     if (metaAttr.last) {
-                        items.on("add reindexed", function(item) {
+                        this.on("items:add items:reindexed", function(item) {
                             if (items.getIndex(item) === items.count() - 1)
                                 groupValue = metaAttr.last(groupValue, item.get(attrKey));
                             silent = true;
@@ -6566,6 +6566,18 @@ Scoped.define("module:Modelling.GroupedProperties", [
                         }, this);
                     }
                 }, this);
+
+                items.iterate(function(item) {
+                    this.trigger("items:add", item);
+                }, this);
+                this.delegateEvents([
+                    "add", "remove", "reindexed"
+                ], items, "items");
+            },
+
+            destroy: function() {
+                this[this.cls.groupedItemsKey].off(null, null, this);
+                inherited.destroy.call(this);
             }
 
         };
