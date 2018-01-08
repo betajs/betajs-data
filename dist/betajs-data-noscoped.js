@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.78 - 2017-12-16
+betajs-data - v1.0.79 - 2018-01-08
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,10 +11,10 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.78"
+    "version": "1.0.79"
 };
 });
-Scoped.assumeVersion('base:version', '~1.0.96');
+Scoped.assumeVersion('base:version', '~1.0.141');
 /**
  * @class AbstractQueryCollection
  *
@@ -6088,10 +6088,11 @@ Scoped.define("module:Modelling.Associations.BelongsToAssociation", [
 Scoped.define("module:Modelling.Associations.HasManyAssociation", [
     "module:Modelling.Associations.TableAssociation",
     "base:Classes.SharedObjectFactory",
+    "base:Classes.SharedObjectFactoryPool",
     "module:Collections.TableQueryCollection",
     "base:Objs",
     "base:Functions"
-], function(TableAssociation, SharedObjectFactory, TableQueryCollection, Objs, Functions, scoped) {
+], function(TableAssociation, SharedObjectFactory, SharedObjectFactoryPool, TableQueryCollection, Objs, Functions, scoped) {
     return TableAssociation.extend({
         scoped: scoped
     }, function(inherited) {
@@ -6099,9 +6100,25 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
 
             constructor: function() {
                 inherited.constructor.apply(this, arguments);
-                this.collection = new SharedObjectFactory(this.newCollection, this);
-                this.collection.add = Functions.as_method(this.add, this);
-                this.collection.remove = Functions.as_method(this.remove, this);
+                this.collection = this.newPooledCollection();
+                this.collectionPool = new SharedObjectFactoryPool(this.newPooledCollection, this);
+            },
+
+            destroy: function() {
+                this.collectionPool.destroy();
+                this.collection.destroy();
+                inherited.destroy.call(this);
+            },
+
+            customCollection: function() {
+                return this.collectionPool.acquire.apply(this.collectionPool, arguments);
+            },
+
+            newPooledCollection: function() {
+                var collection = new SharedObjectFactory(this.newCollection, this, Functions.getArguments(arguments));
+                collection.add = Functions.as_method(this.add, this);
+                collection.remove = Functions.as_method(this.remove, this);
+                return collection;
             },
 
             _buildQuery: function(query, options) {},
@@ -6213,7 +6230,7 @@ Scoped.define("module:Modelling.Associations.HasManyKeyAssociation", [
 
             _buildQuery: function(query, options) {
                 return Objs.extend({
-                    "query": Objs.objectBy(this._foreign_key, this._model.id())
+                    "query": Objs.extend(Objs.objectBy(this._foreign_key, this._model.id()), query)
                 }, options);
             },
 
@@ -6262,11 +6279,11 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                 if (this._options.map)
                     arr = arr.map(this._options.map, this._options.mapctx || this);
                 return {
-                    "query": Objs.objectBy(
+                    "query": Objs.extend(Objs.objectBy(
                         this._options.foreign_attr || this._foreign_table.primary_key(), Objs.objectBy(
                             this._options.ignore_case ? "$inic" : "$in",
                             arr
-                        ))
+                        )), query)
                 };
             },
 

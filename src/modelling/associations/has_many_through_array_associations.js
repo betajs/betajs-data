@@ -32,11 +32,11 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                 if (this._options.map)
                     arr = arr.map(this._options.map, this._options.mapctx || this);
                 return {
-                    "query": Objs.objectBy(
+                    "query": Objs.extend(Objs.objectBy(
                         this._options.foreign_attr || this._foreign_table.primary_key(), Objs.objectBy(
                             this._options.ignore_case ? "$inic" : "$in",
                             arr
-                        ))
+                        )), query)
                 };
             },
 

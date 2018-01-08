@@ -9,7 +9,7 @@ Scoped.define("module:Modelling.Associations.HasManyKeyAssociation", [
 
             _buildQuery: function(query, options) {
                 return Objs.extend({
-                    "query": Objs.objectBy(this._foreign_key, this._model.id())
+                    "query": Objs.extend(Objs.objectBy(this._foreign_key, this._model.id()), query)
                 }, options);
             },
 

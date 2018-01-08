@@ -1,10 +1,11 @@
 Scoped.define("module:Modelling.Associations.HasManyAssociation", [
     "module:Modelling.Associations.TableAssociation",
     "base:Classes.SharedObjectFactory",
+    "base:Classes.SharedObjectFactoryPool",
     "module:Collections.TableQueryCollection",
     "base:Objs",
     "base:Functions"
-], function(TableAssociation, SharedObjectFactory, TableQueryCollection, Objs, Functions, scoped) {
+], function(TableAssociation, SharedObjectFactory, SharedObjectFactoryPool, TableQueryCollection, Objs, Functions, scoped) {
     return TableAssociation.extend({
         scoped: scoped
     }, function(inherited) {
@@ -12,9 +13,25 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
 
             constructor: function() {
                 inherited.constructor.apply(this, arguments);
-                this.collection = new SharedObjectFactory(this.newCollection, this);
-                this.collection.add = Functions.as_method(this.add, this);
-                this.collection.remove = Functions.as_method(this.remove, this);
+                this.collection = this.newPooledCollection();
+                this.collectionPool = new SharedObjectFactoryPool(this.newPooledCollection, this);
+            },
+
+            destroy: function() {
+                this.collectionPool.destroy();
+                this.collection.destroy();
+                inherited.destroy.call(this);
+            },
+
+            customCollection: function() {
+                return this.collectionPool.acquire.apply(this.collectionPool, arguments);
+            },
+
+            newPooledCollection: function() {
+                var collection = new SharedObjectFactory(this.newCollection, this, Functions.getArguments(arguments));
+                collection.add = Functions.as_method(this.add, this);
+                collection.remove = Functions.as_method(this.remove, this);
+                return collection;
             },
 
             _buildQuery: function(query, options) {},
