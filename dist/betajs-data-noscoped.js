@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.79 - 2018-01-08
+betajs-data - v1.0.80 - 2018-01-08
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.79"
+    "version": "1.0.80"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6142,7 +6142,7 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
 
             newCollection: function(query, options) {
                 var result = this.buildQuery(query, options);
-                var coll = new TableQueryCollection(this._foreign_table, result.query, Objs.extend(result.options, this._options.collectionOptions));
+                var coll = new TableQueryCollection(this._foreign_table, result.query, Objs.extend(Objs.extend(result.options, this._options.collectionOptions), options));
                 coll.on("replaced-objects collection-updated", function() {
                     this._queryCollectionUpdated(coll);
                 }, this);
@@ -6166,8 +6166,9 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
     });
 });
 Scoped.define("module:Modelling.Associations.HasManyCustomAssociation", [
-    "module:Modelling.Associations.HasManyAssociation"
-], function(HasManyAssociation, scoped) {
+    "module:Modelling.Associations.HasManyAssociation",
+    "base:Objs"
+], function(HasManyAssociation, Objs, scoped) {
     return HasManyAssociation.extend({
         scoped: scoped
     }, function(inherited) {
@@ -6175,7 +6176,8 @@ Scoped.define("module:Modelling.Associations.HasManyCustomAssociation", [
 
             _buildQuery: function(query, options) {
                 return {
-                    "query": this._foreign_key
+                    "query": this._foreign_key,
+                    "options": Objs.clone(options || {}, 1)
                 };
             }
 

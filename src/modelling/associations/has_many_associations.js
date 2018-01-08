@@ -55,7 +55,7 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
 
             newCollection: function(query, options) {
                 var result = this.buildQuery(query, options);
-                var coll = new TableQueryCollection(this._foreign_table, result.query, Objs.extend(result.options, this._options.collectionOptions));
+                var coll = new TableQueryCollection(this._foreign_table, result.query, Objs.extend(Objs.extend(result.options, this._options.collectionOptions), options));
                 coll.on("replaced-objects collection-updated", function() {
                     this._queryCollectionUpdated(coll);
                 }, this);
