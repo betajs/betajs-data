@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.80 - 2018-01-08
+betajs-data - v1.0.81 - 2018-01-22
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1009,7 +1009,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.80 - 2018-01-08
+betajs-data - v1.0.81 - 2018-01-22
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1021,7 +1021,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.80"
+    "version": "1.0.81"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -7782,6 +7782,7 @@ Scoped.define("module:Modelling.Model", [
 
             saveOnChange: function() {
                 this.__saveOnChange = true;
+                return this;
             },
 
             option: function(key) {

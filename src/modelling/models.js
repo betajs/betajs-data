@@ -37,6 +37,7 @@ Scoped.define("module:Modelling.Model", [
 
             saveOnChange: function() {
                 this.__saveOnChange = true;
+                return this;
             },
 
             option: function(key) {
