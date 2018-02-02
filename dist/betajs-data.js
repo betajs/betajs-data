@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.81 - 2018-01-22
+betajs-data - v1.0.81 - 2018-02-02
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1009,7 +1009,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.81 - 2018-01-22
+betajs-data - v1.0.81 - 2018-02-02
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -7780,8 +7780,9 @@ Scoped.define("module:Modelling.Model", [
                 inherited.destroy.call(this);
             },
 
-            saveOnChange: function() {
+            saveOnChange: function(weak) {
                 this.__saveOnChange = true;
+                this.__saveOnChangeWeak = !!weak;
                 return this;
             },
 
@@ -7839,7 +7840,7 @@ Scoped.define("module:Modelling.Model", [
                 var scheme = this.cls.scheme();
                 if (!(key in scheme) || this.__silent > 0)
                     return;
-                if (this.option("auto_update") && (!this.isNew() || this.__saveOnChange))
+                if (this.option("auto_update") && (!this.isNew() || (this.__saveOnChange && (!this.__saveOnChangeWeak || !!value))))
                     this.save();
             },
 
