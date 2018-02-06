@@ -48,14 +48,14 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
 
             allBy: function(query, options) {
                 var result = this.buildQuery(query, options);
-                return this._foreign_table.allBy(result.query, result.options);
+                return this._foreignTable().allBy(result.query, result.options);
             },
 
             _queryCollectionUpdated: function(coll) {},
 
             newCollection: function(query, options) {
                 var result = this.buildQuery(query, options);
-                var coll = new TableQueryCollection(this._foreign_table, result.query, Objs.extend(Objs.extend(result.options, this._options.collectionOptions), options));
+                var coll = new TableQueryCollection(this._foreignTable(), result.query, Objs.extend(Objs.extend(result.options, this._options.collectionOptions), options));
                 coll.on("replaced-objects collection-updated", function() {
                     this._queryCollectionUpdated(coll);
                 }, this);

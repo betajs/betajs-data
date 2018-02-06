@@ -13,7 +13,7 @@ Scoped.define("module:Modelling.Associations.BelongsToAssociation", [
             },
 
             _buildQuery: function(query) {
-                return Objs.objectBy(this._foreign_table.primary_key(), this._model.get(this._foreign_key));
+                return Objs.objectBy(this._foreignTable().primary_key(), this._model.get(this._foreign_key));
             },
 
             _unset: function() {

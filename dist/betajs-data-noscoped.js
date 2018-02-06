@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.81 - 2018-02-02
+betajs-data - v1.0.83 - 2018-02-06
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.81"
+    "version": "1.0.83"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6071,7 +6071,7 @@ Scoped.define("module:Modelling.Associations.BelongsToAssociation", [
             },
 
             _buildQuery: function(query) {
-                return Objs.objectBy(this._foreign_table.primary_key(), this._model.get(this._foreign_key));
+                return Objs.objectBy(this._foreignTable().primary_key(), this._model.get(this._foreign_key));
             },
 
             _unset: function() {
@@ -6135,14 +6135,14 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
 
             allBy: function(query, options) {
                 var result = this.buildQuery(query, options);
-                return this._foreign_table.allBy(result.query, result.options);
+                return this._foreignTable().allBy(result.query, result.options);
             },
 
             _queryCollectionUpdated: function(coll) {},
 
             newCollection: function(query, options) {
                 var result = this.buildQuery(query, options);
-                var coll = new TableQueryCollection(this._foreign_table, result.query, Objs.extend(Objs.extend(result.options, this._options.collectionOptions), options));
+                var coll = new TableQueryCollection(this._foreignTable(), result.query, Objs.extend(Objs.extend(result.options, this._options.collectionOptions), options));
                 coll.on("replaced-objects collection-updated", function() {
                     this._queryCollectionUpdated(coll);
                 }, this);
@@ -6282,7 +6282,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                     arr = arr.map(this._options.map, this._options.mapctx || this);
                 return {
                     "query": Objs.extend(Objs.objectBy(
-                        this._options.foreign_attr || this._foreign_table.primary_key(), Objs.objectBy(
+                        this._options.foreign_attr || this._foreignTable().primary_key(), Objs.objectBy(
                             this._options.ignore_case ? "$inic" : "$in",
                             arr
                         )), query)
@@ -6302,7 +6302,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
             },
 
             _matchItem: function(item, key) {
-                var value = item.get(this._options.foreign_attr || this._foreign_table.primary_key());
+                var value = item.get(this._options.foreign_attr || this._foreignTable().primary_key());
                 if (this._options.map)
                     key = this._options.map.call(this._options.mapctx || this, key);
                 if (this._options.ignore_case) {
@@ -6328,7 +6328,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                     }, this)) {
                     var fk = Types.is_array(this._foreign_key) ? this._foreign_key[0] : this._foreign_key;
                     var current = Objs.clone(this._model.get(fk) || [], 1);
-                    current.push(item.get(this._options.foreign_attr || this._foreign_table.primary_key()));
+                    current.push(item.get(this._options.foreign_attr || this._foreignTable().primary_key()));
                     this._model.set(fk, current);
                     if (this._options.create_virtual && this.collection.value())
                         this.collection.value().add(item);
@@ -6394,12 +6394,12 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
 
             findBy: function(query) {
                 var result = this.buildQuery(query);
-                return this._foreign_table.findBy(result);
+                return this._foreignTable().findBy(result);
             },
 
             newActiveModel: function(query) {
                 var result = this.buildQuery(query);
-                return new ActiveModel(this._foreign_table, result, this._options.queryOpts);
+                return new ActiveModel(this._foreignTable(), result, this._options.queryOpts);
             },
 
             unset: function() {
@@ -6417,6 +6417,76 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
         };
     });
 });
+Scoped.define("module:Modelling.Associations.PolymorphicBelongsToAssociation", [
+    "module:Modelling.Associations.BelongsToAssociation",
+    "base:Objs"
+], function(BelongsToAssociation, Objs, scoped) {
+    return BelongsToAssociation.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            constructor: function(model, foreign_key, foreign_type_key, table_lookup_function, options) {
+                inherited.constructor.call(this, model, null, foreign_key, options);
+                this._foreign_type_key = foreign_type_key;
+                this._table_lookup_function = table_lookup_function;
+            },
+
+            _foreignTable: function() {
+                return this._table_lookup_function(this._model.get(this._foreign_type_key));
+            },
+
+            _unset: function() {
+                inherited._unset.call(this);
+                this._model.set(this._foreign_type_key, null);
+            },
+
+            _set: function(model) {
+                inherited._set.call(this, model);
+                this._model.set(this._foreign_type_key, model.type());
+            }
+
+        };
+    });
+});
+Scoped.define("module:Modelling.Associations.PolymorphicHasManyKeyAssociation", [
+    "module:Modelling.Associations.HasManyKeyAssociation",
+    "base:Objs"
+], function(HasManyKeyAssociation, Objs, scoped) {
+    return HasManyKeyAssociation.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            constructor: function(model, foreign_table, foreign_key, foreign_type_key, options) {
+                inherited.constructor.call(this, model, foreign_table, foreign_key, options);
+                this._foreign_type_key = foreign_type_key;
+            },
+
+            _buildQuery: function(query, options) {
+                return Objs.extend({
+                    "query": Objs.extend(Objs.objectBy(
+                        this._foreign_key,
+                        this._model.id(),
+                        this._foreign_type_key,
+                        this._model.type()
+                    ), query)
+                }, options);
+            },
+
+            _remove: function(item) {
+                inherited._remove.call(this, item);
+                item.set(this._foreign_type_key, null);
+            },
+
+            _add: function(item) {
+                inherited._add.call(this, item);
+                item.set(this._foreign_type_key, this._model.type());
+            }
+
+        };
+    });
+});
 Scoped.define("module:Modelling.Associations.TableAssociation", [
     "module:Modelling.Associations.Association"
 ], function(Association, scoped) {
@@ -6429,6 +6499,10 @@ Scoped.define("module:Modelling.Associations.TableAssociation", [
                 inherited.constructor.call(this, model, options);
                 this._foreign_table = foreign_table;
                 this._foreign_key = foreign_key;
+            },
+
+            _foreignTable: function() {
+                return this._foreign_table;
             }
 
         };
@@ -6739,8 +6813,9 @@ Scoped.define("module:Modelling.Model", [
     "base:Objs",
     "base:Promise",
     "base:Types",
+    "base:Strings",
     "module:Modelling.Table"
-], function(AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Table, scoped) {
+], function(AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Strings, Table, scoped) {
     return AssociatedProperties.extend({
         scoped: scoped
     }, function(inherited) {
@@ -6779,6 +6854,10 @@ Scoped.define("module:Modelling.Model", [
             option: function(key) {
                 var opts = key in this.__options ? this.__options : this.table().options();
                 return opts[key];
+            },
+
+            type: function() {
+                return this.cls.type();
             },
 
             table: function() {
@@ -6901,6 +6980,10 @@ Scoped.define("module:Modelling.Model", [
 
         };
     }, {
+
+        type: function() {
+            return Strings.last_after(this.classname, ".").toLowerCase();
+        },
 
         createTable: function(store, options) {
             return new Table(store, this, options);

@@ -4,8 +4,9 @@ Scoped.define("module:Modelling.Model", [
     "base:Objs",
     "base:Promise",
     "base:Types",
+    "base:Strings",
     "module:Modelling.Table"
-], function(AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Table, scoped) {
+], function(AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Strings, Table, scoped) {
     return AssociatedProperties.extend({
         scoped: scoped
     }, function(inherited) {
@@ -44,6 +45,10 @@ Scoped.define("module:Modelling.Model", [
             option: function(key) {
                 var opts = key in this.__options ? this.__options : this.table().options();
                 return opts[key];
+            },
+
+            type: function() {
+                return this.cls.type();
             },
 
             table: function() {
@@ -166,6 +171,10 @@ Scoped.define("module:Modelling.Model", [
 
         };
     }, {
+
+        type: function() {
+            return Strings.last_after(this.classname, ".").toLowerCase();
+        },
 
         createTable: function(store, options) {
             return new Table(store, this, options);

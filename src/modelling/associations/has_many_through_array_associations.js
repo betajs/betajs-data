@@ -33,7 +33,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                     arr = arr.map(this._options.map, this._options.mapctx || this);
                 return {
                     "query": Objs.extend(Objs.objectBy(
-                        this._options.foreign_attr || this._foreign_table.primary_key(), Objs.objectBy(
+                        this._options.foreign_attr || this._foreignTable().primary_key(), Objs.objectBy(
                             this._options.ignore_case ? "$inic" : "$in",
                             arr
                         )), query)
@@ -53,7 +53,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
             },
 
             _matchItem: function(item, key) {
-                var value = item.get(this._options.foreign_attr || this._foreign_table.primary_key());
+                var value = item.get(this._options.foreign_attr || this._foreignTable().primary_key());
                 if (this._options.map)
                     key = this._options.map.call(this._options.mapctx || this, key);
                 if (this._options.ignore_case) {
@@ -79,7 +79,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                     }, this)) {
                     var fk = Types.is_array(this._foreign_key) ? this._foreign_key[0] : this._foreign_key;
                     var current = Objs.clone(this._model.get(fk) || [], 1);
-                    current.push(item.get(this._options.foreign_attr || this._foreign_table.primary_key()));
+                    current.push(item.get(this._options.foreign_attr || this._foreignTable().primary_key()));
                     this._model.set(fk, current);
                     if (this._options.create_virtual && this.collection.value())
                         this.collection.value().add(item);
