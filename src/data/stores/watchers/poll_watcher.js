@@ -45,7 +45,9 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 					limit: 1,
 					sort: Objs.objectBy(this.__increasingKey, -1)
 				}).mapSuccess(function (iter) {
-					return iter.hasNext() ? iter.next()[this.__increasingKey] : null;
+					var result = iter.hasNext() ? iter.next()[this.__increasingKey] : null;
+					iter.destroy();
+					return result;
 				}, this).mapError(function () {
 					return null;
 				});
@@ -82,6 +84,8 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 						}, this);
 					}, this);
 				}
+				if (this.destroyed())
+					return;
 				if (this.__lastKey) {
 					this.insertsIterator().iterate(function (q) {
 						var query = q.query;
@@ -97,6 +101,7 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 								if (id > this.__lastKey)
 									this.__lastKey = id; 
 							}
+							result.destroy();
 						}, this);
 					}, this);
 				} else {

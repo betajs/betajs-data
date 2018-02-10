@@ -44,9 +44,10 @@ Scoped.define("module:Stores.MemoryStore", [
 			},
 
 			_iterate: function () {
-				return new FilteredIterator(new ArrayIterator(this.__dataByIndex), function (item) {
+				var arrIter = new ArrayIterator(this.__dataByIndex);
+				return (new FilteredIterator(arrIter, function (item) {
 					return !!item;
-				});
+				})).auto_destroy(arrIter, true);
 				//return new ObjectValuesIterator(this.__data);
 			},
 			

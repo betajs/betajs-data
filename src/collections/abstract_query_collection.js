@@ -361,6 +361,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                     }
                     if (!iter.hasNext()) {
                         this._complete = true;
+                        iter.destroy();
                         return true;
                     }
                     this.__executePromise = iter.asyncIterate(this.replace_object, this);

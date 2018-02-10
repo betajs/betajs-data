@@ -288,7 +288,8 @@ Scoped.define("module:Stores.CachedStore", [
 							refreshMeta: false
 						}, ctx);
 					}, this);
-					return new MappedIterator(new ArrayIterator(items), this.removeItemMeta, this);
+					var arrIter = new ArrayIterator(items);
+					return (new MappedIterator(arrIter, this.removeItemMeta, this)).auto_destroy(arrIter, true);
 				}, this);
 			},
 
@@ -309,8 +310,9 @@ Scoped.define("module:Stores.CachedStore", [
 					this._options.queryKey,
 					queryString
 				);
-				return this.queryCache.query(localQuery, {limit : 1}, ctx).mapSuccess(function (result) {
-					result = result.hasNext() ? result.next() : null;
+				return this.queryCache.query(localQuery, {limit : 1}, ctx).mapSuccess(function (resultIter) {
+					result = resultIter.hasNext() ? resultIter.next() : null;
+					resultIter.destroy();
 					if (result) {
 						var meta = this.readQueryMeta(result);
 						var query_id = this.queryCache.id_of(result);
@@ -349,7 +351,8 @@ Scoped.define("module:Stores.CachedStore", [
 							}, ctx));
 						}, this);
 						return Promise.and(promises).mapSuccess(function (items) {
-							return new MappedIterator(new ArrayIterator(items), this.addItemSupp, this);
+							var arrIter = new ArrayIterator(items);
+							return (new MappedIterator(arrIter, this.addItemSupp, this)).auto_destroy(arrIter, true);
 						}, this);
 					}, this).mapError(function () {
 						this.offline();
@@ -436,6 +439,7 @@ Scoped.define("module:Stores.CachedStore", [
 						if (!this.cacheStrategy.validQueryRefreshMeta(meta.refreshMeta) || !this.cacheStrategy.validQueryAccessMeta(meta.accessMeta))
 							this.queryCache.remove(this.queryCache.id_of(query));
 					}
+					queries.destroy();
 				}, this);
 				this.itemCache.query().success(function (items) {
 					while (items.hasNext()) {
@@ -445,6 +449,7 @@ Scoped.define("module:Stores.CachedStore", [
 							(!this.cacheStrategy.validItemRefreshMeta(meta.refreshMeta) || !this.cacheStrategy.validItemAccessMeta(meta.accessMeta)))
 							this.itemCache.remove(this.itemCache.id_of(item));
 					}
+					items.destroy();
 				}, this);
 			},
 

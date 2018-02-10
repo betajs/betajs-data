@@ -105,15 +105,17 @@ Scoped.define("module:Modelling.Table", [
                 return this.allBy(query, Objs.extend({
                     limit: 1
                 }, options), ctx).mapSuccess(function(iter) {
-                    return iter.next();
+                    var item = iter.next();
+                    iter.destroy();
+                    return item;
                 });
             },
 
             allBy: function(query, options, ctx) {
                 return this.__store.query(query, options, ctx).mapSuccess(function(iterator) {
-                    return new MappedIterator(iterator, function(obj) {
+                    return (new MappedIterator(iterator, function(obj) {
                         return this.materialize(obj, ctx);
-                    }, this);
+                    }, this)).auto_destroy(iterator, true);
                 }, this);
             },
 

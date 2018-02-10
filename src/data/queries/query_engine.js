@@ -117,16 +117,17 @@ Scoped.define("module:Queries.Engine", [
             var query_result = constrainedQueryFunction.call(constrainedQueryContext, constrainedQuery);
             return query_result.mapSuccess(function(iter) {
                 iter = this._queryResultRectify(iter, false);
-                if (post_actions.filter)
-                    iter = new FilteredIterator(iter, function(row) {
+                if (post_actions.filter) {
+                    iter = (new FilteredIterator(iter, function(row) {
                         return Queries.evaluate(post_actions.filter, row);
-                    });
+                    })).auto_destroy(iter, true);
+                }
                 if (post_actions.sort)
-                    iter = new SortedIterator(iter, Comparators.byObject(post_actions.sort));
+                    iter = (new SortedIterator(iter, Comparators.byObject(post_actions.sort))).auto_destroy(iter, true);
                 if (post_actions.skip)
-                    iter = new SkipIterator(iter, post_actions.skip);
+                    iter = (new SkipIterator(iter, post_actions.skip)).auto_destroy(iter, true);
                 if (post_actions.limit)
-                    iter = new LimitIterator(iter, post_actions.limit);
+                    iter = (new LimitIterator(iter, post_actions.limit)).auto_destroy(iter, true);
                 return iter;
             }, this);
         },
@@ -147,6 +148,7 @@ Scoped.define("module:Queries.Engine", [
                 iter = new ArrayIterator(materialized);
             } else {
                 iter = new SortedOrIterator(Objs.map(constrainedDNFQuery.query.$or, function(query) {
+                    var iter;
                     var conds = query[key];
                     if (!primaryKeySort && index.options().ignoreCase && index.options().exact) {
                         if (this.indexQueryConditionsSize(conds, index, true) < this.indexQueryConditionsSize(conds, index, false))
@@ -210,21 +212,21 @@ Scoped.define("module:Queries.Engine", [
                     return iter;
                 }, this), index.comparator());
             }
-            iter = new FilteredIterator(iter, function(row) {
+            iter = (new FilteredIterator(iter, function(row) {
                 return Queries.evaluate(constrainedDNFQuery.query, row);
-            });
+            })).auto_destroy(iter, true);
             if (constrainedDNFQuery.options.sort) {
                 if (primaryKeySort)
-                    iter = new PartiallySortedIterator(iter, Comparators.byObject(constrainedDNFQuery.options.sort), function(first, next) {
+                    iter = (new PartiallySortedIterator(iter, Comparators.byObject(constrainedDNFQuery.options.sort), function(first, next) {
                         return first[key] === next[key];
-                    });
+                    })).auto_destroy(iter, true);
                 else
-                    iter = new SortedIterator(iter, Comparators.byObject(constrainedDNFQuery.options.sort));
+                    iter = (new SortedIterator(iter, Comparators.byObject(constrainedDNFQuery.options.sort))).auto_destroy(iter, true);
             }
             if (constrainedDNFQuery.options.skip)
-                iter = new SkipIterator(iter, constrainedDNFQuery.options.skip);
+                iter = (new SkipIterator(iter, constrainedDNFQuery.options.skip)).auto_destroy(iter, true);
             if (constrainedDNFQuery.options.limit)
-                iter = new LimitIterator(iter, constrainedDNFQuery.options.limit);
+                iter = (new LimitIterator(iter, constrainedDNFQuery.options.limit)).auto_destroy(iter, true);
             return Promise.value(iter);
         },
 
@@ -263,7 +265,11 @@ Scoped.define("module:Queries.Engine", [
 
         _queryResultRectify: function(result, materialize) {
             result = result || [];
-            return Types.is_array(result) == materialize ? result : (materialize ? result.asArray() : new ArrayIterator(result));
+            if (Types.is_array(result) == materialize)
+                return result;
+            if (materialize)
+                return result.asArray();
+            return new ArrayIterator(result);
         }
 
     };

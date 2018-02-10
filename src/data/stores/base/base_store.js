@@ -29,7 +29,9 @@ Scoped.define("module:Stores.BaseStore", [
 				if (key === this.id_key())
 					return this.get(value, ctx);
 				return this.query(Objs.objectBy(key, value), {limit: 1}).mapSuccess(function (iter) {
-					return iter.next();
+                    var result = iter.next();
+					iter.destroy();
+					return result;
 				});
 			},
 
@@ -40,6 +42,7 @@ Scoped.define("module:Stores.BaseStore", [
 						var obj = iter.next();
 						promise = promise.and(this.remove(obj[this._id_key], ctx));
 					}
+					iter.destroy();
 					return promise;
 				}, this);
 			}

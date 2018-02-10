@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.83 - 2018-02-06
+betajs-data - v1.0.84 - 2018-02-10
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1009,7 +1009,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.83 - 2018-02-06
+betajs-data - v1.0.84 - 2018-02-10
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1021,7 +1021,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.83"
+    "version": "1.0.84"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -1388,6 +1388,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                     }
                     if (!iter.hasNext()) {
                         this._complete = true;
+                        iter.destroy();
                         return true;
                     }
                     this.__executePromise = iter.asyncIterate(this.replace_object, this);
@@ -1639,11 +1640,11 @@ Scoped.define("module:Stores.DatabaseStore", [
                 }
                 var promise = this.table().find(query, options);
                 return this.__map_ids ? promise.mapSuccess(function(results) {
-                    return new MappedIterator(results, function(data) {
+                    return (new MappedIterator(results, function(data) {
                         data[this.id_key()] = data[this.table().primary_key()];
                         delete data[this.table().primary_key()];
                         return data;
-                    }, this);
+                    }, this)).auto_destroy(results, true);
                 }, this) : promise;
             },
 
@@ -1688,7 +1689,9 @@ Scoped.define("module:Databases.DatabaseTable", [
                 options = options || {};
                 options.limit = 1;
                 return this._find(query, options).mapSuccess(function(result) {
-                    return result.next();
+                    var item = result.next();
+                    result.destroy();
+                    return item;
                 });
             },
 
@@ -1708,7 +1711,7 @@ Scoped.define("module:Databases.DatabaseTable", [
 
             find: function(query, options) {
                 return this._find(this._encode(query), options).mapSuccess(function(result) {
-                    return new MappedIterator(result, this._decode, this);
+                    return (new MappedIterator(result, this._decode, this)).auto_destroy(result, true);
                 }, this);
             },
 
@@ -1735,6 +1738,7 @@ Scoped.define("module:Databases.DatabaseTable", [
                         count++;
                         iter.next();
                     }
+                    iter.destroy();
                     return count;
                 });
             },
@@ -1785,16 +1789,27 @@ Scoped.define("module:Databases.Database", [
 ], function(Class, scoped) {
     return Class.extend({
         scoped: scoped
-    }, {
+    }, function(inherited) {
+        return {
 
-        _tableClass: function() {
-            return null;
-        },
+            constructor: function() {
+                inherited.constructor.apply(this);
+                this.__tableCache = {};
+            },
 
-        getTable: function(table_name) {
-            var cls = this._tableClass();
-            return new cls(this, table_name);
-        }
+            _tableClass: function() {
+                return null;
+            },
+
+            getTable: function(table_name) {
+                if (!this.__tableCache[table_name]) {
+                    var cls = this._tableClass();
+                    this.__tableCache[table_name] = this.auto_destroy(new cls(this, table_name));
+                }
+                return this.__tableCache[table_name];
+            }
+
+        };
 
     });
 });
@@ -3267,16 +3282,17 @@ Scoped.define("module:Queries.Engine", [
             var query_result = constrainedQueryFunction.call(constrainedQueryContext, constrainedQuery);
             return query_result.mapSuccess(function(iter) {
                 iter = this._queryResultRectify(iter, false);
-                if (post_actions.filter)
-                    iter = new FilteredIterator(iter, function(row) {
+                if (post_actions.filter) {
+                    iter = (new FilteredIterator(iter, function(row) {
                         return Queries.evaluate(post_actions.filter, row);
-                    });
+                    })).auto_destroy(iter, true);
+                }
                 if (post_actions.sort)
-                    iter = new SortedIterator(iter, Comparators.byObject(post_actions.sort));
+                    iter = (new SortedIterator(iter, Comparators.byObject(post_actions.sort))).auto_destroy(iter, true);
                 if (post_actions.skip)
-                    iter = new SkipIterator(iter, post_actions.skip);
+                    iter = (new SkipIterator(iter, post_actions.skip)).auto_destroy(iter, true);
                 if (post_actions.limit)
-                    iter = new LimitIterator(iter, post_actions.limit);
+                    iter = (new LimitIterator(iter, post_actions.limit)).auto_destroy(iter, true);
                 return iter;
             }, this);
         },
@@ -3297,6 +3313,7 @@ Scoped.define("module:Queries.Engine", [
                 iter = new ArrayIterator(materialized);
             } else {
                 iter = new SortedOrIterator(Objs.map(constrainedDNFQuery.query.$or, function(query) {
+                    var iter;
                     var conds = query[key];
                     if (!primaryKeySort && index.options().ignoreCase && index.options().exact) {
                         if (this.indexQueryConditionsSize(conds, index, true) < this.indexQueryConditionsSize(conds, index, false))
@@ -3360,21 +3377,21 @@ Scoped.define("module:Queries.Engine", [
                     return iter;
                 }, this), index.comparator());
             }
-            iter = new FilteredIterator(iter, function(row) {
+            iter = (new FilteredIterator(iter, function(row) {
                 return Queries.evaluate(constrainedDNFQuery.query, row);
-            });
+            })).auto_destroy(iter, true);
             if (constrainedDNFQuery.options.sort) {
                 if (primaryKeySort)
-                    iter = new PartiallySortedIterator(iter, Comparators.byObject(constrainedDNFQuery.options.sort), function(first, next) {
+                    iter = (new PartiallySortedIterator(iter, Comparators.byObject(constrainedDNFQuery.options.sort), function(first, next) {
                         return first[key] === next[key];
-                    });
+                    })).auto_destroy(iter, true);
                 else
-                    iter = new SortedIterator(iter, Comparators.byObject(constrainedDNFQuery.options.sort));
+                    iter = (new SortedIterator(iter, Comparators.byObject(constrainedDNFQuery.options.sort))).auto_destroy(iter, true);
             }
             if (constrainedDNFQuery.options.skip)
-                iter = new SkipIterator(iter, constrainedDNFQuery.options.skip);
+                iter = (new SkipIterator(iter, constrainedDNFQuery.options.skip)).auto_destroy(iter, true);
             if (constrainedDNFQuery.options.limit)
-                iter = new LimitIterator(iter, constrainedDNFQuery.options.limit);
+                iter = (new LimitIterator(iter, constrainedDNFQuery.options.limit)).auto_destroy(iter, true);
             return Promise.value(iter);
         },
 
@@ -3413,7 +3430,11 @@ Scoped.define("module:Queries.Engine", [
 
         _queryResultRectify: function(result, materialize) {
             result = result || [];
-            return Types.is_array(result) == materialize ? result : (materialize ? result.asArray() : new ArrayIterator(result));
+            if (Types.is_array(result) == materialize)
+                return result;
+            if (materialize)
+                return result.asArray();
+            return new ArrayIterator(result);
         }
 
     };
@@ -3514,9 +3535,10 @@ Scoped.define("module:Stores.MemoryMapStore", [
 			},
 
 			_iterate: function () {
-				return new FilteredIterator(new NativeMapIterator(this.__map), function (item) {
+				var nativeMapIter = new NativeMapIterator(this.__map);
+				return (new FilteredIterator(nativeMapIter, function (item) {
 					return !!item;
-				});
+				})).auto_destroy(nativeMapIter, true);
 			},
 			
 			_count: function (query) {
@@ -3573,9 +3595,10 @@ Scoped.define("module:Stores.MemoryStore", [
 			},
 
 			_iterate: function () {
-				return new FilteredIterator(new ArrayIterator(this.__dataByIndex), function (item) {
+				var arrIter = new ArrayIterator(this.__dataByIndex);
+				return (new FilteredIterator(arrIter, function (item) {
 					return !!item;
-				});
+				})).auto_destroy(arrIter, true);
 				//return new ObjectValuesIterator(this.__data);
 			},
 			
@@ -3618,7 +3641,9 @@ Scoped.define("module:Stores.BaseStore", [
 				if (key === this.id_key())
 					return this.get(value, ctx);
 				return this.query(Objs.objectBy(key, value), {limit: 1}).mapSuccess(function (iter) {
-					return iter.next();
+                    var result = iter.next();
+					iter.destroy();
+					return result;
 				});
 			},
 
@@ -3629,6 +3654,7 @@ Scoped.define("module:Stores.BaseStore", [
 						var obj = iter.next();
 						promise = promise.and(this.remove(obj[this._id_key], ctx));
 					}
+					iter.destroy();
 					return promise;
 				}, this);
 			}
@@ -3753,7 +3779,7 @@ Scoped.define("module:Stores.StoreHistory", [
 					row_data: {},
 					filter_data: {}
 				}, options);
-				this.historyStore = historyStore || new MemoryStore();
+				this.historyStore = historyStore || this.auto_destroy(new MemoryStore());
 				this.sourceStore = sourceStore;
 				this.commitId = 1;
 				if (sourceStore) {
@@ -3800,6 +3826,7 @@ Scoped.define("module:Stores.StoreHistory", [
 						combined_data = Objs.extend(combined_data, itemData.row);
 						delete_ids.push(this.historyStore.id_of(itemData));
 					}
+					iter.destroy();
 					data = Objs.extend(combined_data, data);
 					Objs.iter(delete_ids, this.historyStore.remove, this.historyStore);
 				}
@@ -3827,6 +3854,7 @@ Scoped.define("module:Stores.StoreHistory", [
 						}, this._options.filter_data)).value();
 						while (iter.hasNext())
 							this.historyStore.remove(this.historyStore.id_of(iter.next()));
+						iter.destroy();
 						return;
 					}
 				}
@@ -3837,6 +3865,7 @@ Scoped.define("module:Stores.StoreHistory", [
 					}, this._options.filter_data)).value();
 					while (iter2.hasNext())
 						this.historyStore.remove(this.historyStore.id_of(iter2.next()));
+					iter2.destroy();
 				}
 				this.historyStore.insert(Objs.extend({
 					type: "remove",
@@ -3855,7 +3884,9 @@ Scoped.define("module:Stores.StoreHistory", [
 				}, {
 					limit: 1
 				}).mapSuccess(function (commits) {
-					return commits.next();
+					var result = commits.next();
+					commits.destroy();
+					return result;
 				});
 			},
 
@@ -4157,9 +4188,9 @@ Scoped.define("module:Stores.ContextualizedStore", [
 			_query: function (query, options) {
 				var decoded = this._decode(query);
 				return this.__store.query(decoded.data, options, decoded.ctx).mapSuccess(function (results) {
-					return new MappedIterator(results, function (row) {
+					return (new MappedIterator(results, function (row) {
 						return this._encode(row, decoded.ctx);
-					}, this);
+					}, this)).auto_destroy(results, true);
 				}, this);
 			},
 
@@ -4219,9 +4250,9 @@ Scoped.define("module:Stores.DecontextualizedSelectStore", [
 
    			_query: function (query, options, ctx) {
    				return this.__store.query(this._encode(query, ctx), options).mapSuccess(function (results) {
-   					return new MappedIterator(results, function (row) {
+   					return (new MappedIterator(results, function (row) {
    						return this._decode(row, ctx);
-   					}, this);
+   					}, this)).auto_destroy(results, true);
    				}, this);
    			},
 
@@ -4233,29 +4264,29 @@ Scoped.define("module:Stores.DecontextualizedSelectStore", [
    				return this.__store;
    			},
 
-   			_get: function (id, ctx) {
-   				return this.query(this.id_row(id), {limit: 1}, ctx).mapSuccess(function (rows) {
-   					if (!rows.hasNext())
-   						return null;
-   					return this._decode(rows.next(), ctx);
-   				}, this);
-   			},
+            _get: function (id, ctx) {
+                return this.query(this.id_row(id), {limit: 1}, ctx).mapSuccess(function (rows) {
+                    var result = rows.hasNext() ? this._decode(rows.next(), ctx) : null;
+                    rows.destroy();
+                    return result;
+                }, this);
+            },
 
-   			_remove: function (id, ctx) {
-   				return this.query(this.id_row(id), {limit: 1}, ctx).mapSuccess(function (rows) {
-   					if (!rows.hasNext())
-   						return null;
-   					return this.__store.remove(this.__store.id_of(this._decode(rows.next(), ctx)));
-   				}, this);
-   			},
+            _remove: function (id, ctx) {
+                return this.query(this.id_row(id), {limit: 1}, ctx).mapSuccess(function (rows) {
+                    var result = rows.hasNext() ? this.__store.remove(this.__store.id_of(this._decode(rows.next(), ctx))) : null;
+                    rows.destroy();
+                    return result;
+                }, this);
+            },
 
-   			_update: function (id, data, ctx) {
-   				return this.query(this.id_row(id), {limit: 1}, ctx).mapSuccess(function (rows) {
-   					if (!rows.hasNext())
-   						return null;
-   					return this.__store.update(this.__store.id_of(this._decode(rows.next(), ctx)), data);
-   				}, this);
-   			}
+            _update: function (id, data, ctx) {
+                return this.query(this.id_row(id), {limit: 1}, ctx).mapSuccess(function (rows) {
+                    var result = rows.hasNext() ? this.__store.update(this.__store.id_of(this._decode(rows.next(), ctx)), data) : null;
+                    rows.destroy();
+                    return result;
+                }, this);
+            }
 
    		};
    	});
@@ -4728,9 +4759,9 @@ Scoped.define("module:Stores.TableStore", [
 
 			_query: function (query, options, ctx) {
 				return this.__table.query(query, options, ctx).mapSuccess(function (models) {
-					return new MappedIterator(models, function (model) {
+					return (new MappedIterator(models, function (model) {
 						return model.asRecord(this.__options.readTags);
-					}, this);
+					}, this)).auto_destroy(models, true);
 				}, this);
 			}
 
@@ -4820,9 +4851,9 @@ Scoped.define("module:Stores.TransformationStore", [
 			},
 			
 			_postQuery: function (results) {
-				return Promise.create(new MappedIterator(results, function (data) {
+				return Promise.create((new MappedIterator(results, function (data) {
 					return this._decodeData(data);
-				}, this));
+				}, this)).auto_destroy(results, true));
 			}
 
 		};
@@ -5734,7 +5765,8 @@ Scoped.define("module:Stores.CachedStore", [
 							refreshMeta: false
 						}, ctx);
 					}, this);
-					return new MappedIterator(new ArrayIterator(items), this.removeItemMeta, this);
+					var arrIter = new ArrayIterator(items);
+					return (new MappedIterator(arrIter, this.removeItemMeta, this)).auto_destroy(arrIter, true);
 				}, this);
 			},
 
@@ -5755,8 +5787,9 @@ Scoped.define("module:Stores.CachedStore", [
 					this._options.queryKey,
 					queryString
 				);
-				return this.queryCache.query(localQuery, {limit : 1}, ctx).mapSuccess(function (result) {
-					result = result.hasNext() ? result.next() : null;
+				return this.queryCache.query(localQuery, {limit : 1}, ctx).mapSuccess(function (resultIter) {
+					result = resultIter.hasNext() ? resultIter.next() : null;
+					resultIter.destroy();
 					if (result) {
 						var meta = this.readQueryMeta(result);
 						var query_id = this.queryCache.id_of(result);
@@ -5795,7 +5828,8 @@ Scoped.define("module:Stores.CachedStore", [
 							}, ctx));
 						}, this);
 						return Promise.and(promises).mapSuccess(function (items) {
-							return new MappedIterator(new ArrayIterator(items), this.addItemSupp, this);
+							var arrIter = new ArrayIterator(items);
+							return (new MappedIterator(arrIter, this.addItemSupp, this)).auto_destroy(arrIter, true);
 						}, this);
 					}, this).mapError(function () {
 						this.offline();
@@ -5882,6 +5916,7 @@ Scoped.define("module:Stores.CachedStore", [
 						if (!this.cacheStrategy.validQueryRefreshMeta(meta.refreshMeta) || !this.cacheStrategy.validQueryAccessMeta(meta.accessMeta))
 							this.queryCache.remove(this.queryCache.id_of(query));
 					}
+					queries.destroy();
 				}, this);
 				this.itemCache.query().success(function (items) {
 					while (items.hasNext()) {
@@ -5891,6 +5926,7 @@ Scoped.define("module:Stores.CachedStore", [
 							(!this.cacheStrategy.validItemRefreshMeta(meta.refreshMeta) || !this.cacheStrategy.validItemAccessMeta(meta.accessMeta)))
 							this.itemCache.remove(this.itemCache.id_of(item));
 					}
+					items.destroy();
 				}, this);
 			},
 
@@ -6021,157 +6057,6 @@ Scoped.define("module:Stores.CacheStrategies.ExpiryCacheStrategy", [
 
 		};
 	});	
-});
-Scoped.define("module:Stores.PartialStore", [
-	"module:Stores.BaseStore",
-	"module:Stores.CachedStore",
-	"module:Stores.PartialStoreWriteStrategies.PostWriteStrategy",
-	"module:Stores.PartialStoreWatcher",
-	"base:Objs",
-	"base:Types"
-], function (Store, CachedStore, PostWriteStrategy, PartialStoreWatcher, Objs, Types, scoped) {
-	return Store.extend({scoped: scoped}, function (inherited) {			
-		return {
-
-			constructor: function (remoteStore, options) {
-				inherited.constructor.call(this, options);
-				this._options = Objs.extend({}, options);
-				if (this._options.remoteWatcher)
-					this.remoteWatcher = this._options.remoteWatcher;
-				this.remoteStore = remoteStore;
-				this.cachedStore = new CachedStore(remoteStore, this._options);
-				this.writeStrategy = this._options.writeStrategy || this.auto_destroy(new PostWriteStrategy());
-				if (this.remoteWatcher) {
-					this.remoteWatcher.on("insert", this._remoteInsert, this);
-					this.remoteWatcher.on("update", this._remoteUpdate, this);
-					this.remoteWatcher.on("remove", this._remoteRemove, this);
-					this._watcher = new PartialStoreWatcher(this);
-				}
-				this.cachedStore.on("insert", this._inserted, this);
-				this.cachedStore.on("remove", this._removed, this);
-				this.cachedStore.on("update", this._updated, this);
-				this.writeStrategy.init(this);
-			},
-			
-			id_key: function () {
-				return this.cachedStore.id_key();
-			},
-			
-			destroy: function () {
-				if (this.remoteWatcher)
-					this.remoteWatcher.off(null, null, this);
-				if (this._watcher)
-					this._watcher.destroy();
-				this.cachedStore.destroy();
-				inherited.destroy.call(this);
-			},
-
-			_insert: function (data, ctx) {
-				return this.writeStrategy.insert(data, ctx);
-			},
-			
-			_remove: function (id, ctx) {
-				return this.writeStrategy.remove(id, ctx);
-			},
-			
-			_update: function (id, data, ctx) {
-				return this.cachedStore.cacheOnlyGet(id, {}, ctx).mapSuccess(function (cachedData) {
-					var diff = Objs.diff(data, cachedData);
-					return Types.is_empty(diff) ? cachedData : this.writeStrategy.update(id, data, ctx);
-				}, this);
-			},
-
-			_get: function (id, ctx) {
-				return this.cachedStore.get(id, ctx);
-			},
-			
-			_query: function (query, options, ctx) {
-				return this.cachedStore.query(query, options, ctx);
-			},			
-			
-			_query_capabilities: function () {
-				return this.cachedStore._query_capabilities();
-			},
-			
-			_remoteInsert: function (data, ctx) {
-				this.cachedStore.cacheInsertUpdate(data, {
-					lockItem: false,
-					silent: false,
-					refreshMeta: true,
-					accessMeta: true,
-					foreignKey: true
-				}, ctx);
-			},
-			
-			_remoteUpdate: function (row, data, ctx) {
-				var id = this.remoteStore.id_of(row);
-				this.cachedStore.cacheUpdate(id, data, {
-					ignoreLock: false,
-					lockAttrs: false,
-					silent: false,
-					accessMeta: true,
-					refreshMeta: true,
-					foreignKey: true
-				}, ctx);
-			},
-			
-			_remoteRemove: function (id, ctx) {
-				this.cachedStore.cacheRemove(id, {
-					ignoreLock: false,
-					silent: false,
-					foreignKey: true
-				}, ctx);
-			},
-			
-			serialize: function () {
-				return this.cachedStore.serialize();
-			},
-			
-			unserialize: function (data) {
-				return this.cachedStore.unserialize(data).success(function (items) {
-					items.forEach(function (item) {
-						this._inserted(item);
-					}, this);
-				}, this);
-			}
-
-		};
-	});	
-});
-
-
-Scoped.define("module:Stores.PartialStoreWatcher", [
-    "module:Stores.Watchers.LocalWatcher"                                                    
-], function (StoreWatcher, scoped) {
-	return StoreWatcher.extend({scoped: scoped}, function (inherited) {
-		return {
-			
-			_watchItem : function(id) {
-				inherited.watchItem.call(this, id);
-				this._store.cachedStore.cachedIdToRemoteId(id).success(function (remoteId) {
-					this._store.remoteWatcher.watchItem(remoteId, this);
-				}, this);
-			},
-
-			_unwatchItem : function(id) {
-				inherited.unwatchItem.call(this, id);
-				this._store.cachedStore.cachedIdToRemoteId(id).success(function (remoteId) {
-					this._store.remoteWatcher.unwatchItem(remoteId, this);
-				}, this);
-			},
-
-			_watchInsert : function(query) {
-				inherited.watchInsert.call(this, query);
-				this._store.remoteWatcher.watchInsert(query, this);
-			},
-
-			_unwatchInsert : function(query) {
-				inherited.unwatchInsert.call(this, query);
-				this._store.remoteWatcher.unwatchInsert(query, this);
-			}			
-			
-		};
-	});
 });
 Scoped.define("module:Stores.PartialStoreWriteStrategies.WriteStrategy", [
                                                                           "base:Class"
@@ -6454,12 +6339,164 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					}
 				};
 				next.apply(this);
+				iter.destroy();
 			}
 
 		};
 	});
 });
 
+Scoped.define("module:Stores.PartialStore", [
+	"module:Stores.BaseStore",
+	"module:Stores.CachedStore",
+	"module:Stores.PartialStoreWriteStrategies.PostWriteStrategy",
+	"module:Stores.PartialStoreWatcher",
+	"base:Objs",
+	"base:Types"
+], function (Store, CachedStore, PostWriteStrategy, PartialStoreWatcher, Objs, Types, scoped) {
+	return Store.extend({scoped: scoped}, function (inherited) {			
+		return {
+
+			constructor: function (remoteStore, options) {
+				inherited.constructor.call(this, options);
+				this._options = Objs.extend({}, options);
+				if (this._options.remoteWatcher)
+					this.remoteWatcher = this._options.remoteWatcher;
+				this.remoteStore = remoteStore;
+				this.cachedStore = new CachedStore(remoteStore, this._options);
+				this.writeStrategy = this._options.writeStrategy || this.auto_destroy(new PostWriteStrategy());
+				if (this.remoteWatcher) {
+					this.remoteWatcher.on("insert", this._remoteInsert, this);
+					this.remoteWatcher.on("update", this._remoteUpdate, this);
+					this.remoteWatcher.on("remove", this._remoteRemove, this);
+					this._watcher = new PartialStoreWatcher(this);
+				}
+				this.cachedStore.on("insert", this._inserted, this);
+				this.cachedStore.on("remove", this._removed, this);
+				this.cachedStore.on("update", this._updated, this);
+				this.writeStrategy.init(this);
+			},
+			
+			id_key: function () {
+				return this.cachedStore.id_key();
+			},
+			
+			destroy: function () {
+				if (this.remoteWatcher)
+					this.remoteWatcher.off(null, null, this);
+				if (this._watcher)
+					this._watcher.destroy();
+				this.cachedStore.destroy();
+				inherited.destroy.call(this);
+			},
+
+			_insert: function (data, ctx) {
+				return this.writeStrategy.insert(data, ctx);
+			},
+			
+			_remove: function (id, ctx) {
+				return this.writeStrategy.remove(id, ctx);
+			},
+			
+			_update: function (id, data, ctx) {
+				return this.cachedStore.cacheOnlyGet(id, {}, ctx).mapSuccess(function (cachedData) {
+					var diff = Objs.diff(data, cachedData);
+					return Types.is_empty(diff) ? cachedData : this.writeStrategy.update(id, data, ctx);
+				}, this);
+			},
+
+			_get: function (id, ctx) {
+				return this.cachedStore.get(id, ctx);
+			},
+			
+			_query: function (query, options, ctx) {
+				return this.cachedStore.query(query, options, ctx);
+			},			
+			
+			_query_capabilities: function () {
+				return this.cachedStore._query_capabilities();
+			},
+			
+			_remoteInsert: function (data, ctx) {
+				this.cachedStore.cacheInsertUpdate(data, {
+					lockItem: false,
+					silent: false,
+					refreshMeta: true,
+					accessMeta: true,
+					foreignKey: true
+				}, ctx);
+			},
+			
+			_remoteUpdate: function (row, data, ctx) {
+				var id = this.remoteStore.id_of(row);
+				this.cachedStore.cacheUpdate(id, data, {
+					ignoreLock: false,
+					lockAttrs: false,
+					silent: false,
+					accessMeta: true,
+					refreshMeta: true,
+					foreignKey: true
+				}, ctx);
+			},
+			
+			_remoteRemove: function (id, ctx) {
+				this.cachedStore.cacheRemove(id, {
+					ignoreLock: false,
+					silent: false,
+					foreignKey: true
+				}, ctx);
+			},
+			
+			serialize: function () {
+				return this.cachedStore.serialize();
+			},
+			
+			unserialize: function (data) {
+				return this.cachedStore.unserialize(data).success(function (items) {
+					items.forEach(function (item) {
+						this._inserted(item);
+					}, this);
+				}, this);
+			}
+
+		};
+	});	
+});
+
+
+Scoped.define("module:Stores.PartialStoreWatcher", [
+    "module:Stores.Watchers.LocalWatcher"                                                    
+], function (StoreWatcher, scoped) {
+	return StoreWatcher.extend({scoped: scoped}, function (inherited) {
+		return {
+			
+			_watchItem : function(id) {
+				inherited.watchItem.call(this, id);
+				this._store.cachedStore.cachedIdToRemoteId(id).success(function (remoteId) {
+					this._store.remoteWatcher.watchItem(remoteId, this);
+				}, this);
+			},
+
+			_unwatchItem : function(id) {
+				inherited.unwatchItem.call(this, id);
+				this._store.cachedStore.cachedIdToRemoteId(id).success(function (remoteId) {
+					this._store.remoteWatcher.unwatchItem(remoteId, this);
+				}, this);
+			},
+
+			_watchInsert : function(query) {
+				inherited.watchInsert.call(this, query);
+				this._store.remoteWatcher.watchInsert(query, this);
+			},
+
+			_unwatchInsert : function(query) {
+				inherited.unwatchInsert.call(this, query);
+				this._store.remoteWatcher.unwatchInsert(query, this);
+			}			
+			
+		};
+	});
+});
 Scoped.define("module:Stores.RemoteStore", [
     "module:Stores.Invokers.InvokerStore",
     "module:Stores.Invokers.StoreInvokeeRestInvoker",
@@ -6750,7 +6787,9 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 					limit: 1,
 					sort: Objs.objectBy(this.__increasingKey, -1)
 				}).mapSuccess(function (iter) {
-					return iter.hasNext() ? iter.next()[this.__increasingKey] : null;
+					var result = iter.hasNext() ? iter.next()[this.__increasingKey] : null;
+					iter.destroy();
+					return result;
 				}, this).mapError(function () {
 					return null;
 				});
@@ -6787,6 +6826,8 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 						}, this);
 					}, this);
 				}
+				if (this.destroyed())
+					return;
 				if (this.__lastKey) {
 					this.insertsIterator().iterate(function (q) {
 						var query = q.query;
@@ -6802,6 +6843,7 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 								if (id > this.__lastKey)
 									this.__lastKey = id; 
 							}
+							result.destroy();
 						}, this);
 					}, this);
 				} else {
@@ -8377,15 +8419,17 @@ Scoped.define("module:Modelling.Table", [
                 return this.allBy(query, Objs.extend({
                     limit: 1
                 }, options), ctx).mapSuccess(function(iter) {
-                    return iter.next();
+                    var item = iter.next();
+                    iter.destroy();
+                    return item;
                 });
             },
 
             allBy: function(query, options, ctx) {
                 return this.__store.query(query, options, ctx).mapSuccess(function(iterator) {
-                    return new MappedIterator(iterator, function(obj) {
+                    return (new MappedIterator(iterator, function(obj) {
                         return this.materialize(obj, ctx);
-                    }, this);
+                    }, this)).auto_destroy(iterator, true);
                 }, this);
             },
 

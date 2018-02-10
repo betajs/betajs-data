@@ -56,9 +56,9 @@ Scoped.define("module:Stores.TableStore", [
 
 			_query: function (query, options, ctx) {
 				return this.__table.query(query, options, ctx).mapSuccess(function (models) {
-					return new MappedIterator(models, function (model) {
+					return (new MappedIterator(models, function (model) {
 						return model.asRecord(this.__options.readTags);
-					}, this);
+					}, this)).auto_destroy(models, true);
 				}, this);
 			}
 

@@ -68,11 +68,11 @@ Scoped.define("module:Stores.DatabaseStore", [
                 }
                 var promise = this.table().find(query, options);
                 return this.__map_ids ? promise.mapSuccess(function(results) {
-                    return new MappedIterator(results, function(data) {
+                    return (new MappedIterator(results, function(data) {
                         data[this.id_key()] = data[this.table().primary_key()];
                         delete data[this.table().primary_key()];
                         return data;
-                    }, this);
+                    }, this)).auto_destroy(results, true);
                 }, this) : promise;
             },
 

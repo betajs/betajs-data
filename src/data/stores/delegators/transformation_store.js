@@ -79,9 +79,9 @@ Scoped.define("module:Stores.TransformationStore", [
 			},
 			
 			_postQuery: function (results) {
-				return Promise.create(new MappedIterator(results, function (data) {
+				return Promise.create((new MappedIterator(results, function (data) {
 					return this._decodeData(data);
-				}, this));
+				}, this)).auto_destroy(results, true));
 			}
 
 		};

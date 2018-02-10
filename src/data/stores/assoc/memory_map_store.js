@@ -27,9 +27,10 @@ Scoped.define("module:Stores.MemoryMapStore", [
 			},
 
 			_iterate: function () {
-				return new FilteredIterator(new NativeMapIterator(this.__map), function (item) {
+				var nativeMapIter = new NativeMapIterator(this.__map);
+				return (new FilteredIterator(nativeMapIter, function (item) {
 					return !!item;
-				});
+				})).auto_destroy(nativeMapIter, true);
 			},
 			
 			_count: function (query) {

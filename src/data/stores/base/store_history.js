@@ -19,7 +19,7 @@ Scoped.define("module:Stores.StoreHistory", [
 					row_data: {},
 					filter_data: {}
 				}, options);
-				this.historyStore = historyStore || new MemoryStore();
+				this.historyStore = historyStore || this.auto_destroy(new MemoryStore());
 				this.sourceStore = sourceStore;
 				this.commitId = 1;
 				if (sourceStore) {
@@ -66,6 +66,7 @@ Scoped.define("module:Stores.StoreHistory", [
 						combined_data = Objs.extend(combined_data, itemData.row);
 						delete_ids.push(this.historyStore.id_of(itemData));
 					}
+					iter.destroy();
 					data = Objs.extend(combined_data, data);
 					Objs.iter(delete_ids, this.historyStore.remove, this.historyStore);
 				}
@@ -93,6 +94,7 @@ Scoped.define("module:Stores.StoreHistory", [
 						}, this._options.filter_data)).value();
 						while (iter.hasNext())
 							this.historyStore.remove(this.historyStore.id_of(iter.next()));
+						iter.destroy();
 						return;
 					}
 				}
@@ -103,6 +105,7 @@ Scoped.define("module:Stores.StoreHistory", [
 					}, this._options.filter_data)).value();
 					while (iter2.hasNext())
 						this.historyStore.remove(this.historyStore.id_of(iter2.next()));
+					iter2.destroy();
 				}
 				this.historyStore.insert(Objs.extend({
 					type: "remove",
@@ -121,7 +124,9 @@ Scoped.define("module:Stores.StoreHistory", [
 				}, {
 					limit: 1
 				}).mapSuccess(function (commits) {
-					return commits.next();
+					var result = commits.next();
+					commits.destroy();
+					return result;
 				});
 			},
 

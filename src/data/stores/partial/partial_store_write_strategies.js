@@ -279,6 +279,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					}
 				};
 				next.apply(this);
+				iter.destroy();
 			}
 
 		};

@@ -28,7 +28,9 @@ Scoped.define("module:Databases.DatabaseTable", [
                 options = options || {};
                 options.limit = 1;
                 return this._find(query, options).mapSuccess(function(result) {
-                    return result.next();
+                    var item = result.next();
+                    result.destroy();
+                    return item;
                 });
             },
 
@@ -48,7 +50,7 @@ Scoped.define("module:Databases.DatabaseTable", [
 
             find: function(query, options) {
                 return this._find(this._encode(query), options).mapSuccess(function(result) {
-                    return new MappedIterator(result, this._decode, this);
+                    return (new MappedIterator(result, this._decode, this)).auto_destroy(result, true);
                 }, this);
             },
 
@@ -75,6 +77,7 @@ Scoped.define("module:Databases.DatabaseTable", [
                         count++;
                         iter.next();
                     }
+                    iter.destroy();
                     return count;
                 });
             },
