@@ -343,18 +343,27 @@ QUnit.test("test partial stores, different ids, commit write strategy, no watche
 		assert.equal(item.foo, "bar");
 		assert.equal(itemCache.query({},{}).value().asArray().length, 1);
 		assert.equal(remoteStore.query({},{}).value().asArray().length, 0);
-		store.writeStrategy.push();
-		item = itemCache.query({},{}).value().next();
-		assert.equal(!!item.remote_id, true, "item should now have a remote id");
-		assert.equal(remoteStore.query({},{}).value().asArray().length, 1);
-		store.remove(item.local_id).success(function () {
-			assert.equal(remoteStore.query({},{}).value().asArray().length, 1);
-			assert.equal(itemCache.query({},{}).value().asArray().length, 0);
-			store.writeStrategy.push();
-			assert.equal(remoteStore.query({},{}).value().asArray().length, 0);
+		store.update(item.local_id, {foo: "baz"}).success(function () {
+			store.get(item.local_id).success(function (itemUpdated) {
+				assert.equal(itemUpdated.foo, "baz");
+                store.writeStrategy.push();
+                item = itemCache.query({},{}).value().next();
+                assert.equal(!!item.remote_id, true, "item should now have a remote id");
+                assert.equal(remoteStore.query({},{}).value().asArray().length, 1);
+                store.remove(item.local_id).success(function () {
+                    assert.equal(remoteStore.query({},{}).value().asArray().length, 1);
+                    assert.equal(itemCache.query({},{}).value().asArray().length, 0);
+                    store.writeStrategy.push();
+                    assert.equal(remoteStore.query({},{}).value().asArray().length, 0);
+                }).error(function () {
+                    assert.ok(false);
+                });
+            }).error(function () {
+                assert.ok(false);
+            });
 		}).error(function () {
-			assert.ok(false);
-		});
+            assert.ok(false);
+        });
 	}).error(function () {
 		assert.ok(false);
 	});

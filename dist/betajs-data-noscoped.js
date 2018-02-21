@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.84 - 2018-02-10
+betajs-data - v1.0.85 - 2018-02-21
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.84"
+    "version": "1.0.85"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -5252,7 +5252,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 			update: function (id, data) {
 				return this.partialStore.cachedStore.cacheUpdate(id, data, {
 					lockAttrs: true,
-					ignoreLock: false,
+					ignoreLock: true, // this was false before, not sure why.
 					silent: true,
 					refreshMeta: false,
 					accessMeta: true

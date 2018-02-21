@@ -202,7 +202,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 			update: function (id, data) {
 				return this.partialStore.cachedStore.cacheUpdate(id, data, {
 					lockAttrs: true,
-					ignoreLock: false,
+					ignoreLock: true, // this was false before, not sure why.
 					silent: true,
 					refreshMeta: false,
 					accessMeta: true
