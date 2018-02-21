@@ -34,6 +34,10 @@ Scoped.define("module:Stores.Watchers.ListWatcher", [
                 return this;
             },
 
+			getWatchers: function () {
+				return Objs.values(this.__watchers);
+			},
+
 			__forEachWatcher: function (f, ctx) {
 				Objs.iter(this.__watchers, f, ctx || this);
 			},

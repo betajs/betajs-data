@@ -47,3 +47,27 @@ QUnit.test("test tables findBy", function (assert) {
 	var model2 = table.findBy({}).value();
 	assert.equal(model2.id(), model.id());
 });
+
+QUnit.test("test tables sync changes", function (assert) {
+    var store = new BetaJS.Data.Stores.MemoryStore();
+    var Model = BetaJS.Data.Modelling.Model.extend("Model", {}, {
+        _initializeScheme: function () {
+            return BetaJS.Objs.extend({
+                value: {}
+            }, this._inherited(Model, "_initializeScheme"));
+        }
+    });
+    var table = new BetaJS.Data.Modelling.Table(store, Model, {});
+    var model1 = table.newModel({
+		value: "foo"
+	});
+    model1.save();
+    var model2 = table.findById(model1.id()).value();
+    assert.equal(model2.get("value"), "foo");
+    model2.set("value", "bar");
+    assert.equal(model1.get("value"), "bar");
+    model1.set("value", "baz");
+    assert.equal(model2.get("value"), "baz");
+    model1.set("value", "bang");
+    assert.equal(model2.get("value"), "bang");
+});

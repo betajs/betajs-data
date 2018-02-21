@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.85 - 2018-02-21
+betajs-data - v1.0.86 - 2018-02-21
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1009,7 +1009,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.85 - 2018-02-21
+betajs-data - v1.0.86 - 2018-02-21
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1021,7 +1021,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.85"
+    "version": "1.0.86"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6294,6 +6294,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 								}
 							}
 						}, this);
+                        iter.destroy();
 						return;
 					}
 					var commit = iter.next();
@@ -6339,7 +6340,6 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					}
 				};
 				next.apply(this);
-				iter.destroy();
 			}
 
 		};
@@ -6673,6 +6673,10 @@ Scoped.define("module:Stores.Watchers.ListWatcher", [
                 }
                 return this;
             },
+
+			getWatchers: function () {
+				return Objs.values(this.__watchers);
+			},
 
 			__forEachWatcher: function (f, ctx) {
 				Objs.iter(this.__watchers, f, ctx || this);
@@ -7934,8 +7938,10 @@ Scoped.define("module:Modelling.Model", [
                         return;
                     this.__silent++;
                     for (var key in data) {
-                        if (!this._properties_changed[key])
+                        if (!this._properties_changed[key]) {
                             this.set(key, data[key]);
+                            delete this._properties_changed[key];
+                        }
                     }
                     this.__silent--;
                 }, this);

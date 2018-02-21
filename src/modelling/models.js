@@ -73,8 +73,10 @@ Scoped.define("module:Modelling.Model", [
                         return;
                     this.__silent++;
                     for (var key in data) {
-                        if (!this._properties_changed[key])
+                        if (!this._properties_changed[key]) {
                             this.set(key, data[key]);
+                            delete this._properties_changed[key];
+                        }
                     }
                     this.__silent--;
                 }, this);
