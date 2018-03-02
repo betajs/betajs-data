@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.86 - 2018-02-21
+betajs-data - v1.0.87 - 2018-03-02
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1009,7 +1009,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.86 - 2018-02-21
+betajs-data - v1.0.87 - 2018-03-02
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1021,7 +1021,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.86"
+    "version": "1.0.87"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -7823,7 +7823,9 @@ Scoped.define("module:Modelling.GroupedProperties", [
             uniqueUnion: {
                 add: function(groupValue, itemValue, item) {
                     var result = Objs.clone(groupValue || {}, 1);
-                    (itemValue || []).forEach(function(key) {
+                    if (!itemValue || !Types.is_array(itemValue))
+                        itemValue = [];
+                    itemValue.forEach(function(key) {
                         result[key] = result[key] || {};
                         result[key][item.cid()] = true;
                     });
@@ -7831,7 +7833,9 @@ Scoped.define("module:Modelling.GroupedProperties", [
                 },
                 remove: function(groupValue, itemValue, item) {
                     var result = Objs.clone(groupValue || {}, 1);
-                    (itemValue || []).forEach(function(key) {
+                    if (!itemValue || !Types.is_array(itemValue))
+                        itemValue = [];
+                    itemValue.forEach(function(key) {
                         if (result[key]) {
                             delete result[key][item.cid()];
                             if (Types.is_empty(result[key]))

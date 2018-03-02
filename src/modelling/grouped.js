@@ -201,7 +201,9 @@ Scoped.define("module:Modelling.GroupedProperties", [
             uniqueUnion: {
                 add: function(groupValue, itemValue, item) {
                     var result = Objs.clone(groupValue || {}, 1);
-                    (itemValue || []).forEach(function(key) {
+                    if (!itemValue || !Types.is_array(itemValue))
+                        itemValue = [];
+                    itemValue.forEach(function(key) {
                         result[key] = result[key] || {};
                         result[key][item.cid()] = true;
                     });
@@ -209,7 +211,9 @@ Scoped.define("module:Modelling.GroupedProperties", [
                 },
                 remove: function(groupValue, itemValue, item) {
                     var result = Objs.clone(groupValue || {}, 1);
-                    (itemValue || []).forEach(function(key) {
+                    if (!itemValue || !Types.is_array(itemValue))
+                        itemValue = [];
+                    itemValue.forEach(function(key) {
                         if (result[key]) {
                             delete result[key][item.cid()];
                             if (Types.is_empty(result[key]))
