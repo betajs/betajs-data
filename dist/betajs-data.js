@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.87 - 2018-03-02
+betajs-data - v1.0.88 - 2018-03-09
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1009,7 +1009,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.87 - 2018-03-02
+betajs-data - v1.0.88 - 2018-03-09
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1021,7 +1021,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.87"
+    "version": "1.0.88"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -5798,13 +5798,13 @@ Scoped.define("module:Stores.CachedStore", [
 								meta.accessMeta = this.cacheStrategy.queryAccessMeta(meta.accessMeta);
 								this.queryCache.update(query_id, this.addQueryMeta({}, meta), ctx);
 							}
-							return this.__itemCacheQuery(query, options, ctx);
+							return this.__itemCacheQuery(query, queryOptions, ctx);
 						}
 						this.queryCache.remove(query_id, ctx);
 					}
 					// Note: This is probably not good enough in the most general cases.
 					if (Queries.queryDeterminedByAttrs(query, this._options.suppAttrs))
-						return this.itemCache.query(query, options, ctx);
+						return this.itemCache.query(query, queryOptions, ctx);
 					var remotePromise = this.remoteStore.query(query, queryOptions, ctx).mapSuccess(function (items) {
 						this.online();
 						items = items.asArray();
@@ -5834,10 +5834,10 @@ Scoped.define("module:Stores.CachedStore", [
 					}, this).mapError(function () {
 						this.offline();
 						if (!this._options.optimisticRead) {
-							return this.__itemCacheQuery(query, options, ctx);
+							return this.__itemCacheQuery(query, queryOptions, ctx);
 						}
 					}, this);
-					return this._options.optimisticRead ? this.__itemCacheQuery(query, options, ctx) : remotePromise;
+					return this._options.optimisticRead ? this.__itemCacheQuery(query, queryOptions, ctx) : remotePromise;
 				}, this);
 			},
 

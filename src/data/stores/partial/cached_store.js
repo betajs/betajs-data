@@ -321,13 +321,13 @@ Scoped.define("module:Stores.CachedStore", [
 								meta.accessMeta = this.cacheStrategy.queryAccessMeta(meta.accessMeta);
 								this.queryCache.update(query_id, this.addQueryMeta({}, meta), ctx);
 							}
-							return this.__itemCacheQuery(query, options, ctx);
+							return this.__itemCacheQuery(query, queryOptions, ctx);
 						}
 						this.queryCache.remove(query_id, ctx);
 					}
 					// Note: This is probably not good enough in the most general cases.
 					if (Queries.queryDeterminedByAttrs(query, this._options.suppAttrs))
-						return this.itemCache.query(query, options, ctx);
+						return this.itemCache.query(query, queryOptions, ctx);
 					var remotePromise = this.remoteStore.query(query, queryOptions, ctx).mapSuccess(function (items) {
 						this.online();
 						items = items.asArray();
@@ -357,10 +357,10 @@ Scoped.define("module:Stores.CachedStore", [
 					}, this).mapError(function () {
 						this.offline();
 						if (!this._options.optimisticRead) {
-							return this.__itemCacheQuery(query, options, ctx);
+							return this.__itemCacheQuery(query, queryOptions, ctx);
 						}
 					}, this);
-					return this._options.optimisticRead ? this.__itemCacheQuery(query, options, ctx) : remotePromise;
+					return this._options.optimisticRead ? this.__itemCacheQuery(query, queryOptions, ctx) : remotePromise;
 				}, this);
 			},
 
