@@ -149,10 +149,12 @@ Scoped.define("module:Stores.CachedStore", [
 						meta.lockedAttrs = {};
 					}
 					data = Objs.filter(data, function (value, key) {
-						return options.ignoreLock || (!meta.lockedItem && !meta.lockedAttrs[key]);
+						return (options.ignoreLock || (!meta.lockedItem && !meta.lockedAttrs[key])) && (!(key in item) || item[key] != value);
 					}, this);
+					/*
 					if (Types.is_empty(data))
 						return this.removeItemMeta(item);
+					*/
 					if (options.lockAttrs) {
 						Objs.iter(data, function (value, key) {
 							meta.lockedAttrs[key] = true;
