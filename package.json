@@ -15,7 +15,7 @@
         "url": "https://github.com/betajs/betajs-data/issues"
     },
     "name": "betajs-data",
-    "version": "1.0.89",
+    "version": "1.0.90",
     "description": "BetaJS-Data is a general-purpose JavaScript framework for handling RESTful operations and ActiveRecord abstractions.",
     "contributors": [
         "Oliver Friedmann"
@@ -48,7 +48,8 @@
         "url": "git://github.com/betajs/betajs-data.git"
     },
     "scripts": {
-        "test": "grunt check"
+        "test": "grunt check",
+        "relink": "npm link betajs && npm link betajs-compile && npm link betajs-scoped && npm link betajs-shims"
     },
     "meta": {
         "blog": "http://blog.betajs.com",

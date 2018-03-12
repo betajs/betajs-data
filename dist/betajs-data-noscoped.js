@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.89 - 2018-03-10
+betajs-data - v1.0.90 - 2018-03-12
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.89"
+    "version": "1.0.90"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -82,6 +82,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                     }
                 }
                 this._id_key = this._id_key || options.id_key || "id";
+                this._secondary_ident = options.secondary_ident;
                 this._source = source;
                 this._complete = false;
                 this._active = options.active || false;
@@ -216,7 +217,10 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 
 
             get_ident: function(obj) {
-                return Class.is_class_instance(obj) ? obj.get(this._id_key) : obj[this._id_key];
+                var result = Class.is_class_instance(obj) ? obj.get(this._id_key) : obj[this._id_key];
+                if (!result && this._secondary_ident)
+                    result = this._secondary_ident(obj);
+                return result;
             },
 
             getQuery: function() {
@@ -6298,8 +6302,9 @@ Scoped.define("module:Modelling.Associations.HasManyKeyAssociation", [
 Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
     "module:Modelling.Associations.HasManyAssociation",
     "base:Objs",
-    "base:Types"
-], function(HasManyAssociation, Objs, Types, scoped) {
+    "base:Types",
+    "base:Functions"
+], function(HasManyAssociation, Objs, Types, Functions, scoped) {
     return HasManyAssociation.extend({
         scoped: scoped
     }, function(inherited) {
@@ -6319,6 +6324,9 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
 
             constructor: function() {
                 inherited.constructor.apply(this, arguments);
+                this._options.collectionOptions = Objs.extend({
+                    secondary_ident: Functions.as_method(this._mapItemValue, this)
+                }, this._options.collectionOptions);
                 this.__foreignKeyArray().forEach(function(fk) {
                     this._model.on("change:" + fk, this._queryChanged, this);
                 }, this);
@@ -6349,15 +6357,20 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                 }
             },
 
-            _matchItem: function(item, key) {
-                var value = item.get(this._options.foreign_attr || this._foreignTable().primary_key());
+            _mapValue: function(value) {
                 if (this._options.map)
-                    key = this._options.map.call(this._options.mapctx || this, key);
-                if (this._options.ignore_case) {
-                    key = key.toLowerCase();
+                    value = this._options.map.call(this._options.mapctx || this, value);
+                if (this._options.ignore_case)
                     value = value.toLowerCase();
-                }
-                return value === key;
+                return value;
+            },
+
+            _mapItemValue: function(item) {
+                return this._mapValue(item.get(this._options.foreign_attr || this._foreignTable().primary_key()));
+            },
+
+            _matchItem: function(item, key) {
+                return this._mapItemValue(item) === this._mapValue(key);
             },
 
             _remove: function(item) {

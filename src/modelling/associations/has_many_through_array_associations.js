@@ -1,8 +1,9 @@
 Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
     "module:Modelling.Associations.HasManyAssociation",
     "base:Objs",
-    "base:Types"
-], function(HasManyAssociation, Objs, Types, scoped) {
+    "base:Types",
+    "base:Functions"
+], function(HasManyAssociation, Objs, Types, Functions, scoped) {
     return HasManyAssociation.extend({
         scoped: scoped
     }, function(inherited) {
@@ -22,6 +23,9 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
 
             constructor: function() {
                 inherited.constructor.apply(this, arguments);
+                this._options.collectionOptions = Objs.extend({
+                    secondary_ident: Functions.as_method(this._mapItemValue, this)
+                }, this._options.collectionOptions);
                 this.__foreignKeyArray().forEach(function(fk) {
                     this._model.on("change:" + fk, this._queryChanged, this);
                 }, this);
@@ -52,15 +56,20 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                 }
             },
 
-            _matchItem: function(item, key) {
-                var value = item.get(this._options.foreign_attr || this._foreignTable().primary_key());
+            _mapValue: function(value) {
                 if (this._options.map)
-                    key = this._options.map.call(this._options.mapctx || this, key);
-                if (this._options.ignore_case) {
-                    key = key.toLowerCase();
+                    value = this._options.map.call(this._options.mapctx || this, value);
+                if (this._options.ignore_case)
                     value = value.toLowerCase();
-                }
-                return value === key;
+                return value;
+            },
+
+            _mapItemValue: function(item) {
+                return this._mapValue(item.get(this._options.foreign_attr || this._foreignTable().primary_key()));
+            },
+
+            _matchItem: function(item, key) {
+                return this._mapItemValue(item) === this._mapValue(key);
             },
 
             _remove: function(item) {

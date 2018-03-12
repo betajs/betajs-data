@@ -65,6 +65,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                     }
                 }
                 this._id_key = this._id_key || options.id_key || "id";
+                this._secondary_ident = options.secondary_ident;
                 this._source = source;
                 this._complete = false;
                 this._active = options.active || false;
@@ -199,7 +200,10 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
 
 
             get_ident: function(obj) {
-                return Class.is_class_instance(obj) ? obj.get(this._id_key) : obj[this._id_key];
+                var result = Class.is_class_instance(obj) ? obj.get(this._id_key) : obj[this._id_key];
+                if (!result && this._secondary_ident)
+                    result = this._secondary_ident(obj);
+                return result;
             },
 
             getQuery: function() {
