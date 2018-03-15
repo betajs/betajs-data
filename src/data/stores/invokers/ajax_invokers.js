@@ -20,7 +20,7 @@ Scoped.define("module:Stores.Invokers.RestInvokeeAjaxInvoker", [
 				}).mapError(function (error) {
 					return {
 						error: error.status_code(),
-						data: error.data(),
+						data: error.data ? error.data() : null,
 						invalid: error.status_code() === HttpHeader.HTTP_STATUS_PRECONDITION_FAILED
 					};
 				}, this);

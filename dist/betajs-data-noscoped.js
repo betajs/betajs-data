@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.90 - 2018-03-12
+betajs-data - v1.0.90 - 2018-03-15
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -4119,7 +4119,7 @@ Scoped.define("module:Stores.Invokers.RestInvokeeAjaxInvoker", [
 				}).mapError(function (error) {
 					return {
 						error: error.status_code(),
-						data: error.data(),
+						data: error.data ? error.data() : null,
 						invalid: error.status_code() === HttpHeader.HTTP_STATUS_PRECONDITION_FAILED
 					};
 				}, this);
