@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.90 - 2018-03-15
+betajs-data - v1.0.92 - 2018-03-17
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.90"
+    "version": "1.0.92"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -3406,6 +3406,7 @@ Scoped.define("module:Stores.PassthroughStore", [
 				this.__store = store;
 				options = options || {};
 				options.id_key = options.id_key || store.id_key();
+				this.__preserves = options.preserves;
 				inherited.constructor.call(this, options);
 				if (options.destroy_store)
 					this._auto_destroy(store);
@@ -3416,10 +3417,20 @@ Scoped.define("module:Stores.PassthroughStore", [
 				return this.__store._query_capabilities();
 			},
 
-			_insert: function (data, ctx) {
-				return this._preInsert(data).mapSuccess(function (data) {
+			_insert: function (originalData, ctx) {
+				return this._preInsert(originalData).mapSuccess(function (data) {
 					return this.__store.insert(data, ctx).mapSuccess(function (data) {
-						return this._postInsert(data);
+						var result = this._postInsert(data);
+						if (this.__preserves) {
+							return result.mapSuccess(function (data) {
+								this.__preserves.forEach(function (preserve) {
+									if (preserve in originalData && !(preserve in data))
+										data[preserve] = originalData[preserve];
+								});
+								return data;
+							}, this);
+						} else
+							return result;
 					}, this);
 				}, this);
 			},
@@ -5197,8 +5208,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 	"module:Stores.StoreHistory",
 	"module:Stores.MemoryStore",
 	"base:Objs",
-	"base:Timers.Timer"
-], function (Class, StoreHistory, MemoryStore, Objs, Timer, scoped) {
+	"base:Timers.Timer",
+	"base:Promise"
+], function (Class, StoreHistory, MemoryStore, Objs, Timer, Promise, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -5221,7 +5233,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					}
 				}, this._options)));
 				if (this._options.auto_push) {
-					this.auto_destroy(new Timer({
+					this._timer = this.auto_destroy(new Timer({
 						fire: function () {
 							this.push(this.partialStore);
 						},
@@ -5270,7 +5282,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 			
 			push: function () {
 				if (this.pushing)
-					return;
+					return Promise.value(true);
 				var failedIds = {};
 				var unlockIds = {};
 				var hs = this.storeHistory.historyStore;
@@ -5291,7 +5303,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 							}
 						}, this);
                         iter.destroy();
-						return;
+						return Promise.value(true);
 					}
 					var commit = iter.next();
 					var commit_id = hs.id_of(commit);
@@ -5300,7 +5312,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 							pushed: true,
 							success: false
 						});
-						next.apply(this);
+						return next.apply(this);
 					} else {
 						var promise = null;
 						if (commit.type === "insert") {
@@ -5312,7 +5324,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 						} else if (commit.type === "remove") {
 							promise = this.partialStore.remoteStore.remove(commit.row ? this.partialStore.remoteStore.id_of(commit.row) : commit.row_id);
 						}
-						promise.success(function (ret) {
+						return promise.mapSuccess(function (ret) {
 							hs.update(commit_id, {
 								pushed: true,
 								success: true
@@ -5323,19 +5335,19 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 									unlockIds[commit.row_id] = ret;
 								}
 							}
-							next.apply(this);
-						}, this).error(function () {
+							return next.apply(this);
+						}, this).mapError(function () {
 							hs.update(commit_id, {
 								pushed: true,
 								success: false
 							});
 							failedIds[commit_id] = true;
 							unlockIds[commit.row_id] = false;
-							next.apply(this);
+							return next.apply(this);
 						}, this);
 					}
 				};
-				next.apply(this);
+				return next.apply(this);
 			}
 
 		};

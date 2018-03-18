@@ -44,3 +44,19 @@ QUnit.test("test store update async 2", function (assert) {
 		}, {z: 3});
 	});
 });
+
+
+
+QUnit.test("test store create get memory map store", function (assert) {
+    var store = new BetaJS.Data.Stores.MemoryMapStore();
+    var done = assert.async();
+    store.insert({x: 5, id: 1521244505370}).success(function (object) {
+        assert.equal(object.id, 1521244505370);
+        assert.equal(object.x, 5);
+        store.get(1521244505370).success(function (object) {
+            assert.equal(object.id, 1521244505370);
+            assert.equal(object.x, 5);
+            done();
+        }, {z: 3});
+    });
+});

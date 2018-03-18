@@ -141,8 +141,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 	"module:Stores.StoreHistory",
 	"module:Stores.MemoryStore",
 	"base:Objs",
-	"base:Timers.Timer"
-], function (Class, StoreHistory, MemoryStore, Objs, Timer, scoped) {
+	"base:Timers.Timer",
+	"base:Promise"
+], function (Class, StoreHistory, MemoryStore, Objs, Timer, Promise, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -165,7 +166,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					}
 				}, this._options)));
 				if (this._options.auto_push) {
-					this.auto_destroy(new Timer({
+					this._timer = this.auto_destroy(new Timer({
 						fire: function () {
 							this.push(this.partialStore);
 						},
@@ -214,7 +215,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 			
 			push: function () {
 				if (this.pushing)
-					return;
+					return Promise.value(true);
 				var failedIds = {};
 				var unlockIds = {};
 				var hs = this.storeHistory.historyStore;
@@ -235,7 +236,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 							}
 						}, this);
                         iter.destroy();
-						return;
+						return Promise.value(true);
 					}
 					var commit = iter.next();
 					var commit_id = hs.id_of(commit);
@@ -244,7 +245,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 							pushed: true,
 							success: false
 						});
-						next.apply(this);
+						return next.apply(this);
 					} else {
 						var promise = null;
 						if (commit.type === "insert") {
@@ -256,7 +257,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 						} else if (commit.type === "remove") {
 							promise = this.partialStore.remoteStore.remove(commit.row ? this.partialStore.remoteStore.id_of(commit.row) : commit.row_id);
 						}
-						promise.success(function (ret) {
+						return promise.mapSuccess(function (ret) {
 							hs.update(commit_id, {
 								pushed: true,
 								success: true
@@ -267,19 +268,19 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 									unlockIds[commit.row_id] = ret;
 								}
 							}
-							next.apply(this);
-						}, this).error(function () {
+							return next.apply(this);
+						}, this).mapError(function () {
 							hs.update(commit_id, {
 								pushed: true,
 								success: false
 							});
 							failedIds[commit_id] = true;
 							unlockIds[commit.row_id] = false;
-							next.apply(this);
+							return next.apply(this);
 						}, this);
 					}
 				};
-				next.apply(this);
+				return next.apply(this);
 			}
 
 		};

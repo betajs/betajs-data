@@ -10,6 +10,7 @@ Scoped.define("module:Stores.PassthroughStore", [
 				this.__store = store;
 				options = options || {};
 				options.id_key = options.id_key || store.id_key();
+				this.__preserves = options.preserves;
 				inherited.constructor.call(this, options);
 				if (options.destroy_store)
 					this._auto_destroy(store);
@@ -20,10 +21,20 @@ Scoped.define("module:Stores.PassthroughStore", [
 				return this.__store._query_capabilities();
 			},
 
-			_insert: function (data, ctx) {
-				return this._preInsert(data).mapSuccess(function (data) {
+			_insert: function (originalData, ctx) {
+				return this._preInsert(originalData).mapSuccess(function (data) {
 					return this.__store.insert(data, ctx).mapSuccess(function (data) {
-						return this._postInsert(data);
+						var result = this._postInsert(data);
+						if (this.__preserves) {
+							return result.mapSuccess(function (data) {
+								this.__preserves.forEach(function (preserve) {
+									if (preserve in originalData && !(preserve in data))
+										data[preserve] = originalData[preserve];
+								});
+								return data;
+							}, this);
+						} else
+							return result;
 					}, this);
 				}, this);
 			},
