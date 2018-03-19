@@ -368,3 +368,33 @@ QUnit.test("test partial stores, different ids, commit write strategy, no watche
 		assert.ok(false);
 	});
 });
+
+
+QUnit.test("commit strategy push", function (assert) {
+	var remoteStore = new BetaJS.Data.Stores.MemoryStore();
+	var asyncRemoteStore = new BetaJS.Data.Stores.AsyncStore(remoteStore);
+
+	var writeStrategy = new BetaJS.Data.Stores.PartialStoreWriteStrategies.CommitStrategy();
+	var partialStore = new BetaJS.Data.Stores.PartialStore(asyncRemoteStore, {
+		writeStrategy: writeStrategy
+	});
+
+	var done = assert.async();
+
+	partialStore.insert({foo: "bar"}).success(function (model) {
+		assert.equal(remoteStore.query().value().asArray().length, 0);
+		var push = writeStrategy.push();
+        assert.equal(remoteStore.query().value().asArray().length, 0);
+        partialStore.update(model.id, {foo: "baz"}).success(function () {
+            assert.equal(remoteStore.query().value().asArray().length, 0);
+            push.success(function () {
+                assert.equal(remoteStore.count().value(), 1);
+                writeStrategy.push().success(function () {
+                    assert.equal(remoteStore.count().value(), 1);
+                    done();
+				});
+			});
+		});
+	});
+
+});

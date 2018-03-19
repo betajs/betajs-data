@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.92 - 2018-03-17
+betajs-data - v1.0.93 - 2018-03-19
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1009,7 +1009,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.92 - 2018-03-17
+betajs-data - v1.0.93 - 2018-03-19
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1021,7 +1021,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.92"
+    "version": "1.0.93"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -3793,6 +3793,14 @@ Scoped.define("module:Stores.StoreHistory", [
 				}
 			},
 
+			lockCommits: function () {
+				this.lockedCommits = this.commitId;
+			},
+
+			unlockCommits: function () {
+				delete this.lockedCommits;
+			},
+
 			sourceInsert: function (data) {
 				this.commitId++;
 				this.historyStore.insert(Objs.extend({
@@ -3818,6 +3826,8 @@ Scoped.define("module:Stores.StoreHistory", [
 					var combined_data = {};
 					var delete_ids = [];
 					var query = Objs.extend({ row_id: row_id }, this._options.filter_data);
+					if (this.lockedCommits)
+						query.commit_id = {"$gt": this.lockedCommits};
 					if (types.length === 1)
 						query.type = types[0];
 					else
@@ -6296,10 +6306,12 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 				var failedIds = {};
 				var unlockIds = {};
 				var hs = this.storeHistory.historyStore;
+                this.storeHistory.lockCommits();
 				var iter = hs.query({success: false}, {sort: {commit_id: 1}}).value();
 				var next = function () {
 					if (!iter.hasNext()) {
 						this.pushing = false;
+						this.storeHistory.unlockCommits();
 						Objs.iter(unlockIds, function (value, id) {
 							if (value) {
 								if (value === true) {

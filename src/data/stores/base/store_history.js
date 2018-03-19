@@ -29,6 +29,14 @@ Scoped.define("module:Stores.StoreHistory", [
 				}
 			},
 
+			lockCommits: function () {
+				this.lockedCommits = this.commitId;
+			},
+
+			unlockCommits: function () {
+				delete this.lockedCommits;
+			},
+
 			sourceInsert: function (data) {
 				this.commitId++;
 				this.historyStore.insert(Objs.extend({
@@ -54,6 +62,8 @@ Scoped.define("module:Stores.StoreHistory", [
 					var combined_data = {};
 					var delete_ids = [];
 					var query = Objs.extend({ row_id: row_id }, this._options.filter_data);
+					if (this.lockedCommits)
+						query.commit_id = {"$gt": this.lockedCommits};
 					if (types.length === 1)
 						query.type = types[0];
 					else

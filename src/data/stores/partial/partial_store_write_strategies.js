@@ -219,10 +219,12 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 				var failedIds = {};
 				var unlockIds = {};
 				var hs = this.storeHistory.historyStore;
+                this.storeHistory.lockCommits();
 				var iter = hs.query({success: false}, {sort: {commit_id: 1}}).value();
 				var next = function () {
 					if (!iter.hasNext()) {
 						this.pushing = false;
+						this.storeHistory.unlockCommits();
 						Objs.iter(unlockIds, function (value, id) {
 							if (value) {
 								if (value === true) {
