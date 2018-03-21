@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.93 - 2018-03-19
+betajs-data - v1.0.94 - 2018-03-21
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.93"
+    "version": "1.0.94"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -4672,7 +4672,12 @@ Scoped.define("module:Stores.CachedStore", [
 					            : this.itemCache.get(this.itemCache.id_of(data), ctx);
 				return itemPromise.mapSuccess(function (item) {
 					options.foreignKey = false;
-					return item ? this.cacheUpdate(this.itemCache.id_of(item), data, options, ctx) : this.cacheInsert(data, options, ctx);
+					if (!item)
+                        return this.cacheInsert(data, options, ctx);
+					var backup = Objs.clone(data, 1);
+					return this.cacheUpdate(this.itemCache.id_of(item), data, options, ctx).mapSuccess(function (result) {
+						return Objs.extend(backup, result);
+					});
 				}, this);
 			},
 

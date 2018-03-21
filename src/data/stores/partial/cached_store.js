@@ -180,7 +180,12 @@ Scoped.define("module:Stores.CachedStore", [
 					            : this.itemCache.get(this.itemCache.id_of(data), ctx);
 				return itemPromise.mapSuccess(function (item) {
 					options.foreignKey = false;
-					return item ? this.cacheUpdate(this.itemCache.id_of(item), data, options, ctx) : this.cacheInsert(data, options, ctx);
+					if (!item)
+                        return this.cacheInsert(data, options, ctx);
+					var backup = Objs.clone(data, 1);
+					return this.cacheUpdate(this.itemCache.id_of(item), data, options, ctx).mapSuccess(function (result) {
+						return Objs.extend(backup, result);
+					});
 				}, this);
 			},
 
