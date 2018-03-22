@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.94 - 2018-03-21
+betajs-data - v1.0.94 - 2018-03-22
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -4675,7 +4675,9 @@ Scoped.define("module:Stores.CachedStore", [
 					if (!item)
                         return this.cacheInsert(data, options, ctx);
 					var backup = Objs.clone(data, 1);
-					return this.cacheUpdate(this.itemCache.id_of(item), data, options, ctx).mapSuccess(function (result) {
+					var itemId = this.itemCache.id_of(item);
+					backup[this.itemCache.id_key()] = itemId;
+					return this.cacheUpdate(itemId, data, options, ctx).mapSuccess(function (result) {
 						return Objs.extend(backup, result);
 					});
 				}, this);
