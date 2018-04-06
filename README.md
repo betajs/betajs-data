@@ -1,4 +1,4 @@
-# betajs-data 1.0.96
+# betajs-data 1.0.97
 [![Build Status](https://api.travis-ci.org/betajs/betajs-data.svg?branch=master)](https://travis-ci.org/betajs/betajs-data)
 [![Code Climate](https://codeclimate.com/github/betajs/betajs-data/badges/gpa.svg)](https://codeclimate.com/github/betajs/betajs-data)
 [![NPM](https://img.shields.io/npm/v/betajs-data.svg?style=flat)](https://www.npmjs.com/package/betajs-data)
@@ -123,11 +123,11 @@ The BetaJS Data module contains the following subsystems:
 ## Links
 | Resource   | URL |
 | :--------- | --: |
-| Homepage   | [http://betajs.com](http://betajs.com) |
+| Homepage   | [https://betajs.com](https://betajs.com) |
 | Git        | [git://github.com/betajs/betajs-data.git](git://github.com/betajs/betajs-data.git) |
 | Repository | [https://github.com/betajs/betajs-data](https://github.com/betajs/betajs-data) |
-| Blog       | [http://blog.betajs.com](http://blog.betajs.com) | 
-| Twitter    | [http://twitter.com/thebetajs](http://twitter.com/thebetajs) | 
+| Blog       | [https://blog.betajs.com](https://blog.betajs.com) | 
+| Twitter    | [https://twitter.com/thebetajs](https://twitter.com/thebetajs) | 
 | Gitter     | [https://gitter.im/betajs/betajs-data](https://gitter.im/betajs/betajs-data) | 
 
 

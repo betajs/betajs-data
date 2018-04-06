@@ -222,3 +222,29 @@ QUnit.test("test query collection super increase", function (assert) {
 
     assert.equal(coll.count(), 95-25);
 });
+
+
+
+
+QUnit.test("test auto query collection with other queries", function (assert) {
+    var store = new BetaJS.Data.Stores.MemoryStore();
+    for (var i = 1; i < 5; ++i)
+        for (var j = 1; j < 5; ++j)
+            for (var k = 3; k < 5; ++k)
+                store.insert({i:i,j:j,k:k});
+    var coll = new BetaJS.Data.Collections.StoreQueryCollection(store, {query: {i:1, j:1}, options: {sort: {k: -1}, limit: 2}}, {
+        active: true,
+        auto: true,
+		active_in_direction: true
+    });
+    assert.equal(coll.count(), 2);
+    assert.equal(coll.getByIndex(0).get("k"), 4);
+    assert.equal(coll.getByIndex(1).get("k"), 3);
+    store.insert({i:1, j:1, k: 5});
+    assert.equal(coll.count(), 3);
+    assert.equal(coll.getByIndex(0).get("k"), 5);
+    assert.equal(coll.getByIndex(1).get("k"), 4);
+    assert.equal(coll.getByIndex(2).get("k"), 3);
+    store.insert({i:1, j:1, k: 2});
+    assert.equal(coll.count(), 3);
+});

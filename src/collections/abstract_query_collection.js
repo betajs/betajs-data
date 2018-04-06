@@ -76,6 +76,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 this._forward_steps = options.forward_steps || null;
                 this._backward_steps = options.backward_steps || null;
                 this._async = options.async || false;
+                this._active_in_direction = "active_in_direction" in options ? options.active_in_direction : false;
                 if (this._active) {
                     this.on("add", function(object) {
                         this._watchItem(object.get(this._id_key));
@@ -414,6 +415,12 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                     return;
                 if (!this.isValid(data))
                     return;
+                if (this._active_in_direction && this._query.options.sort && this.count() > 0) {
+                    var item = this.getByIndex(this.count() - 1).getAll();
+                    var comp = Comparators.byObject(this._query.options.sort);
+                    if (comp(item, data) < 0)
+                        return;
+                }
                 this.add(this._materialize(data));
                 if (this._query.options.limit && this.count() > this._query.options.limit) {
                     if (this._active_bounds)

@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.96 - 2018-03-29
+betajs-data - v1.0.97 - 2018-04-06
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1009,7 +1009,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.96 - 2018-03-29
+betajs-data - v1.0.97 - 2018-04-06
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1021,7 +1021,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.96"
+    "version": "1.0.97"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -1103,6 +1103,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 this._forward_steps = options.forward_steps || null;
                 this._backward_steps = options.backward_steps || null;
                 this._async = options.async || false;
+                this._active_in_direction = "active_in_direction" in options ? options.active_in_direction : false;
                 if (this._active) {
                     this.on("add", function(object) {
                         this._watchItem(object.get(this._id_key));
@@ -1441,6 +1442,12 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                     return;
                 if (!this.isValid(data))
                     return;
+                if (this._active_in_direction && this._query.options.sort && this.count() > 0) {
+                    var item = this.getByIndex(this.count() - 1).getAll();
+                    var comp = Comparators.byObject(this._query.options.sort);
+                    if (comp(item, data) < 0)
+                        return;
+                }
                 this.add(this._materialize(data));
                 if (this._query.options.limit && this.count() > this._query.options.limit) {
                     if (this._active_bounds)
