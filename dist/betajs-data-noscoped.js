@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.97 - 2018-04-06
+betajs-data - v1.0.98 - 2018-04-14
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.97"
+    "version": "1.0.98"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -432,7 +432,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                     return;
                 if (!this.isValid(data))
                     return;
-                if (this._active_in_direction && this._query.options.sort && this.count() > 0) {
+                if (this._active_in_direction && this._query.options.sort && this._query.options.limit && this.count() >= this._query.options.limit) {
                     var item = this.getByIndex(this.count() - 1).getAll();
                     var comp = Comparators.byObject(this._query.options.sort);
                     if (comp(item, data) < 0)

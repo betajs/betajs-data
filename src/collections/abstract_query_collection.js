@@ -415,7 +415,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                     return;
                 if (!this.isValid(data))
                     return;
-                if (this._active_in_direction && this._query.options.sort && this.count() > 0) {
+                if (this._active_in_direction && this._query.options.sort && this._query.options.limit && this.count() >= this._query.options.limit) {
                     var item = this.getByIndex(this.count() - 1).getAll();
                     var comp = Comparators.byObject(this._query.options.sort);
                     if (comp(item, data) < 0)
