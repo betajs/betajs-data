@@ -202,7 +202,7 @@ Scoped.extend("module:Queries.RangeQueryBuilder", [
             _buildQuery: function() {
                 return Objs.objectBy(this.__key, {
                     "$gte": this.__lowerBound,
-                    "$le": this.__upperBound
+                    "$lte": this.__upperBound
                 });
             },
 

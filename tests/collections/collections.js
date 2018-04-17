@@ -248,3 +248,25 @@ QUnit.test("test auto query collection with other queries", function (assert) {
     store.insert({i:1, j:1, k: 2});
     assert.equal(coll.count(), 3);
 });
+
+
+
+QUnit.test("bounds expansion", function (assert) {
+    var store = new BetaJS.Data.Stores.MemoryStore();
+    for (var i = 1; i < 50; ++i)
+        for (var j = 1; j <= 5; ++j)
+			store.insert({i:i,j:j});
+    var coll = new BetaJS.Data.Collections.StoreQueryCollection(store, {query: {
+		i: {
+			$gte: 20,
+			$lt: 30
+		}
+	}, options: {}}, {
+        active: true,
+        auto: true,
+        bounds_attribute: "i"
+    });
+    assert.equal(coll.count(), (30 - 20) * 5);
+    coll.bounds_forwards(40);
+    assert.equal(coll.count(), (40 - 20) * 5);
+});

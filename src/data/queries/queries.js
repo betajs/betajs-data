@@ -45,7 +45,7 @@ Scoped.define("module:Queries", [
                 return object_value >= condition_value;
             }
         },
-        "$le": {
+        "$lte": {
             target: "atom",
             evaluate_single: function(object_value, condition_value) {
                 return object_value <= condition_value;
@@ -99,7 +99,7 @@ Scoped.define("module:Queries", [
          * pair :== key: value | $or : queries | $and: queries
          * value :== atom | conditions
          * conditions :== {condition, ...}  
-         * condition :== $in: atoms | $gt: atom | $lt: atom | $gte: atom | $le: atom | $sw: atom | $ct: atom | all with ic
+         * condition :== $in: atoms | $gt: atom | $lt: atom | $gte: atom | $lte: atom | $sw: atom | $ct: atom | all with ic
          *
          */
 
@@ -271,7 +271,7 @@ Scoped.define("module:Queries", [
         rangeSuperQueryDiffQuery: function(superCandidate, subCandidate) {
             if (!Objs.keyEquals(superCandidate, subCandidate))
                 return false;
-            var rangeKey = Objs.objectify(["$gt", "$lt", "$gte", "$le"]);
+            var rangeKey = Objs.objectify(["$gt", "$lt", "$gte", "$lte"]);
             var ors = [];
             var result = {};
             var iterResult = Objs.iter(superCandidate, function(superValue, key) {
@@ -297,43 +297,43 @@ Scoped.define("module:Queries", [
                     return false;
                 var ret = Objs.clone(superValue, 1);
                 if (subValue.$gt || subValue.$gte) {
-                    if (subValue.$lt || subValue.$le) {
+                    if (subValue.$lt || subValue.$lte) {
                         if (superValue.$gt || superValue.$gte) {
                             if ((superValue.$gt || superValue.$gte) > (subValue.$gt || subValue.$gte))
                                 return false;
                         }
-                        if (superValue.$lt || superValue.$le) {
-                            if ((superValue.$lt || superValue.$le) < (subValue.$lt || subValue.$le))
+                        if (superValue.$lt || superValue.$lte) {
+                            if ((superValue.$lt || superValue.$lte) < (subValue.$lt || subValue.$lte))
                                 return false;
                         }
                         var retLow = Objs.clone(ret, 1);
                         var retHigh = Objs.clone(ret, 1);
                         delete retLow.$lt;
-                        delete retLow.$le;
-                        retLow[subValue.$gt ? "$le" : "$lt"] = subValue.$gt || subValue.$gte;
+                        delete retLow.$lte;
+                        retLow[subValue.$gt ? "$lte" : "$lt"] = subValue.$gt || subValue.$gte;
                         delete retHigh.$gt;
                         delete retHigh.$gte;
-                        retHigh[subValue.$lt ? "$gte" : "$gt"] = subValue.$lt || subValue.$le;
+                        retHigh[subValue.$lt ? "$gte" : "$gt"] = subValue.$lt || subValue.$lte;
                         ors.push(Objs.objectBy(key, retLow));
                         ors.push(Objs.objectBy(key, retHigh));
                         return true;
                     } else {
-                        if (superValue.$lt || superValue.$le)
+                        if (superValue.$lt || superValue.$lte)
                             return false;
                         if (superValue.$gt || superValue.$gte) {
                             if ((superValue.$gt || superValue.$gte) > (subValue.$gt || subValue.$gte))
                                 return false;
                         }
-                        ret[subValue.$gt ? "$le" : "$lt"] = subValue.$gt || subValue.$gte;
+                        ret[subValue.$gt ? "$lte" : "$lt"] = subValue.$gt || subValue.$gte;
                     }
-                } else if (subValue.$lt || subValue.$le) {
+                } else if (subValue.$lt || subValue.$lte) {
                     if (superValue.$gt || superValue.$gte)
                         return false;
-                    if (superValue.$lt || superValue.$le) {
-                        if ((superValue.$lt || superValue.$le) < (subValue.$lt || subValue.$le))
+                    if (superValue.$lt || superValue.$lte) {
+                        if ((superValue.$lt || superValue.$lte) < (subValue.$lt || subValue.$lte))
                             return false;
                     }
-                    ret[subValue.$lt ? "$gte" : "$gt"] = subValue.$lt || subValue.$le;
+                    ret[subValue.$lt ? "$gte" : "$gt"] = subValue.$lt || subValue.$lte;
                 } else
                     return false;
                 result[key] = ret;

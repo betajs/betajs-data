@@ -71,6 +71,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 this._active = options.active || false;
                 this._incremental = "incremental" in options ? options.incremental : true;
                 this._active_bounds = "active_bounds" in options ? options.active_bounds : true;
+                this._bounds_attribute = options.bounds_attribute;
                 this._enabled = false;
                 this._range = options.range || null;
                 this._forward_steps = options.forward_steps || null;
@@ -199,6 +200,25 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 });
             },
 
+            bounds_forwards: function(newUpperBound) {
+                var oldUpperBound = this._query.query[this._bounds_attribute].$lt;
+                this._query.query[this._bounds_attribute].$lt = newUpperBound;
+                var queryCopy = Objs.clone(this._query.query, 2);
+                queryCopy[this._bounds_attribute].$gte = oldUpperBound;
+                return this._execute({
+                    query: queryCopy
+                }, true);
+            },
+
+            bounds_backwards: function(newLowerBound) {
+                var oldLowerBound = this._query.query[this._bounds_attribute].$gte;
+                this._query.query[this._bounds_attribute].$gte = newLowerBound;
+                var queryCopy = Objs.clone(this._query.query, 2);
+                queryCopy[this._bounds_attribute].$lt = oldLowerBound;
+                return this._execute({
+                    query: queryCopy
+                }, true);
+            },
 
             get_ident: function(obj) {
                 var result = Class.is_class_instance(obj) ? obj.get(this._id_key) : obj[this._id_key];

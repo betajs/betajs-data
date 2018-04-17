@@ -25,10 +25,10 @@ QUnit.test("elem match query", function (assert) {
 });
 
 
-QUnit.test("query diff le", function (assert) {
+QUnit.test("query diff lte", function (assert) {
 	var sub = {
 		"date": {
-			"$le": 1000
+			"$lte": 1000
 		},
 		"foo": "bar"
 	};

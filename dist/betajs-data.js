@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.98 - 2018-04-14
+betajs-data - v1.0.99 - 2018-04-17
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.98 - 2018-04-14
+betajs-data - v1.0.99 - 2018-04-17
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,7 +1018,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.98"
+    "version": "1.0.99"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -1095,6 +1095,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 this._active = options.active || false;
                 this._incremental = "incremental" in options ? options.incremental : true;
                 this._active_bounds = "active_bounds" in options ? options.active_bounds : true;
+                this._bounds_attribute = options.bounds_attribute;
                 this._enabled = false;
                 this._range = options.range || null;
                 this._forward_steps = options.forward_steps || null;
@@ -1223,6 +1224,25 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 });
             },
 
+            bounds_forwards: function(newUpperBound) {
+                var oldUpperBound = this._query.query[this._bounds_attribute].$lt;
+                this._query.query[this._bounds_attribute].$lt = newUpperBound;
+                var queryCopy = Objs.clone(this._query.query, 2);
+                queryCopy[this._bounds_attribute].$gte = oldUpperBound;
+                return this._execute({
+                    query: queryCopy
+                }, true);
+            },
+
+            bounds_backwards: function(newLowerBound) {
+                var oldLowerBound = this._query.query[this._bounds_attribute].$gte;
+                this._query.query[this._bounds_attribute].$gte = newLowerBound;
+                var queryCopy = Objs.clone(this._query.query, 2);
+                queryCopy[this._bounds_attribute].$lt = oldLowerBound;
+                return this._execute({
+                    query: queryCopy
+                }, true);
+            },
 
             get_ident: function(obj) {
                 var result = Class.is_class_instance(obj) ? obj.get(this._id_key) : obj[this._id_key];
@@ -2364,7 +2384,7 @@ Scoped.define("module:Queries", [
                 return object_value >= condition_value;
             }
         },
-        "$le": {
+        "$lte": {
             target: "atom",
             evaluate_single: function(object_value, condition_value) {
                 return object_value <= condition_value;
@@ -2418,7 +2438,7 @@ Scoped.define("module:Queries", [
          * pair :== key: value | $or : queries | $and: queries
          * value :== atom | conditions
          * conditions :== {condition, ...}  
-         * condition :== $in: atoms | $gt: atom | $lt: atom | $gte: atom | $le: atom | $sw: atom | $ct: atom | all with ic
+         * condition :== $in: atoms | $gt: atom | $lt: atom | $gte: atom | $lte: atom | $sw: atom | $ct: atom | all with ic
          *
          */
 
@@ -2590,7 +2610,7 @@ Scoped.define("module:Queries", [
         rangeSuperQueryDiffQuery: function(superCandidate, subCandidate) {
             if (!Objs.keyEquals(superCandidate, subCandidate))
                 return false;
-            var rangeKey = Objs.objectify(["$gt", "$lt", "$gte", "$le"]);
+            var rangeKey = Objs.objectify(["$gt", "$lt", "$gte", "$lte"]);
             var ors = [];
             var result = {};
             var iterResult = Objs.iter(superCandidate, function(superValue, key) {
@@ -2616,43 +2636,43 @@ Scoped.define("module:Queries", [
                     return false;
                 var ret = Objs.clone(superValue, 1);
                 if (subValue.$gt || subValue.$gte) {
-                    if (subValue.$lt || subValue.$le) {
+                    if (subValue.$lt || subValue.$lte) {
                         if (superValue.$gt || superValue.$gte) {
                             if ((superValue.$gt || superValue.$gte) > (subValue.$gt || subValue.$gte))
                                 return false;
                         }
-                        if (superValue.$lt || superValue.$le) {
-                            if ((superValue.$lt || superValue.$le) < (subValue.$lt || subValue.$le))
+                        if (superValue.$lt || superValue.$lte) {
+                            if ((superValue.$lt || superValue.$lte) < (subValue.$lt || subValue.$lte))
                                 return false;
                         }
                         var retLow = Objs.clone(ret, 1);
                         var retHigh = Objs.clone(ret, 1);
                         delete retLow.$lt;
-                        delete retLow.$le;
-                        retLow[subValue.$gt ? "$le" : "$lt"] = subValue.$gt || subValue.$gte;
+                        delete retLow.$lte;
+                        retLow[subValue.$gt ? "$lte" : "$lt"] = subValue.$gt || subValue.$gte;
                         delete retHigh.$gt;
                         delete retHigh.$gte;
-                        retHigh[subValue.$lt ? "$gte" : "$gt"] = subValue.$lt || subValue.$le;
+                        retHigh[subValue.$lt ? "$gte" : "$gt"] = subValue.$lt || subValue.$lte;
                         ors.push(Objs.objectBy(key, retLow));
                         ors.push(Objs.objectBy(key, retHigh));
                         return true;
                     } else {
-                        if (superValue.$lt || superValue.$le)
+                        if (superValue.$lt || superValue.$lte)
                             return false;
                         if (superValue.$gt || superValue.$gte) {
                             if ((superValue.$gt || superValue.$gte) > (subValue.$gt || subValue.$gte))
                                 return false;
                         }
-                        ret[subValue.$gt ? "$le" : "$lt"] = subValue.$gt || subValue.$gte;
+                        ret[subValue.$gt ? "$lte" : "$lt"] = subValue.$gt || subValue.$gte;
                     }
-                } else if (subValue.$lt || subValue.$le) {
+                } else if (subValue.$lt || subValue.$lte) {
                     if (superValue.$gt || superValue.$gte)
                         return false;
-                    if (superValue.$lt || superValue.$le) {
-                        if ((superValue.$lt || superValue.$le) < (subValue.$lt || subValue.$le))
+                    if (superValue.$lt || superValue.$lte) {
+                        if ((superValue.$lt || superValue.$lte) < (subValue.$lt || subValue.$lte))
                             return false;
                     }
-                    ret[subValue.$lt ? "$gte" : "$gt"] = subValue.$lt || subValue.$le;
+                    ret[subValue.$lt ? "$gte" : "$gt"] = subValue.$lt || subValue.$lte;
                 } else
                     return false;
                 result[key] = ret;
@@ -3139,7 +3159,7 @@ Scoped.extend("module:Queries.RangeQueryBuilder", [
             _buildQuery: function() {
                 return Objs.objectBy(this.__key, {
                     "$gte": this.__lowerBound,
-                    "$le": this.__upperBound
+                    "$lte": this.__upperBound
                 });
             },
 
