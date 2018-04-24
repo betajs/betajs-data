@@ -35,9 +35,9 @@ Scoped.define("module:Modelling.Table", [
                     this.trigger("update", id, data, row);
                     this.trigger("update:" + id, data);
                 }, this);
-                this.__store.on("remove", function(id) {
-                    this.trigger("remove", id);
-                    this.trigger("remove:" + id);
+                this.__store.on("remove", function(id, ctx, data) {
+                    this.trigger("remove", id, ctx, data);
+                    this.trigger("remove:" + id, ctx, data);
                 }, this);
                 if (this.__options.cache_models) {
                     this.model_cache = this.auto_destroy(new ObjectCache(function(model) {

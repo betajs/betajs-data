@@ -194,8 +194,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					return this.partialStore.cachedStore.cacheRemove(id, {
 						ignoreLock: true,
 						silent: true
-					}).success(function () {
+					}).mapSuccess(function (data) {
 						this.storeHistory.sourceRemove(id, this.partialStore.remoteStore.id_row(remoteId));
+						return data;
 					}, this);
 				}, this);
 			},

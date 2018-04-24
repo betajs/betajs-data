@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.99 - 2018-04-17
+betajs-data - v1.0.100 - 2018-04-24
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.99 - 2018-04-17
+betajs-data - v1.0.100 - 2018-04-24
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,7 +1018,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.99"
+    "version": "1.0.100"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -3990,9 +3990,9 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			this.trigger("write", "insert", row, ctx);
 		},
 
-		_removed: function (id, ctx) {
-			this.trigger("remove", id, ctx);
-			this.trigger("write", "remove", id, ctx);
+		_removed: function (id, ctx, data) {
+			this.trigger("remove", id, ctx, data);
+			this.trigger("write", "remove", id, ctx, data);
 		},
 
 		_updated: function (row, data, ctx, pre_data) {
@@ -4037,8 +4037,8 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 		},
 
 		remove: function (id, ctx) {
-			return this._remove(id, ctx).success(function () {
-				this._removed(id, ctx);
+			return this._remove(id, ctx).success(function (data) {
+				this._removed(id, ctx, data);
 			}, this);
 		},
 
@@ -5735,9 +5735,10 @@ Scoped.define("module:Stores.CachedStore", [
 					if (!options.ignoreLock && (meta.lockedItem || !Types.is_empty(meta.lockedAttrs)))
 						return Promise.error("locked item");
 					var cached_id = this.itemCache.id_of(data);
-					return this.itemCache.remove(cached_id, ctx).success(function () {
+					return this.itemCache.remove(cached_id, ctx).mapSuccess(function () {
 						if (!options.silent)
-							this._removed(cached_id, ctx);
+							this._removed(cached_id, ctx, data);
+						return data;
 					}, this);
 				}, this);
 			},
@@ -6312,8 +6313,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					return this.partialStore.cachedStore.cacheRemove(id, {
 						ignoreLock: true,
 						silent: true
-					}).success(function () {
+					}).mapSuccess(function (data) {
 						this.storeHistory.sourceRemove(id, this.partialStore.remoteStore.id_row(remoteId));
+						return data;
 					}, this);
 				}, this);
 			},
@@ -7455,9 +7457,9 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                     var fk = Types.is_array(this._foreign_key) ? this._foreign_key[0] : this._foreign_key;
                     var current = Objs.clone(this._model.get(fk) || [], 1);
                     current.push(item.get(this._options.foreign_attr || this._foreignTable().primary_key()));
-                    this._model.set(fk, current);
                     if (this._options.create_virtual && this.collection.value())
                         this.collection.value().add(item);
+                    this._model.set(fk, current);
                 }
             }
 
@@ -8437,9 +8439,9 @@ Scoped.define("module:Modelling.Table", [
                     this.trigger("update", id, data, row);
                     this.trigger("update:" + id, data);
                 }, this);
-                this.__store.on("remove", function(id) {
-                    this.trigger("remove", id);
-                    this.trigger("remove:" + id);
+                this.__store.on("remove", function(id, ctx, data) {
+                    this.trigger("remove", id, ctx, data);
+                    this.trigger("remove:" + id, ctx, data);
                 }, this);
                 if (this.__options.cache_models) {
                     this.model_cache = this.auto_destroy(new ObjectCache(function(model) {

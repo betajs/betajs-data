@@ -38,9 +38,9 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			this.trigger("write", "insert", row, ctx);
 		},
 
-		_removed: function (id, ctx) {
-			this.trigger("remove", id, ctx);
-			this.trigger("write", "remove", id, ctx);
+		_removed: function (id, ctx, data) {
+			this.trigger("remove", id, ctx, data);
+			this.trigger("write", "remove", id, ctx, data);
 		},
 
 		_updated: function (row, data, ctx, pre_data) {
@@ -85,8 +85,8 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 		},
 
 		remove: function (id, ctx) {
-			return this._remove(id, ctx).success(function () {
-				this._removed(id, ctx);
+			return this._remove(id, ctx).success(function (data) {
+				this._removed(id, ctx, data);
 			}, this);
 		},
 

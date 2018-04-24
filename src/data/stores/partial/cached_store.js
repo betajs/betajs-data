@@ -209,9 +209,10 @@ Scoped.define("module:Stores.CachedStore", [
 					if (!options.ignoreLock && (meta.lockedItem || !Types.is_empty(meta.lockedAttrs)))
 						return Promise.error("locked item");
 					var cached_id = this.itemCache.id_of(data);
-					return this.itemCache.remove(cached_id, ctx).success(function () {
+					return this.itemCache.remove(cached_id, ctx).mapSuccess(function () {
 						if (!options.silent)
-							this._removed(cached_id, ctx);
+							this._removed(cached_id, ctx, data);
+						return data;
 					}, this);
 				}, this);
 			},

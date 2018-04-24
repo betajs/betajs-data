@@ -89,9 +89,9 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                     var fk = Types.is_array(this._foreign_key) ? this._foreign_key[0] : this._foreign_key;
                     var current = Objs.clone(this._model.get(fk) || [], 1);
                     current.push(item.get(this._options.foreign_attr || this._foreignTable().primary_key()));
-                    this._model.set(fk, current);
                     if (this._options.create_virtual && this.collection.value())
                         this.collection.value().add(item);
+                    this._model.set(fk, current);
                 }
             }
 
