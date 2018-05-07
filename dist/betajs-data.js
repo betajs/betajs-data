@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.100 - 2018-04-24
+betajs-data - v1.0.101 - 2018-05-07
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.100 - 2018-04-24
+betajs-data - v1.0.101 - 2018-05-07
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,7 +1018,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.100"
+    "version": "1.0.101"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -2951,6 +2951,18 @@ Scoped.define("module:Queries", [
                 } else
                     return attributes[key];
             }, this);
+        },
+
+        queryDataProjection: function(query) {
+            return Objs.map(query, this.queryValueDataProjection, this);
+        },
+
+        queryValueDataProjection: function(queryValue) {
+            if (!Types.is_object(queryValue))
+                return queryValue;
+            if (queryValue.$elemMatch)
+                return [queryValue.$elemMatch];
+            return queryValue;
         }
 
     };
@@ -4250,8 +4262,9 @@ Scoped.define("module:Stores.DecontextualizedSelectStore", [
 	"module:Stores.BaseStore",
 	"base:Iterators.MappedIterator",
 	"base:Promise",
-	"base:Objs"
-], function (BaseStore, MappedIterator, Promise, Objs, scoped) {
+	"base:Objs",
+	"module:Queries"
+], function (BaseStore, MappedIterator, Promise, Objs, Queries, scoped) {
    	return BaseStore.extend({scoped: scoped}, function (inherited) {			
    		return {
 
@@ -4273,9 +4286,13 @@ Scoped.define("module:Stores.DecontextualizedSelectStore", [
    			},
    			
    			_encode: function (data, ctx) {
-   				return Objs.extend(Objs.clone(data, 1), ctx);
+   				return Objs.extend(Objs.clone(data, 1), Queries.queryDataProjection(ctx));
    			},
-   			
+
+            _encodeQuery: function (data, ctx) {
+                return Objs.extend(Objs.clone(data, 1), ctx);
+            },
+
    			_query_capabilities: function () {
    				return this.__store._query_capabilities();
    			},
@@ -4287,7 +4304,7 @@ Scoped.define("module:Stores.DecontextualizedSelectStore", [
    			},
 
    			_query: function (query, options, ctx) {
-   				return this.__store.query(this._encode(query, ctx), options).mapSuccess(function (results) {
+   				return this.__store.query(this._encodeQuery(query, ctx), options).mapSuccess(function (results) {
    					return (new MappedIterator(results, function (row) {
    						return this._decode(row, ctx);
    					}, this)).auto_destroy(results, true);
@@ -6139,8 +6156,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.WriteStrategy", [
 
 Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
 	"module:Stores.PartialStoreWriteStrategies.WriteStrategy",
-	"base:Types"
-], function (Class, Types, scoped) {
+	"base:Types",
+	"base:Objs"
+], function (Class, Types, Objs, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -6167,8 +6185,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
 			},
 
 			update: function (cachedId, data, ctx) {
-				var inner = function () {
-                    return this.partialStore.cachedStore.cacheUpdate(cachedId, data, {
+				var inner = function (updatedData) {
+					var merger = Objs.extend(Objs.clone(data, 1), updatedData);
+                    return this.partialStore.cachedStore.cacheUpdate(cachedId, merger, {
                         ignoreLock: false,
                         lockAttrs: false,
                         silent: true,
@@ -6180,8 +6199,8 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
                 if (!remoteRequired)
                 	return inner.call(this);
 				return this.partialStore.cachedStore.cachedIdToRemoteId(cachedId).mapSuccess(function (remoteId) {
-					return this.partialStore.remoteStore.update(remoteId, data, ctx).mapSuccess(function () {
-						return inner.call(this);
+					return this.partialStore.remoteStore.update(remoteId, data, ctx).mapSuccess(function (updatedData) {
+						return inner.call(this, updatedData);
 					}, this);
 				}, this);
 			}

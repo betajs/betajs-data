@@ -20,8 +20,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.WriteStrategy", [
 
 Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
 	"module:Stores.PartialStoreWriteStrategies.WriteStrategy",
-	"base:Types"
-], function (Class, Types, scoped) {
+	"base:Types",
+	"base:Objs"
+], function (Class, Types, Objs, scoped) {
 	return Class.extend({scoped: scoped}, function (inherited) {
 		return {
 
@@ -48,8 +49,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
 			},
 
 			update: function (cachedId, data, ctx) {
-				var inner = function () {
-                    return this.partialStore.cachedStore.cacheUpdate(cachedId, data, {
+				var inner = function (updatedData) {
+					var merger = Objs.extend(Objs.clone(data, 1), updatedData);
+                    return this.partialStore.cachedStore.cacheUpdate(cachedId, merger, {
                         ignoreLock: false,
                         lockAttrs: false,
                         silent: true,
@@ -61,8 +63,8 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
                 if (!remoteRequired)
                 	return inner.call(this);
 				return this.partialStore.cachedStore.cachedIdToRemoteId(cachedId).mapSuccess(function (remoteId) {
-					return this.partialStore.remoteStore.update(remoteId, data, ctx).mapSuccess(function () {
-						return inner.call(this);
+					return this.partialStore.remoteStore.update(remoteId, data, ctx).mapSuccess(function (updatedData) {
+						return inner.call(this, updatedData);
 					}, this);
 				}, this);
 			}

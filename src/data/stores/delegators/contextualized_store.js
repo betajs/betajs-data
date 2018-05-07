@@ -93,8 +93,9 @@ Scoped.define("module:Stores.DecontextualizedSelectStore", [
 	"module:Stores.BaseStore",
 	"base:Iterators.MappedIterator",
 	"base:Promise",
-	"base:Objs"
-], function (BaseStore, MappedIterator, Promise, Objs, scoped) {
+	"base:Objs",
+	"module:Queries"
+], function (BaseStore, MappedIterator, Promise, Objs, Queries, scoped) {
    	return BaseStore.extend({scoped: scoped}, function (inherited) {			
    		return {
 
@@ -116,9 +117,14 @@ Scoped.define("module:Stores.DecontextualizedSelectStore", [
    			},
    			
    			_encode: function (data, ctx) {
-   				return Objs.extend(Objs.clone(data, 1), ctx);
+                return Objs.extend(Objs.clone(data, 1), ctx);
+   				// return Objs.extend(Objs.clone(data, 1), Queries.queryDataProjection(ctx));
    			},
-   			
+			/*
+            _encodeQuery: function (data, ctx) {
+                return Objs.extend(Objs.clone(data, 1), ctx);
+            },
+			*/
    			_query_capabilities: function () {
    				return this.__store._query_capabilities();
    			},
@@ -130,7 +136,7 @@ Scoped.define("module:Stores.DecontextualizedSelectStore", [
    			},
 
    			_query: function (query, options, ctx) {
-   				return this.__store.query(this._encode(query, ctx), options).mapSuccess(function (results) {
+   				return this.__store.query(this._encodeQuery(query, ctx), options).mapSuccess(function (results) {
    					return (new MappedIterator(results, function (row) {
    						return this._decode(row, ctx);
    					}, this)).auto_destroy(results, true);
