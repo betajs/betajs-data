@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.101 - 2018-05-07
+betajs-data - v1.0.102 - 2018-05-13
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.101"
+    "version": "1.0.102"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -1944,19 +1944,20 @@ Scoped.define("module:Queries", [
                 } else
                     return attributes[key];
             }, this);
-        },
-
-        queryDataProjection: function(query) {
-            return Objs.map(query, this.queryValueDataProjection, this);
-        },
-
-        queryValueDataProjection: function(queryValue) {
-            if (!Types.is_object(queryValue))
-                return queryValue;
-            if (queryValue.$elemMatch)
-                return [queryValue.$elemMatch];
-            return queryValue;
         }
+        /*,
+
+                queryDataProjection: function(query) {
+                    return Objs.map(query, this.queryValueDataProjection, this);
+                },
+
+                queryValueDataProjection: function(queryValue) {
+                    if (!Types.is_object(queryValue))
+                        return queryValue;
+                    if (queryValue.$elemMatch)
+                        return [queryValue.$elemMatch];
+                    return queryValue;
+                }*/
 
     };
 });
@@ -3160,6 +3161,85 @@ Scoped.define("module:Stores.AsyncStore", [
 });
 
 
+
+Scoped.define("module:Stores.ConcatStore", [
+    "module:Stores.BaseStore"
+], function (BaseStore, scoped) {
+	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+		return {
+
+			constructor: function (primary, secondary, options) {
+				this.__primary = primary;
+				this.__secondary = secondary;
+				inherited.constructor.call(this, options);
+			},
+
+			_query_capabilities: function () {
+				return this._primary()._query_capabilities();
+			},
+
+            _count: function () {
+				return this._primary().count.apply(this._primary(), arguments).and(this._secondary().count.apply(this._secondary(), arguments)).mapSuccess(function (counts) {
+					return counts[0] + counts[1];
+				});
+            },
+
+			_insert: function () {
+				var args = arguments;
+				return this._primary().insert.apply(this._primary(), args).mapError(function () {
+					return this._secondary().insert.apply(this._secondary(), args);
+				}, this);
+			},
+
+			_remove: function () {
+                var args = arguments;
+                return this._primary().remove.apply(this._primary(), args).mapError(function () {
+                    return this._secondary().remove.apply(this._secondary(), args);
+                }, this);
+			},
+
+			_get: function () {
+                var args = arguments;
+                return this._primary().get.apply(this._primary(), args).mapCallback(function (error, model) {
+                    return model || this._secondary().get.apply(this._secondary(), args);
+                }, this);
+			},
+
+			_update: function () {
+                var args = arguments;
+                return this._primary().update.apply(this._primary(), args).mapError(function () {
+                    return this._secondary().update.apply(this._secondary(), args);
+                }, this);
+			},
+
+			_query: function (q, c, ctx) {
+				c = c || {};
+				return this._primary().query(q, c, ctx).mapSuccess(function (result) {
+					result = result.asArray();
+					if (c.limit && result.length >= c.limit)
+						return result;
+					if (c.limit)
+						c.limit -= result.length;
+					return this._secondary().query(q, c, ctx).mapSuccess(function (result2) {
+						return result.concat(result2.asArray());
+					}, this);
+				}, this);
+			},
+
+			_primary: function () {
+				return this.__primary;
+			},
+
+            _secondary: function () {
+                return this.__secondary;
+            }
+
+
+		};
+	});
+});
+
+
 Scoped.define("module:Stores.ContextualizedStore", [
                                                  "module:Stores.BaseStore",
                                                  "base:Iterators.MappedIterator",
@@ -3279,13 +3359,14 @@ Scoped.define("module:Stores.DecontextualizedSelectStore", [
    			},
    			
    			_encode: function (data, ctx) {
-   				return Objs.extend(Objs.clone(data, 1), Queries.queryDataProjection(ctx));
+                return Objs.extend(Objs.clone(data, 1), ctx);
+   				// return Objs.extend(Objs.clone(data, 1), Queries.queryDataProjection(ctx));
    			},
-
+			/*
             _encodeQuery: function (data, ctx) {
                 return Objs.extend(Objs.clone(data, 1), ctx);
             },
-
+			*/
    			_query_capabilities: function () {
    				return this.__store._query_capabilities();
    			},
@@ -3297,7 +3378,7 @@ Scoped.define("module:Stores.DecontextualizedSelectStore", [
    			},
 
    			_query: function (query, options, ctx) {
-   				return this.__store.query(this._encodeQuery(query, ctx), options).mapSuccess(function (results) {
+   				return this.__store.query(this._encode(query, ctx), options).mapSuccess(function (results) {
    					return (new MappedIterator(results, function (row) {
    						return this._decode(row, ctx);
    					}, this)).auto_destroy(results, true);

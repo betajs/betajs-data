@@ -136,7 +136,7 @@ Scoped.define("module:Stores.DecontextualizedSelectStore", [
    			},
 
    			_query: function (query, options, ctx) {
-   				return this.__store.query(this._encodeQuery(query, ctx), options).mapSuccess(function (results) {
+   				return this.__store.query(this._encode(query, ctx), options).mapSuccess(function (results) {
    					return (new MappedIterator(results, function (row) {
    						return this._decode(row, ctx);
    					}, this)).auto_destroy(results, true);
