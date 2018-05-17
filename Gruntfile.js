@@ -24,7 +24,7 @@ module.exports = function(grunt) {
     .qunitjsTask(null, ['tests/qunitjs-node.js'])
     .closureTask(null, [require.resolve("betajs-scoped"), require.resolve("betajs"), "./dist/betajs-data-noscoped.js"])
     .browserstackTask(null, 'tests/tests.html', {desktop: true, mobile: true})
-    .lintTask(null, ['./src/**/*.js', './dist/' + dist + '-noscoped.js', './dist/' + dist + '.js', './Gruntfile.js', './tests/**/*.js', './benchmarks/**/*.js'])
+    .lintTask(null, ['./src/**/*.js', './Gruntfile.js', './tests/**/*.js', './benchmarks/**/*.js'])
     .benchmarkTask("benchmark-compare", ['benchmarks/common/init.js', 'benchmarks/compare/*.js'])
     
     /* External Configurations */

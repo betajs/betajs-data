@@ -613,19 +613,6 @@ Scoped.define("module:Queries", [
                     return attributes[key];
             }, this);
         }
-        /*,
-
-                queryDataProjection: function(query) {
-                    return Objs.map(query, this.queryValueDataProjection, this);
-                },
-
-                queryValueDataProjection: function(queryValue) {
-                    if (!Types.is_object(queryValue))
-                        return queryValue;
-                    if (queryValue.$elemMatch)
-                        return [queryValue.$elemMatch];
-                    return queryValue;
-                }*/
 
     };
 });
