@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.103 - 2018-05-17
+betajs-data - v1.0.104 - 2018-05-23
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.103 - 2018-05-17
+betajs-data - v1.0.104 - 2018-05-23
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,7 +1018,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.103"
+    "version": "1.0.104"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -4372,7 +4372,7 @@ Scoped.define("module:Stores.AbstractDecontextualizedStore", [
 			},
 
             _query: function (query, options, ctx) {
-                return this._rawQuery(query, options).mapSuccess(function (results) {
+                return this._rawQuery(query, options, ctx).mapSuccess(function (results) {
                     return (new MappedIterator(results, function (row) {
                         return this._decodeRow(row, ctx);
                     }, this)).auto_destroy(results, true);
@@ -4426,7 +4426,19 @@ Scoped.define("module:Stores.AbstractDecontextualizedStore", [
 
 			_encodeUpdate: function (id, data, ctx, row) {
             	throw "Abstract";
-			}
+			},
+
+            _inserted: function (data, ctx) {
+                inherited._inserted.call(this, this._decodeRow(data, ctx), ctx);
+            },
+
+            _removed: function (id, ctx, data) {
+                inherited._removed.call(this, id, ctx, this._decodeRow(data, ctx));
+            },
+
+            _updated: function (row, data, ctx, pre_data) {
+                inherited._updated.call(this, this._decodeRow(row, ctx), this._decodeRow(data, ctx), ctx, this._decodeRow(pre_data, ctx));
+            }
 
         };
     });
@@ -4450,6 +4462,8 @@ Scoped.define("module:Stores.DecontextualizedSelectStore", [
             },
 
             _decodeRow: function (data, ctx) {
+                if (!data)
+                    return data;
                 data = Objs.clone(data, 1);
                 Objs.iter(ctx, function (value, key) {
                     delete data[key];
@@ -4472,8 +4486,9 @@ Scoped.define("module:Stores.DecontextualizedSelectStore", [
 Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
     "module:Stores.AbstractDecontextualizedStore",
     "base:Objs",
-	"base:Promise"
-], function (AbstractDecontextualizedStore, Objs, Promise, scoped) {
+	"base:Promise",
+    "base:Types"
+], function (AbstractDecontextualizedStore, Objs, Promise, Types, scoped) {
     return AbstractDecontextualizedStore.extend({scoped: scoped}, function (inherited) {
         return {
 
@@ -4483,7 +4498,9 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 this.__contextAttributes = options.contextAttributes || [];
                 this.__contextAccessKey = options.contextAccessKey;
                 this.__immediateRemove = options.immediateRemove;
-                this.__contextAccessExpander = options.contextAccessExpander;
+                this.__contextAccessExpander = options.contextAccessExpander || function () {
+                    return [];
+                };
                 this.__contextDataCloner = options.contextDataCloner;
             },
 
@@ -4495,9 +4512,14 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
             },
 
             _encodeRemove: function (id, data, ctx) {
-                if (this.__immediateRemove)
-                	return false;
                 var ctxId = ctx[this.__contextKey];
+                if (this.__immediateRemove) {
+                    (data[this.__contextAccessKey]).forEach(function (cctx) {
+                        if (cctx !== ctxId)
+                            inherited._removed.call(this, id, cctx, data);
+                    }, this);
+                    return false;
+                }
                 var filtered = data[this.__contextAccessKey].filter(function (contextValue) {
                 	return contextValue !== ctxId;
 				}, this);
@@ -4512,6 +4534,8 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
             },
 
             _decodeRow: function (data, ctx) {
+                if (!data)
+                    return data;
                 data = Objs.clone(data, 1);
                 var ctxId = ctx[this.__contextKey];
                 delete data[this.__contextAccessKey];
@@ -4538,6 +4562,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 var ctxId = ctx[this.__contextKey];
             	data = Objs.clone(data, 1);
             	var contextData = {};
+                data[this.__contextAccessKey] = [ctxId];
                 this.__contextAttributes.forEach(function (ctxAttrKey) {
                     contextData[ctxAttrKey] = data[ctxAttrKey];
                     data[ctxAttrKey] = Objs.objectBy(
@@ -4547,10 +4572,11 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 }, this);
                 var otherContexts = Promise.value(this.__contextAccessExpander(data, ctx));
                 return otherContexts.mapSuccess(function (otherContexts) {
+                    data[this.__contextAccessKey] = data[this.__contextAccessKey].concat(otherContexts);
                 	var clonedDataPromises = otherContexts.map(function (otherCtxId) {
                         return Promise.value(this.__contextDataCloner(data, ctx, otherCtxId));
                     }, this);
-                	return clonedDataPromises.mapSuccess(function (clonedDatas) {
+                	return Promise.and(clonedDataPromises).mapSuccess(function (clonedDatas) {
                         otherContexts.forEach(function (otherCtxId, i) {
                             var otherData = clonedDatas[i];
                             this.__contextAttributes.forEach(function (ctxAttrKey) {
@@ -4560,7 +4586,28 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                         return data;
 					}, this);
 				}, this);
+            },
+
+            _inserted: function (data, ctx) {
+                (data[this.__contextAccessKey] || [ctx[this.__contextKey]]).forEach(function (cctx) {
+                    inherited._inserted.call(this, data, Objs.objectBy(this.__contextKey, cctx));
+                }, this);
+            },
+
+            _updated: function (row, data, ctx, pre_data) {
+                data = Objs.clone(data, 1);
+                this.__contextAttributes.forEach(function (key) {
+                    delete data[key];
+                });
+                if (!Types.is_empty(data)) {
+                    (row[this.__contextAccessKey] || []).forEach(function (cctxId) {
+                        var cctx = Objs.objectBy(this.__contextKey, cctxId);
+                        inherited._updated.call(this, this._decodeRow(row, cctx), this._decodeRow(data, cctx), cctx, this._decodeRow(pre_data, cctx));
+                    }, this);
+                } else
+                    inherited._updated.call(this, this._decodeRow(row, ctx), this._decodeRow(data, ctx), ctx, this._decodeRow(pre_data, ctx));
             }
+
 
         };
     });
