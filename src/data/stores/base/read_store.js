@@ -61,6 +61,14 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 					this,
 					this.indices);
 		},
+
+		findBy: function (query, ctx) {
+			return this.query(query, {
+				limit: 1
+			}, ctx).mapSuccess(function (result) {
+				return result.next();
+			});
+		},
 		
 		serialize: function (ctx) {
 			return this.query({}, {}, ctx).mapSuccess(function (iter) {

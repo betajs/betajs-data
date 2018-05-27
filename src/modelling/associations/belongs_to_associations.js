@@ -13,7 +13,13 @@ Scoped.define("module:Modelling.Associations.BelongsToAssociation", [
             },
 
             _buildQuery: function(query) {
-                return Objs.objectBy(this._foreignTable().primary_key(), this._model.get(this._foreign_key));
+                var result = this._model.get(this._foreign_key);
+                if (this._options.map)
+                    result = this._options.map.call(this._options.mapctx || this, result);
+                return Objs.extend(Objs.objectBy(
+                    this._options.foreign_attr || this._foreignTable().primary_key(),
+                    result
+                ), query);
             },
 
             _unset: function() {

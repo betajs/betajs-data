@@ -34,7 +34,8 @@ Scoped.define("module:Modelling.Model", [
             destroy: function() {
                 if (this.__removeOnDestroy)
                     this.remove();
-                this.__table.off(null, null, this);
+                if (this.table())
+                    this.table().off(null, null, this);
                 this.trigger("destroy");
                 inherited.destroy.call(this);
             },
@@ -46,7 +47,7 @@ Scoped.define("module:Modelling.Model", [
             },
 
             option: function(key) {
-                var opts = key in this.__options ? this.__options : this.table().options();
+                var opts = key in this.__options || !this.table() ? this.__options : this.table().options();
                 return opts[key];
             },
 

@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.104 - 2018-05-23
+betajs-data - v1.0.105 - 2018-05-27
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.104 - 2018-05-23
+betajs-data - v1.0.105 - 2018-05-27
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,7 +1018,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.104"
+    "version": "1.0.105"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -3754,6 +3754,14 @@ Scoped.define("module:Stores.ReadStoreMixin", [
 					this,
 					this.indices);
 		},
+
+		findBy: function (query, ctx) {
+			return this.query(query, {
+				limit: 1
+			}, ctx).mapSuccess(function (result) {
+				return result.next();
+			});
+		},
 		
 		serialize: function (ctx) {
 			return this.query({}, {}, ctx).mapSuccess(function (iter) {
@@ -4501,7 +4509,13 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 this.__contextAccessExpander = options.contextAccessExpander || function () {
                     return [];
                 };
-                this.__contextDataCloner = options.contextDataCloner;
+                this.__contextDataCloner = options.contextDataCloner || function (data) {
+                    var result = {};
+                    this.__contextAttributes.forEach(function (ctxAttrKey) {
+                        result[ctxAttrKey] = data[ctxAttrKey];
+                    }, this);
+                    return result;
+                };
             },
 
             _encodeQuery: function (query, ctx) {
@@ -4560,21 +4574,24 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
 
             _encodeRow: function (data, ctx) {
                 var ctxId = ctx[this.__contextKey];
-            	data = Objs.clone(data, 1);
-            	var contextData = {};
+                data = Objs.clone(data, 1);
+                var contextData = {};
                 data[this.__contextAccessKey] = [ctxId];
                 this.__contextAttributes.forEach(function (ctxAttrKey) {
                     contextData[ctxAttrKey] = data[ctxAttrKey];
                     data[ctxAttrKey] = Objs.objectBy(
-                		ctxId,
+                        ctxId,
                         contextData[ctxAttrKey]
-					);
+                    );
                 }, this);
-                var otherContexts = Promise.value(this.__contextAccessExpander(data, ctx));
+                var otherContexts = Promise.value(this.__contextAccessExpander.call(this, data, ctx));
                 return otherContexts.mapSuccess(function (otherContexts) {
+                    otherContexts = otherContexts.filter(function (otherCtxId) {
+                        return otherCtxId !== ctxId;
+                    });
                     data[this.__contextAccessKey] = data[this.__contextAccessKey].concat(otherContexts);
-                	var clonedDataPromises = otherContexts.map(function (otherCtxId) {
-                        return Promise.value(this.__contextDataCloner(data, ctx, otherCtxId));
+                    var clonedDataPromises = otherContexts.map(function (otherCtxId) {
+                        return Promise.value(this.__contextDataCloner.call(this, data, ctx, otherCtxId));
                     }, this);
                 	return Promise.and(clonedDataPromises).mapSuccess(function (clonedDatas) {
                         otherContexts.forEach(function (otherCtxId, i) {
@@ -4582,7 +4599,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                             this.__contextAttributes.forEach(function (ctxAttrKey) {
                                 data[ctxAttrKey][otherCtxId] = otherData[ctxAttrKey];
                             }, this);
-						}, this);
+                        }, this);
                         return data;
 					}, this);
 				}, this);
@@ -7475,7 +7492,13 @@ Scoped.define("module:Modelling.Associations.BelongsToAssociation", [
             },
 
             _buildQuery: function(query) {
-                return Objs.objectBy(this._foreignTable().primary_key(), this._model.get(this._foreign_key));
+                var result = this._model.get(this._foreign_key);
+                if (this._options.map)
+                    result = this._options.map.call(this._options.mapctx || this, result);
+                return Objs.extend(Objs.objectBy(
+                    this._options.foreign_attr || this._foreignTable().primary_key(),
+                    result
+                ), query);
             },
 
             _unset: function() {
@@ -8260,7 +8283,8 @@ Scoped.define("module:Modelling.Model", [
             destroy: function() {
                 if (this.__removeOnDestroy)
                     this.remove();
-                this.__table.off(null, null, this);
+                if (this.table())
+                    this.table().off(null, null, this);
                 this.trigger("destroy");
                 inherited.destroy.call(this);
             },
@@ -8272,7 +8296,7 @@ Scoped.define("module:Modelling.Model", [
             },
 
             option: function(key) {
-                var opts = key in this.__options ? this.__options : this.table().options();
+                var opts = key in this.__options || !this.table() ? this.__options : this.table().options();
                 return opts[key];
             },
 

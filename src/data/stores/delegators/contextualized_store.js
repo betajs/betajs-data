@@ -265,7 +265,13 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 this.__contextAccessExpander = options.contextAccessExpander || function () {
                     return [];
                 };
-                this.__contextDataCloner = options.contextDataCloner;
+                this.__contextDataCloner = options.contextDataCloner || function (data) {
+                    var result = {};
+                    this.__contextAttributes.forEach(function (ctxAttrKey) {
+                        result[ctxAttrKey] = data[ctxAttrKey];
+                    }, this);
+                    return result;
+                };
             },
 
             _encodeQuery: function (query, ctx) {
@@ -324,21 +330,24 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
 
             _encodeRow: function (data, ctx) {
                 var ctxId = ctx[this.__contextKey];
-            	data = Objs.clone(data, 1);
-            	var contextData = {};
+                data = Objs.clone(data, 1);
+                var contextData = {};
                 data[this.__contextAccessKey] = [ctxId];
                 this.__contextAttributes.forEach(function (ctxAttrKey) {
                     contextData[ctxAttrKey] = data[ctxAttrKey];
                     data[ctxAttrKey] = Objs.objectBy(
-                		ctxId,
+                        ctxId,
                         contextData[ctxAttrKey]
-					);
+                    );
                 }, this);
-                var otherContexts = Promise.value(this.__contextAccessExpander(data, ctx));
+                var otherContexts = Promise.value(this.__contextAccessExpander.call(this, data, ctx));
                 return otherContexts.mapSuccess(function (otherContexts) {
+                    otherContexts = otherContexts.filter(function (otherCtxId) {
+                        return otherCtxId !== ctxId;
+                    });
                     data[this.__contextAccessKey] = data[this.__contextAccessKey].concat(otherContexts);
-                	var clonedDataPromises = otherContexts.map(function (otherCtxId) {
-                        return Promise.value(this.__contextDataCloner(data, ctx, otherCtxId));
+                    var clonedDataPromises = otherContexts.map(function (otherCtxId) {
+                        return Promise.value(this.__contextDataCloner.call(this, data, ctx, otherCtxId));
                     }, this);
                 	return Promise.and(clonedDataPromises).mapSuccess(function (clonedDatas) {
                         otherContexts.forEach(function (otherCtxId, i) {
@@ -346,7 +355,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                             this.__contextAttributes.forEach(function (ctxAttrKey) {
                                 data[ctxAttrKey][otherCtxId] = otherData[ctxAttrKey];
                             }, this);
-						}, this);
+                        }, this);
                         return data;
 					}, this);
 				}, this);
