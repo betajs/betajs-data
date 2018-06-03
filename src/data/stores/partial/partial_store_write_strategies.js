@@ -291,3 +291,42 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 		};
 	});
 });
+
+
+
+Scoped.define("module:Stores.PartialStoreWriteStrategies.DelegatedWriteStrategy", [
+    "module:Stores.PartialStoreWriteStrategies.WriteStrategy"
+], function (Class, scoped) {
+    return Class.extend({scoped: scoped}, function (inherited) {
+        return {
+
+            constructor: function (insertWriteStrategy, updateWriteStrategy, removeWriteStrategy) {
+                inherited.constructor.call(this);
+                this._insertWriteStrategy = insertWriteStrategy;
+                this._updateWriteStrategy = updateWriteStrategy;
+                this._removeWriteStrategy = removeWriteStrategy;
+            },
+
+            init: function (partialStore) {
+                inherited.init.call(this, partialStore);
+                this._insertWriteStrategy.init(partialStore);
+                this._updateWriteStrategy.init(partialStore);
+                this._removeWriteStrategy.init(partialStore);
+            },
+
+            insert: function () {
+                return this._insertWriteStrategy.insert.apply(this._insertWriteStrategy, arguments);
+            },
+
+            remove: function () {
+                return this._updateWriteStrategy.remove.apply(this._updateWriteStrategy, arguments);
+            },
+
+            update: function () {
+                return this._removeWriteStrategy.update.apply(this._removeWriteStrategy, arguments);
+            }
+
+        };
+    });
+});
+

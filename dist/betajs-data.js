@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.105 - 2018-05-27
+betajs-data - v1.0.106 - 2018-06-04
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.105 - 2018-05-27
+betajs-data - v1.0.106 - 2018-06-04
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,7 +1018,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.105"
+    "version": "1.0.106"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6710,6 +6710,45 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 		};
 	});
 });
+
+
+
+Scoped.define("module:Stores.PartialStoreWriteStrategies.DelegatedWriteStrategy", [
+    "module:Stores.PartialStoreWriteStrategies.WriteStrategy"
+], function (Class, scoped) {
+    return Class.extend({scoped: scoped}, function (inherited) {
+        return {
+
+            constructor: function (insertWriteStrategy, updateWriteStrategy, removeWriteStrategy) {
+                inherited.constructor.call(this);
+                this._insertWriteStrategy = insertWriteStrategy;
+                this._updateWriteStrategy = updateWriteStrategy;
+                this._removeWriteStrategy = removeWriteStrategy;
+            },
+
+            init: function (partialStore) {
+                inherited.init.call(this, partialStore);
+                this._insertWriteStrategy.init(partialStore);
+                this._updateWriteStrategy.init(partialStore);
+                this._removeWriteStrategy.init(partialStore);
+            },
+
+            insert: function () {
+                return this._insertWriteStrategy.insert.apply(this._insertWriteStrategy, arguments);
+            },
+
+            remove: function () {
+                return this._updateWriteStrategy.remove.apply(this._updateWriteStrategy, arguments);
+            },
+
+            update: function () {
+                return this._removeWriteStrategy.update.apply(this._removeWriteStrategy, arguments);
+            }
+
+        };
+    });
+});
+
 
 Scoped.define("module:Stores.PartialStore", [
 	"module:Stores.BaseStore",
