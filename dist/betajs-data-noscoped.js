@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.106 - 2018-06-04
+betajs-data - v1.0.107 - 2018-06-19
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.106"
+    "version": "1.0.107"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6561,11 +6561,15 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
                 inherited.constructor.apply(this, arguments);
                 this.collection = this.newPooledCollection();
                 this.collectionPool = new SharedObjectFactoryPool(this.newPooledCollection, this);
+                if (this._model && this._model.isNew && this._model.isNew())
+                    this._model.once("save", this._queryChanged, this);
             },
 
             destroy: function() {
                 this.collectionPool.destroy();
                 this.collection.destroy();
+                if (this._model)
+                    this._model.off(null, null, this);
                 inherited.destroy.call(this);
             },
 

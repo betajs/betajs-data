@@ -15,11 +15,15 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
                 inherited.constructor.apply(this, arguments);
                 this.collection = this.newPooledCollection();
                 this.collectionPool = new SharedObjectFactoryPool(this.newPooledCollection, this);
+                if (this._model && this._model.isNew && this._model.isNew())
+                    this._model.once("save", this._queryChanged, this);
             },
 
             destroy: function() {
                 this.collectionPool.destroy();
                 this.collection.destroy();
+                if (this._model)
+                    this._model.off(null, null, this);
                 inherited.destroy.call(this);
             },
 
