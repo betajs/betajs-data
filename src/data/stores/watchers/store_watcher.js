@@ -40,12 +40,13 @@ Scoped.define("module:Stores.Watchers.StoreWatcherMixin", [], function() {
 
 
 Scoped.define("module:Stores.Watchers.StoreWatcher", [
-                                                      "base:Class",
-                                                      "base:Events.EventsMixin",
-                                                      "base:Classes.ContextRegistry",    
-                                                      "module:Stores.Watchers.StoreWatcherMixin",
-                                                      "module:Queries"
-                                                      ], function(Class, EventsMixin, ContextRegistry, StoreWatcherMixin, Queries, scoped) {
+	"base:Class",
+	"base:Events.EventsMixin",
+	"base:Classes.ContextRegistry",
+	"base:Comparators",
+	"module:Stores.Watchers.StoreWatcherMixin",
+	"module:Queries"
+], function(Class, EventsMixin, ContextRegistry, Comparators, StoreWatcherMixin, Queries, scoped) {
 	return Class.extend({scoped: scoped}, [EventsMixin, StoreWatcherMixin, function (inherited) {
 		return {
 
@@ -56,6 +57,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 					this.id_key = options.id_key;
 				else
 					this.id_key = "id";
+				this.__ctx = options.ctx;
 				this.__items = new ContextRegistry();
 				this.__inserts = new ContextRegistry(Queries.serialize, Queries);
 			},
@@ -94,7 +96,13 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				this.__inserts.unregister(query, context).forEach(this._unwatchInsert, this);
 			},
 
-			_removedItem : function(id) {
+			_ctxFilter: function (ctx) {
+				return !this.__ctx || !ctx || Comparators.deepEqual(this.__ctx, ctx, 2);
+			},
+
+			_removedItem : function(id, ctx) {
+				if (!this._ctxFilter(ctx))
+					return;
 				if (!this.__items.get(id))
 					return;
 				// @Oliver: I am not sure why this is commented out, but tests fail if we comment it in.
@@ -102,14 +110,18 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				this._removedWatchedItem(id);
 			},
 
-			_updatedItem : function(row, data) {
+			_updatedItem : function(row, data, ctx) {
+                if (!this._ctxFilter(ctx))
+                    return;
 				var id = row[this.id_key];
 				if (!this.__items.get(id))
 					return;
 				this._updatedWatchedItem(row, data);
 			},
 
-			_insertedInsert : function(data) {
+			_insertedInsert : function(data, ctx) {
+                if (!this._ctxFilter(ctx))
+                    return;
 				var trig = false;
 				var iter = this.__inserts.iterator();
 				while (!trig && iter.hasNext())

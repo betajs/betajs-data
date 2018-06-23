@@ -9,12 +9,12 @@ Scoped.define("module:Stores.Watchers.LocalWatcher", [
 				options.id_key = store.id_key();
 				inherited.constructor.call(this, options);
 				this._store = store;
-				this._store.on("insert", function (data) {
-					this._insertedInsert(data);
-				}, this).on("update", function (row, data) {
-					this._updatedItem(row, data);
-				}, this).on("remove", function (id) {
-					this._removedItem(id);
+				this._store.on("insert", function (data, ctx) {
+					this._insertedInsert(data, ctx);
+				}, this).on("update", function (row, data, ctx) {
+					this._updatedItem(row, data, ctx);
+				}, this).on("remove", function (id, ctx) {
+					this._removedItem(id, ctx);
 				}, this);
 			},
 

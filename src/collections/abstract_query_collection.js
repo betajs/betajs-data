@@ -40,10 +40,12 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
              * @return {QueryCollection} A new instance of QueryCollection.
              */
             constructor: function(source, query, options) {
-                inherited.constructor.call(this, {
-                    release_references: true
-                });
                 options = options || {};
+                inherited.constructor.call(this, {
+                    release_references: true,
+                    uniqueness: options.uniqueness,
+                    indices: options.indices
+                });
                 if (ConstrainedQueryBuilder.is_instance_of(query)) {
                     this._rangeQueryBuilder = options.range_query_builder;
                     this.__queryBuilder = query;

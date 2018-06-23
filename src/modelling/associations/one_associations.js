@@ -26,14 +26,14 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
                     active.update(this.buildQuery());
             },
 
-            findBy: function(query) {
+            findBy: function(query, ctx) {
                 var result = this.buildQuery(query);
-                return this._foreignTable().findBy(result);
+                return this._foreignTable().findBy(result, null, ctx);
             },
 
             newActiveModel: function(query) {
                 var result = this.buildQuery(query);
-                return new ActiveModel(this._foreignTable(), result, this._options.queryOpts);
+                return new ActiveModel(this._foreignTable(), result, this._options.queryOpts, this._options.activeOpts);
             },
 
             unset: function() {

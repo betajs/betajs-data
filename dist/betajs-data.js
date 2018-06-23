@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.107 - 2018-06-19
+betajs-data - v1.0.108 - 2018-06-23
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.107 - 2018-06-19
+betajs-data - v1.0.108 - 2018-06-23
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,7 +1018,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.107"
+    "version": "1.0.108"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -1064,10 +1064,12 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
              * @return {QueryCollection} A new instance of QueryCollection.
              */
             constructor: function(source, query, options) {
-                inherited.constructor.call(this, {
-                    release_references: true
-                });
                 options = options || {};
+                inherited.constructor.call(this, {
+                    release_references: true,
+                    uniqueness: options.uniqueness,
+                    indices: options.indices
+                });
                 if (ConstrainedQueryBuilder.is_instance_of(query)) {
                     this._rangeQueryBuilder = options.range_query_builder;
                     this.__queryBuilder = query;
@@ -4390,10 +4392,13 @@ Scoped.define("module:Stores.AbstractDecontextualizedStore", [
             _insert: function (data, ctx) {
                 return Promise.value(this._encodeRow(data, ctx)).mapSuccess(function (encoded) {
                 	return this.__store.insert(encoded).mapSuccess(function (data) {
+                	    this._undecodedInserted(data, ctx);
                         return this._decodeRow(data, ctx);
                     }, this);
                 }, this);
             },
+
+            _undecodedInserted: function (data, ctx) {},
 
             _remove: function (id, ctx) {
             	return this._rawGet(id, ctx).mapSuccess(function (row) {
@@ -4412,9 +4417,14 @@ Scoped.define("module:Stores.AbstractDecontextualizedStore", [
             		if (!row)
             			return true;
             		var updatedData = this._encodeUpdate(id, data, ctx, row);
-            		return this.__store.update(id, updatedData);
+            		return this.__store.update(id, updatedData).mapSuccess(function (updatedData) {
+            		    this._undecodedUpdated(id, updatedData, ctx, row);
+            		    return this._decodeRow(updatedData, ctx);
+                    }, this);
 				}, this);
             },
+
+            _undecodedUpdated: function (id, updatedData, ctx) {},
 
             _encodeRow: function (data, ctx) {
 				throw "Abstract";
@@ -4516,6 +4526,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                     }, this);
                     return result;
                 };
+                this.__contextDataUpdater = options.contextDataUpdater;
             },
 
             _encodeQuery: function (query, ctx) {
@@ -4550,11 +4561,12 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
             _decodeRow: function (data, ctx) {
                 if (!data)
                     return data;
-                data = Objs.clone(data, 1);
+                data = Objs.clone(data, 2);
                 var ctxId = ctx[this.__contextKey];
                 delete data[this.__contextAccessKey];
                 this.__contextAttributes.forEach(function (ctxAttrKey) {
-                    data[ctxAttrKey] = data[ctxAttrKey][ctxId];
+                    if (data[ctxAttrKey])
+                        data[ctxAttrKey] = data[ctxAttrKey][ctxId];
                 }, this);
                 return data;
             },
@@ -4564,11 +4576,13 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 var ctxId = ctx[this.__contextKey];
                 this.__contextAttributes.forEach(function (ctxAttrKey) {
                 	if (ctxAttrKey in data) {
-                		var value = data[ctxAttrKey];
-                		data[ctxAttrKey] = row[ctxAttrKey];
-                		data[ctxAttrKey][ctxId] = value;
-					}
+                        var value = data[ctxAttrKey];
+                        data[ctxAttrKey] = row[ctxAttrKey];
+                        data[ctxAttrKey][ctxId] = value;
+                    }
                 }, this);
+                if (this.__contextDataUpdater)
+                    data = this.__contextDataUpdater(id, data, ctx, row);
                 return data;
             },
 
@@ -4605,26 +4619,23 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
 				}, this);
             },
 
-            _inserted: function (data, ctx) {
-                (data[this.__contextAccessKey] || [ctx[this.__contextKey]]).forEach(function (cctx) {
-                    inherited._inserted.call(this, data, Objs.objectBy(this.__contextKey, cctx));
+            _undecodedUpdated: function (id, updatedData, ctx, row) {
+                (row[this.__contextAccessKey]).forEach(function (cctxId) {
+                    if (ctx[this.__contextKey] == cctxId)
+                        return;
+                    var cctx = Objs.objectBy(this.__contextKey, cctxId);
+                    this._updated(row, updatedData, cctx, row);
                 }, this);
             },
 
-            _updated: function (row, data, ctx, pre_data) {
-                data = Objs.clone(data, 1);
-                this.__contextAttributes.forEach(function (key) {
-                    delete data[key];
-                });
-                if (!Types.is_empty(data)) {
-                    (row[this.__contextAccessKey] || []).forEach(function (cctxId) {
-                        var cctx = Objs.objectBy(this.__contextKey, cctxId);
-                        inherited._updated.call(this, this._decodeRow(row, cctx), this._decodeRow(data, cctx), cctx, this._decodeRow(pre_data, cctx));
-                    }, this);
-                } else
-                    inherited._updated.call(this, this._decodeRow(row, ctx), this._decodeRow(data, ctx), ctx, this._decodeRow(pre_data, ctx));
+            _undecodedInserted: function (data, ctx) {
+                (data[this.__contextAccessKey]).forEach(function (cctxId) {
+                    if (ctx[this.__contextKey] == cctxId)
+                        return;
+                    var cctx = Objs.objectBy(this.__contextKey, cctxId);
+                    this._inserted(data, cctx);
+                }, this);
             }
-
 
         };
     });
@@ -7130,12 +7141,12 @@ Scoped.define("module:Stores.Watchers.LocalWatcher", [
 				options.id_key = store.id_key();
 				inherited.constructor.call(this, options);
 				this._store = store;
-				this._store.on("insert", function (data) {
-					this._insertedInsert(data);
-				}, this).on("update", function (row, data) {
-					this._updatedItem(row, data);
-				}, this).on("remove", function (id) {
-					this._removedItem(id);
+				this._store.on("insert", function (data, ctx) {
+					this._insertedInsert(data, ctx);
+				}, this).on("update", function (row, data, ctx) {
+					this._updatedItem(row, data, ctx);
+				}, this).on("remove", function (id, ctx) {
+					this._removedItem(id, ctx);
 				}, this);
 			},
 
@@ -7310,12 +7321,13 @@ Scoped.define("module:Stores.Watchers.StoreWatcherMixin", [], function() {
 
 
 Scoped.define("module:Stores.Watchers.StoreWatcher", [
-                                                      "base:Class",
-                                                      "base:Events.EventsMixin",
-                                                      "base:Classes.ContextRegistry",    
-                                                      "module:Stores.Watchers.StoreWatcherMixin",
-                                                      "module:Queries"
-                                                      ], function(Class, EventsMixin, ContextRegistry, StoreWatcherMixin, Queries, scoped) {
+	"base:Class",
+	"base:Events.EventsMixin",
+	"base:Classes.ContextRegistry",
+	"base:Comparators",
+	"module:Stores.Watchers.StoreWatcherMixin",
+	"module:Queries"
+], function(Class, EventsMixin, ContextRegistry, Comparators, StoreWatcherMixin, Queries, scoped) {
 	return Class.extend({scoped: scoped}, [EventsMixin, StoreWatcherMixin, function (inherited) {
 		return {
 
@@ -7326,6 +7338,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 					this.id_key = options.id_key;
 				else
 					this.id_key = "id";
+				this.__ctx = options.ctx;
 				this.__items = new ContextRegistry();
 				this.__inserts = new ContextRegistry(Queries.serialize, Queries);
 			},
@@ -7364,7 +7377,13 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				this.__inserts.unregister(query, context).forEach(this._unwatchInsert, this);
 			},
 
-			_removedItem : function(id) {
+			_ctxFilter: function (ctx) {
+				return !this.__ctx || !ctx || Comparators.deepEqual(this.__ctx, ctx, 2);
+			},
+
+			_removedItem : function(id, ctx) {
+				if (!this._ctxFilter(ctx))
+					return;
 				if (!this.__items.get(id))
 					return;
 				// @Oliver: I am not sure why this is commented out, but tests fail if we comment it in.
@@ -7372,14 +7391,18 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				this._removedWatchedItem(id);
 			},
 
-			_updatedItem : function(row, data) {
+			_updatedItem : function(row, data, ctx) {
+                if (!this._ctxFilter(ctx))
+                    return;
 				var id = row[this.id_key];
 				if (!this.__items.get(id))
 					return;
 				this._updatedWatchedItem(row, data);
 			},
 
-			_insertedInsert : function(data) {
+			_insertedInsert : function(data, ctx) {
+                if (!this._ctxFilter(ctx))
+                    return;
 				var trig = false;
 				var iter = this.__inserts.iterator();
 				while (!trig && iter.hasNext())
@@ -7418,8 +7441,9 @@ Scoped.extend("module:Modelling.ActiveModel", [
     }, function(inherited) {
         return {
 
-            constructor: function(table, query, queryopts) {
+            constructor: function(table, query, queryopts, options) {
                 inherited.constructor.call(this);
+                this._options = options || {};
                 this._table = table;
                 this._watcher = table.store().watcher();
                 this._query = query;
@@ -7469,7 +7493,7 @@ Scoped.extend("module:Modelling.ActiveModel", [
 
             _registerModel: function(model) {
                 this.set("model", model);
-                if (this._watcher)
+                if (this._watcher && !model.isNew())
                     this._watcher.watchItem(model.id(), this);
                 model.on("change", function() {
                     if (!Queries.evaluate(this._query, model.data()))
@@ -7493,6 +7517,8 @@ Scoped.extend("module:Modelling.ActiveModel", [
                 this._table.findBy(this._query, this._queryopts).success(function(model) {
                     if (model)
                         this._registerModel(model);
+                    else if (this._options.create_virtual)
+                        this._registerModel(this._options.create_virtual.call(this._options.create_virtual_ctx || this, this._query));
                 }, this);
             }
 
@@ -7871,14 +7897,14 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
                     active.update(this.buildQuery());
             },
 
-            findBy: function(query) {
+            findBy: function(query, ctx) {
                 var result = this.buildQuery(query);
-                return this._foreignTable().findBy(result);
+                return this._foreignTable().findBy(result, null, ctx);
             },
 
             newActiveModel: function(query) {
                 var result = this.buildQuery(query);
-                return new ActiveModel(this._foreignTable(), result, this._options.queryOpts);
+                return new ActiveModel(this._foreignTable(), result, this._options.queryOpts, this._options.activeOpts);
             },
 
             unset: function() {
@@ -8330,6 +8356,10 @@ Scoped.define("module:Modelling.Model", [
                     this.table().off(null, null, this);
                 this.trigger("destroy");
                 inherited.destroy.call(this);
+            },
+
+            ctx: function() {
+                return this.__ctx;
             },
 
             saveOnChange: function(weak) {

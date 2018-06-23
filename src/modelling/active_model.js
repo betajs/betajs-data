@@ -9,8 +9,9 @@ Scoped.extend("module:Modelling.ActiveModel", [
     }, function(inherited) {
         return {
 
-            constructor: function(table, query, queryopts) {
+            constructor: function(table, query, queryopts, options) {
                 inherited.constructor.call(this);
+                this._options = options || {};
                 this._table = table;
                 this._watcher = table.store().watcher();
                 this._query = query;
@@ -60,7 +61,7 @@ Scoped.extend("module:Modelling.ActiveModel", [
 
             _registerModel: function(model) {
                 this.set("model", model);
-                if (this._watcher)
+                if (this._watcher && !model.isNew())
                     this._watcher.watchItem(model.id(), this);
                 model.on("change", function() {
                     if (!Queries.evaluate(this._query, model.data()))
@@ -84,6 +85,8 @@ Scoped.extend("module:Modelling.ActiveModel", [
                 this._table.findBy(this._query, this._queryopts).success(function(model) {
                     if (model)
                         this._registerModel(model);
+                    else if (this._options.create_virtual)
+                        this._registerModel(this._options.create_virtual.call(this._options.create_virtual_ctx || this, this._query));
                 }, this);
             }
 

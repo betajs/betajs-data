@@ -146,10 +146,13 @@ Scoped.define("module:Stores.AbstractDecontextualizedStore", [
             _insert: function (data, ctx) {
                 return Promise.value(this._encodeRow(data, ctx)).mapSuccess(function (encoded) {
                 	return this.__store.insert(encoded).mapSuccess(function (data) {
+                	    this._undecodedInserted(data, ctx);
                         return this._decodeRow(data, ctx);
                     }, this);
                 }, this);
             },
+
+            _undecodedInserted: function (data, ctx) {},
 
             _remove: function (id, ctx) {
             	return this._rawGet(id, ctx).mapSuccess(function (row) {
@@ -168,9 +171,14 @@ Scoped.define("module:Stores.AbstractDecontextualizedStore", [
             		if (!row)
             			return true;
             		var updatedData = this._encodeUpdate(id, data, ctx, row);
-            		return this.__store.update(id, updatedData);
+            		return this.__store.update(id, updatedData).mapSuccess(function (updatedData) {
+            		    this._undecodedUpdated(id, updatedData, ctx, row);
+            		    return this._decodeRow(updatedData, ctx);
+                    }, this);
 				}, this);
             },
+
+            _undecodedUpdated: function (id, updatedData, ctx) {},
 
             _encodeRow: function (data, ctx) {
 				throw "Abstract";
@@ -272,6 +280,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                     }, this);
                     return result;
                 };
+                this.__contextDataUpdater = options.contextDataUpdater;
             },
 
             _encodeQuery: function (query, ctx) {
@@ -306,11 +315,12 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
             _decodeRow: function (data, ctx) {
                 if (!data)
                     return data;
-                data = Objs.clone(data, 1);
+                data = Objs.clone(data, 2);
                 var ctxId = ctx[this.__contextKey];
                 delete data[this.__contextAccessKey];
                 this.__contextAttributes.forEach(function (ctxAttrKey) {
-                    data[ctxAttrKey] = data[ctxAttrKey][ctxId];
+                    if (data[ctxAttrKey])
+                        data[ctxAttrKey] = data[ctxAttrKey][ctxId];
                 }, this);
                 return data;
             },
@@ -320,11 +330,13 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 var ctxId = ctx[this.__contextKey];
                 this.__contextAttributes.forEach(function (ctxAttrKey) {
                 	if (ctxAttrKey in data) {
-                		var value = data[ctxAttrKey];
-                		data[ctxAttrKey] = row[ctxAttrKey];
-                		data[ctxAttrKey][ctxId] = value;
-					}
+                        var value = data[ctxAttrKey];
+                        data[ctxAttrKey] = row[ctxAttrKey];
+                        data[ctxAttrKey][ctxId] = value;
+                    }
                 }, this);
+                if (this.__contextDataUpdater)
+                    data = this.__contextDataUpdater(id, data, ctx, row);
                 return data;
             },
 
@@ -361,26 +373,23 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
 				}, this);
             },
 
-            _inserted: function (data, ctx) {
-                (data[this.__contextAccessKey] || [ctx[this.__contextKey]]).forEach(function (cctx) {
-                    inherited._inserted.call(this, data, Objs.objectBy(this.__contextKey, cctx));
+            _undecodedUpdated: function (id, updatedData, ctx, row) {
+                (row[this.__contextAccessKey]).forEach(function (cctxId) {
+                    if (ctx[this.__contextKey] == cctxId)
+                        return;
+                    var cctx = Objs.objectBy(this.__contextKey, cctxId);
+                    this._updated(row, updatedData, cctx, row);
                 }, this);
             },
 
-            _updated: function (row, data, ctx, pre_data) {
-                data = Objs.clone(data, 1);
-                this.__contextAttributes.forEach(function (key) {
-                    delete data[key];
-                });
-                if (!Types.is_empty(data)) {
-                    (row[this.__contextAccessKey] || []).forEach(function (cctxId) {
-                        var cctx = Objs.objectBy(this.__contextKey, cctxId);
-                        inherited._updated.call(this, this._decodeRow(row, cctx), this._decodeRow(data, cctx), cctx, this._decodeRow(pre_data, cctx));
-                    }, this);
-                } else
-                    inherited._updated.call(this, this._decodeRow(row, ctx), this._decodeRow(data, ctx), ctx, this._decodeRow(pre_data, ctx));
+            _undecodedInserted: function (data, ctx) {
+                (data[this.__contextAccessKey]).forEach(function (cctxId) {
+                    if (ctx[this.__contextKey] == cctxId)
+                        return;
+                    var cctx = Objs.objectBy(this.__contextKey, cctxId);
+                    this._inserted(data, cctx);
+                }, this);
             }
-
 
         };
     });

@@ -40,6 +40,10 @@ Scoped.define("module:Modelling.Model", [
                 inherited.destroy.call(this);
             },
 
+            ctx: function() {
+                return this.__ctx;
+            },
+
             saveOnChange: function(weak) {
                 this.__saveOnChange = true;
                 this.__saveOnChangeWeak = !!weak;
