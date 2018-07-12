@@ -8,9 +8,10 @@ Scoped.define("module:Modelling.Associations.HasManyKeyAssociation", [
         return {
 
             _buildQuery: function(query, options) {
-                return Objs.extend({
-                    "query": Objs.extend(Objs.objectBy(this._foreign_key, this._model.id()), query)
-                }, options);
+                return {
+                    "query": Objs.extend(Objs.objectBy(this._foreign_key, this._model.id()), query),
+                    "options": options
+                };
             },
 
             _remove: function(item) {
