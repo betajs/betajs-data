@@ -142,7 +142,12 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 
 			_watchInsert : function(query) {},
 
-			_unwatchInsert : function(query) {}
+			_unwatchInsert : function(query) {},
+
+			reconnect: function () {
+                this.itemsIterator().iterate(this._watchItem, this);
+                this.insertsIterator().iterate(this._watchInsert, this);
+			}
 
 		};
 	}]);
