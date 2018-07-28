@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.110 - 2018-07-22
+betajs-data - v1.0.111 - 2018-07-28
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.110"
+    "version": "1.0.111"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -3523,10 +3523,20 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
             },
 
             _encodeQuery: function (query, ctx) {
-                return Objs.extend(Objs.objectBy(
+                query = Objs.extend(Objs.objectBy(
                 	this.__contextAccessKey,
 					{"$elemMatch": ctx[this.__contextKey]}
 				), query);
+                this.__contextAttributes.forEach(function (key) {
+                    // TODO: This currently only works with MongoDB databases
+                    if (key in query) {
+                        query[key + "." + ctx[this.__contextKey]] = query[key];
+                        delete query[key];
+                        // TODO: This is a weird workaround, otherwise the result will be empty
+                        delete query[this.__contextAccessKey];
+                    }
+                }, this);
+                return query;
             },
 
             _encodeRemove: function (id, data, ctx) {

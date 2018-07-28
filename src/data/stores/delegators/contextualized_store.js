@@ -284,10 +284,20 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
             },
 
             _encodeQuery: function (query, ctx) {
-                return Objs.extend(Objs.objectBy(
+                query = Objs.extend(Objs.objectBy(
                 	this.__contextAccessKey,
 					{"$elemMatch": ctx[this.__contextKey]}
 				), query);
+                this.__contextAttributes.forEach(function (key) {
+                    // TODO: This currently only works with MongoDB databases
+                    if (key in query) {
+                        query[key + "." + ctx[this.__contextKey]] = query[key];
+                        delete query[key];
+                        // TODO: This is a weird workaround, otherwise the result will be empty
+                        delete query[this.__contextAccessKey];
+                    }
+                }, this);
+                return query;
             },
 
             _encodeRemove: function (id, data, ctx) {
