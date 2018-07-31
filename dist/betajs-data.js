@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.111 - 2018-07-28
+betajs-data - v1.0.111 - 2018-07-31
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.111 - 2018-07-28
+betajs-data - v1.0.111 - 2018-07-31
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -5100,19 +5100,30 @@ Scoped.define("module:Stores.TableStore", [
 				var model = this.__table.newModel({}, null, ctx);
 				model.setByTags(data, this.__options.insertTags);
 				return model.save().mapSuccess(function () {
-					return model.asRecord(this.__options.readTags);
+                    var rec = model.asRecord(this.__options.readTags);
+                    model.decreaseRef();
+                    return rec;
 				}, this);
 			},
 
 			_remove: function (id, ctx) {
 				return this.__table.findById(id, ctx).mapSuccess(function (model) {
-					return model ? model.remove() : model;
+                    if (!model)
+                        return model;
+                    model.remove();
+                    var rec = model.asRecord(this.__options.readTags);
+                    model.decreaseRef();
+                    return rec;
 				}, this);
 			},
 
 			_get: function (id, ctx) {
 				return this.__table.findById(id, ctx).mapSuccess(function (model) {
-					return model ? model.asRecord(this.__options.readTags) : model;
+                    if (!model)
+                        return model;
+                    var rec = model.asRecord(this.__options.readTags);
+                    model.decreaseRef();
+                    return rec;
 				}, this);
 			},
 
@@ -5122,7 +5133,9 @@ Scoped.define("module:Stores.TableStore", [
 						return model;
 					model.setByTags(data, this.__options.updateTags);
 					return model.save().mapSuccess(function () {
-						return model.asRecord(this.__options.readTags);
+                        var rec = model.asRecord(this.__options.readTags);
+                        model.decreaseRef();
+                        return rec;
 					}, this);
 				}, this);
 			},
@@ -5130,7 +5143,9 @@ Scoped.define("module:Stores.TableStore", [
 			_query: function (query, options, ctx) {
 				return this.__table.query(query, options, ctx).mapSuccess(function (models) {
 					return (new MappedIterator(models, function (model) {
-						return model.asRecord(this.__options.readTags);
+						var rec = model.asRecord(this.__options.readTags);
+						model.decreaseRef();
+						return rec;
 					}, this)).auto_destroy(models, true);
 				}, this);
 			}
