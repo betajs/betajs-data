@@ -50,6 +50,14 @@ Scoped.define("module:Modelling.Model", [
                 return this;
             },
 
+            disableSaveOnChange: function() {
+                this.__disableSaveOnChange = true;
+            },
+
+            enableSaveOnChange: function() {
+                this.__disableSaveOnChange = false;
+            },
+
             option: function(key) {
                 var opts = key in this.__options || !this.table() ? this.__options : this.table().options();
                 return opts[key];
@@ -110,7 +118,7 @@ Scoped.define("module:Modelling.Model", [
                 var scheme = this.cls.scheme();
                 if (!(key in scheme) || this.__silent > 0)
                     return;
-                if (this.option("auto_update") && (!this.isNew() || (this.__saveOnChange && (!this.__saveOnChangeWeak || !!value))))
+                if (this.option("auto_update") && (!this.isNew() || (!this.__disableSaveOnChange && this.__saveOnChange && (!this.__saveOnChangeWeak || !!value))))
                     this.save();
             },
 
