@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.113 - 2018-08-28
+betajs-data - v1.0.115 - 2018-08-29
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.113 - 2018-08-28
+betajs-data - v1.0.115 - 2018-08-29
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,7 +1018,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.113"
+    "version": "1.0.115"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -9122,15 +9122,25 @@ Scoped.define("module:Modelling.Validators.UniqueValidator", [
     }, function(inherited) {
         return {
 
-            constructor: function(key, error_string) {
+            constructor: function(key, error_string, ignore_if_null, query) {
                 inherited.constructor.call(this);
                 this.__key = key;
                 this.__error_string = error_string ? error_string : "Key already present";
+                this.__ignore_if_null = ignore_if_null;
+                this.__query = query;
             },
 
             validate: function(value, context) {
+                if (value == null && this.__ignore_if_null)
+                    return null;
                 var query = {};
                 query[this.__key] = value;
+                if (this.__query && Array.isArray(this.__query)) {
+                    this.__query.forEach(function(element) {
+                        if (element !== this.__key)
+                            query[element] = context.get(element);
+                    }, this);
+                }
                 return context.table().findBy(query).mapSuccess(function(item) {
                     return (!item || (!context.isNew() && context.id() == item.id())) ? null : this.__error_string;
                 }, this);
@@ -9150,6 +9160,28 @@ Scoped.define("module:Modelling.Validators.Validator", [
             return null;
         }
 
+    });
+});
+Scoped.define("module:Modelling.Validators.ValueValidator", [
+    "module:Modelling.Validators.Validator",
+    "base:Types"
+], function(Validator, Types, scoped) {
+    return Validator.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            constructor: function(values) {
+                inherited.constructor.call(this);
+                this.__values = values;
+            },
+
+            validate: function(value, context) {
+                if (this.__values.indexOf(value) < 0)
+                    return null;
+                return null;
+            }
+        };
     });
 });
 }).call(Scoped);
