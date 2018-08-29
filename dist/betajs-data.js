@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.115 - 2018-08-29
+betajs-data - v1.0.116 - 2018-08-29
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.115 - 2018-08-29
+betajs-data - v1.0.116 - 2018-08-29
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,7 +1018,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.115"
+    "version": "1.0.116"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -7632,8 +7632,12 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
                 inherited.constructor.apply(this, arguments);
                 this.collection = this.newPooledCollection();
                 this.collectionPool = new SharedObjectFactoryPool(this.newPooledCollection, this);
-                if (this._model && this._model.isNew && this._model.isNew())
-                    this._model.once("save", this._queryChanged, this);
+                if (this._model && this._model.isNew && !this._model.destroyed()) {
+                    if (this._model.isNew())
+                        this._model.once("save", this._queryChanged, this);
+                    if (this._options.delete_cascade)
+                        this._model.once("remove", this.removeAll, this);
+                }
             },
 
             destroy: function() {
@@ -7685,7 +7689,16 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
             },
 
             remove: function(item) {
+                if (item && !item.destroyed() && this._options.delete_cascade)
+                    item.weaklyRemove();
                 return this._remove(item);
+            },
+
+            removeAll: function() {
+                this.allBy().success(function(iter) {
+                    while (iter.hasNext())
+                        this.remove(iter.next());
+                }, this);
             },
 
             _remove: function(item) {},
@@ -8373,7 +8386,8 @@ Scoped.define("module:Modelling.Model", [
                 this.__table = table;
                 this.__options = Objs.extend({
                     newModel: true,
-                    removed: false
+                    removed: false,
+                    canWeaklyRemove: false
                 }, options);
                 this.__ctx = ctx;
                 this.__silent = 1;
@@ -8528,6 +8542,14 @@ Scoped.define("module:Modelling.Model", [
 
             isRemoving: function() {
                 return this.__removing;
+            },
+
+            canWeaklyRemove: function() {
+                return this.option('can_weakly_remove');
+            },
+
+            weaklyRemove: function() {
+                return this.canWeaklyRemove() ? this.remove() : Promise.error("Cannot remove weakly");
             },
 
             remove: function() {
@@ -8858,7 +8880,9 @@ Scoped.define("module:Modelling.Table", [
                     // Save invalid
                     save_invalid: false,
                     // Cache Models
-                    cache_models: false
+                    cache_models: false,
+
+                    can_weakly_remove: false
                 }, options || {});
                 this.__store.on("insert", function(obj) {
                     this.trigger("create", obj);

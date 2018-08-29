@@ -75,3 +75,75 @@ QUnit.test("has many through array virtual", function (assert) {
     assert.equal(collection.count(), 5);
 });
 
+
+
+
+
+
+
+
+QUnit.test("has many through array delete cascade", function (assert) {
+    var Model2 = BetaJS.Data.Modelling.Model.extend("Model2", {}, {
+        _initializeScheme: function () {
+            var scheme = this._inherited(Model2, "_initializeScheme");
+            scheme.value = {
+                type: "string"
+            };
+            return scheme;
+        }
+    });
+    var store2 = new BetaJS.Data.Stores.MemoryStore();
+    store2.insert_all([{
+        id: 1,
+        value: "a@a.a"
+    }, {
+        id: 2,
+        value: "b@b.b"
+    }]);
+    var table2 = new BetaJS.Data.Modelling.Table(store2, Model2, {
+        can_weakly_remove: true
+    });
+    var Model1 = BetaJS.Data.Modelling.Model.extend("Model1", {
+        _initializeAssociations: function () {
+            var assocs = this._inherited(Model1, "_initializeAssociations");
+            assocs.items = new BetaJS.Data.Modelling.Associations.HasManyThroughArrayAssociation(
+                this,
+                table2,
+                "items", {
+                    collectionOptions: {
+                        auto: true
+                    },
+                    foreign_attr: "value",
+                    delete_cascade: true
+                }
+            );
+            return assocs;
+        }
+    }, {
+        _initializeScheme: function () {
+            var scheme = this._inherited(Model1, "_initializeScheme");
+            scheme.items = {
+                type: "array"
+            };
+            return scheme;
+        }
+    });
+    var store1 = new BetaJS.Data.Stores.MemoryStore();
+    var table1 = new BetaJS.Data.Modelling.Table(store1, Model1, {});
+    var model = table1.newModel({
+        items: ["a@a.a", "b@b.b"]
+    });
+    model.save();
+
+    var collectionAssoc = model.assocs.items.collection;
+    var collection = collectionAssoc.acquire();
+    assert.equal(model.get("items").length, 2);
+    assert.equal(collection.count(), 2);
+    var oneModel = collection.getByIndex(1);
+    collectionAssoc.remove(oneModel);
+    assert.equal(collection.count(), 1);
+    assert.equal(store2.count().value(), 1);
+    model.remove();
+    assert.equal(store2.count().value(), 0);
+});
+

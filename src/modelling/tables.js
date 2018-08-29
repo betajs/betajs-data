@@ -25,7 +25,9 @@ Scoped.define("module:Modelling.Table", [
                     // Save invalid
                     save_invalid: false,
                     // Cache Models
-                    cache_models: false
+                    cache_models: false,
+
+                    can_weakly_remove: false
                 }, options || {});
                 this.__store.on("insert", function(obj) {
                     this.trigger("create", obj);

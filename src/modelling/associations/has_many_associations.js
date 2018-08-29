@@ -15,8 +15,12 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
                 inherited.constructor.apply(this, arguments);
                 this.collection = this.newPooledCollection();
                 this.collectionPool = new SharedObjectFactoryPool(this.newPooledCollection, this);
-                if (this._model && this._model.isNew && this._model.isNew())
-                    this._model.once("save", this._queryChanged, this);
+                if (this._model && this._model.isNew && !this._model.destroyed()) {
+                    if (this._model.isNew())
+                        this._model.once("save", this._queryChanged, this);
+                    if (this._options.delete_cascade)
+                        this._model.once("remove", this.removeAll, this);
+                }
             },
 
             destroy: function() {
@@ -68,7 +72,16 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
             },
 
             remove: function(item) {
+                if (item && !item.destroyed() && this._options.delete_cascade)
+                    item.weaklyRemove();
                 return this._remove(item);
+            },
+
+            removeAll: function() {
+                this.allBy().success(function(iter) {
+                    while (iter.hasNext())
+                        this.remove(iter.next());
+                }, this);
             },
 
             _remove: function(item) {},

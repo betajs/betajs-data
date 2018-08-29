@@ -16,7 +16,8 @@ Scoped.define("module:Modelling.Model", [
                 this.__table = table;
                 this.__options = Objs.extend({
                     newModel: true,
-                    removed: false
+                    removed: false,
+                    canWeaklyRemove: false
                 }, options);
                 this.__ctx = ctx;
                 this.__silent = 1;
@@ -171,6 +172,14 @@ Scoped.define("module:Modelling.Model", [
 
             isRemoving: function() {
                 return this.__removing;
+            },
+
+            canWeaklyRemove: function() {
+                return this.option('can_weakly_remove');
+            },
+
+            weaklyRemove: function() {
+                return this.canWeaklyRemove() ? this.remove() : Promise.error("Cannot remove weakly");
             },
 
             remove: function() {
