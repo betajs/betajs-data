@@ -21,6 +21,11 @@ Scoped.define("module:Databases.Database", [
                     this.__tableCache[table_name] = this.auto_destroy(new cls(this, table_name));
                 }
                 return this.__tableCache[table_name];
+            },
+
+            _renameTableCache: function(old_table_name, new_table_name) {
+                this.__tableCache[new_table_name] = this.__tableCache[old_table_name];
+                delete this.__tableCache[old_table_name];
             }
 
         };

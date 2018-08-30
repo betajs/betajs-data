@@ -118,6 +118,17 @@ Scoped.define("module:Databases.DatabaseTable", [
 
             clear: function() {
                 return this._clear();
+            },
+
+            renameTable: function(newName) {
+                return this._renameTable(newName).success(function() {
+                    this._database._renameTableCache(newName, this._table_name);
+                    this._table_name = newName;
+                }, this);
+            },
+
+            _renameTable: function(newName) {
+                throw "Unsupported";
             }
 
         };

@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.116 - 2018-08-29
+betajs-data - v1.0.116 - 2018-08-30
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -802,6 +802,17 @@ Scoped.define("module:Databases.DatabaseTable", [
 
             clear: function() {
                 return this._clear();
+            },
+
+            renameTable: function(newName) {
+                return this._renameTable(newName).success(function() {
+                    this._database._renameTableCache(newName, this._table_name);
+                    this._table_name = newName;
+                }, this);
+            },
+
+            _renameTable: function(newName) {
+                throw "Unsupported";
             }
 
         };
@@ -830,6 +841,11 @@ Scoped.define("module:Databases.Database", [
                     this.__tableCache[table_name] = this.auto_destroy(new cls(this, table_name));
                 }
                 return this.__tableCache[table_name];
+            },
+
+            _renameTableCache: function(old_table_name, new_table_name) {
+                this.__tableCache[new_table_name] = this.__tableCache[old_table_name];
+                delete this.__tableCache[old_table_name];
             }
 
         };
