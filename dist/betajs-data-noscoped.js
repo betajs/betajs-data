@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.118 - 2018-09-04
+betajs-data - v1.0.119 - 2018-09-04
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.118"
+    "version": "1.0.119"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -5217,7 +5217,7 @@ Scoped.define("module:Stores.CachedStore", [
 					queryString
 				);
 				return this.queryCache.query(localQuery, {limit : 1}, ctx).mapSuccess(function (resultIter) {
-					result = resultIter.hasNext() ? resultIter.next() : null;
+					var result = resultIter.hasNext() ? resultIter.next() : null;
 					resultIter.destroy();
 					if (result) {
 						var meta = this.readQueryMeta(result);

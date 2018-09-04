@@ -322,7 +322,7 @@ Scoped.define("module:Stores.CachedStore", [
 					queryString
 				);
 				return this.queryCache.query(localQuery, {limit : 1}, ctx).mapSuccess(function (resultIter) {
-					result = resultIter.hasNext() ? resultIter.next() : null;
+					var result = resultIter.hasNext() ? resultIter.next() : null;
 					resultIter.destroy();
 					if (result) {
 						var meta = this.readQueryMeta(result);
