@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.116 - 2018-08-30
+betajs-data - v1.0.118 - 2018-09-04
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.116"
+    "version": "1.0.118"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -4550,47 +4550,42 @@ Scoped.define("module:Stores.Invokers.RouteredRestInvokee", [], function () {
 
 
 
-Scoped.define("module:Stores.Invokers.InvokerStore", [
+Scoped.define("module:Stores.Invokers.AbstractInvokerStore", [
     "module:Stores.BaseStore",
     "module:Queries.Constrained"
 ], function (BaseStore, Constrained, scoped) {
 	return BaseStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 			
-			constructor: function (storeInvokee, options) {
-				inherited.constructor.call(this, options);
-				this.__storeInvokee = storeInvokee;
-			},
-			
 			_query_capabilities: function () {
 				return Constrained.fullConstrainedQueryCapabilities();
 			},
 			
-			__invoke: function (member, data, context) {
-				return this.__storeInvokee.storeInvoke(member, data, context);
+			_invoke: function (member, data, context) {
+				throw "Abstract method invoke";
 			},
 
 			_insert: function (data, ctx) {
-				return this.__invoke("insert", data, ctx);
+				return this._invoke("insert", data, ctx);
 			},
 
 			_remove: function (id, ctx) {
-				return this.__invoke("remove", id, ctx);
+				return this._invoke("remove", id, ctx);
 			},
 
 			_get: function (id, ctx) {
-				return this.__invoke("get", id, ctx);
+				return this._invoke("get", id, ctx);
 			},
 
 			_update: function (id, data, ctx) {
-				return this.__invoke("update", {
+				return this._invoke("update", {
 					id: id,
 					data: data
 				}, ctx);
 			},
 
 			_query: function (query, options, ctx) {
-				return this.__invoke("query", {
+				return this._invoke("query", {
 					query: query,
 					options: options
 				}, ctx);
@@ -4602,8 +4597,33 @@ Scoped.define("module:Stores.Invokers.InvokerStore", [
 
 
 
+Scoped.define("module:Stores.Invokers.InvokerStore", [
+    "module:Stores.Invokers.AbstractInvokerStore"
+], function (AbstractInvokerStore, scoped) {
+    return AbstractInvokerStore.extend({scoped: scoped}, function (inherited) {
+        return {
 
-Scoped.define("module:Stores.Invokers.StoreInvokeeInvoker", ["base:Class", "module:Stores.Invokers.StoreInvokee"], function (Class, Invokee, scoped) {
+            constructor: function (storeInvokee, options) {
+                inherited.constructor.call(this, options);
+                this.__storeInvokee = storeInvokee;
+            },
+
+            _invoke: function (member, data, context) {
+                return this.__storeInvokee.storeInvoke(member, data, context);
+            }
+
+        };
+    });
+});
+
+
+
+
+
+Scoped.define("module:Stores.Invokers.StoreInvokeeInvoker", [
+	"base:Class",
+	"module:Stores.Invokers.StoreInvokee"
+], function (Class, Invokee, scoped) {
 	return Class.extend({scoped: scoped}, [Invokee, function (inherited) {		
 		return {
 					
@@ -4633,7 +4653,11 @@ Scoped.define("module:Stores.Invokers.StoreInvokeeInvoker", ["base:Class", "modu
 			},
 
 			__query: function (data, context) {
-				return this.__store.query(data.query, data.options, context);
+				return this.__store.query(data.query, data.options, context).mapSuccess(function (iter) {
+					var result = iter.asArray();
+					iter.decreaseRef();
+					return result;
+				});
 			}
 
 		};
@@ -5089,6 +5113,7 @@ Scoped.define("module:Stores.CachedStore", [
 			},
 			
 			cacheOnlyGet: function (id, options, ctx) {
+				options = options || {};
 				var foreignKey = options.foreignKey && this._foreignKey;
 				var itemPromise = foreignKey ?
 					  this.itemCache.getBy(this.remoteStore.id_key(), id, ctx)
@@ -5954,6 +5979,65 @@ Scoped.define("module:Stores.PartialStoreWatcher", [
 		};
 	});
 });
+Scoped.define("module:Stores.ChannelClientStore", [
+    "module:Stores.Invokers.AbstractInvokerStore",
+    "base:Channels.TransportChannel",
+    "base:Functions"
+], function (AbstractInvokerStore, TransportChannel, Functions, scoped) {
+    return AbstractInvokerStore.extend({scoped: scoped}, function (inherited) {
+        return {
+
+            constructor: function (sender, receiver, options) {
+                inherited.constructor.call(this, options);
+                this.transport = this.auto_destroy(new TransportChannel(sender, receiver));
+                this.transport._reply = Functions.as_method(function (message, data) {
+                    if (message === "event")
+                        this.trigger.apply(this, [data.event].concat(data.args));
+                }, this);
+            },
+
+            _invoke: function (member, data, context) {
+                return this.transport.send("invoke", {
+                    member: member,
+                    data: data,
+                    context: context
+                });
+            }
+
+        };
+    });
+});
+
+
+Scoped.define("module:Stores.ChannelServerStore", [
+    "module:Stores.Invokers.StoreInvokeeInvoker",
+    "base:Channels.TransportChannel",
+    "base:Functions"
+], function (StoreInvokeeInvoker, TransportChannel, Functions, scoped) {
+    return StoreInvokeeInvoker.extend({scoped: scoped}, function (inherited) {
+        return {
+
+            constructor: function (sender, receiver, store) {
+                inherited.constructor.call(this, store);
+                this.transport = this.auto_destroy(new TransportChannel(sender, receiver));
+                this.transport._reply = Functions.as_method(function (message, data) {
+                    if (message === "invoke")
+                        return this.storeInvoke(data.member, data.data, data.context);
+                }, this);
+                store.on('all', function (eventName) {
+                    this.transport.send("event", {
+                        event: eventName,
+                        args: Functions.getArguments(arguments, 1)
+                    }, {
+                        stateless: true
+                    });
+                }, this);
+            }
+
+        };
+    });
+});
+
 Scoped.define("module:Stores.RemoteStore", [
     "module:Stores.Invokers.InvokerStore",
     "module:Stores.Invokers.StoreInvokeeRestInvoker",

@@ -14,3 +14,4 @@ require(__dirname + "/modelling/model_validations.js");
 require(__dirname + "/modelling/scheme_validations.js");
 require(__dirname + "/collections/collections.js");
 require(__dirname + "/data/complex_store_uses.js");
+require(__dirname + "/data/channel_stores.js");

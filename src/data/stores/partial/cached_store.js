@@ -218,6 +218,7 @@ Scoped.define("module:Stores.CachedStore", [
 			},
 			
 			cacheOnlyGet: function (id, options, ctx) {
+				options = options || {};
 				var foreignKey = options.foreignKey && this._foreignKey;
 				var itemPromise = foreignKey ?
 					  this.itemCache.getBy(this.remoteStore.id_key(), id, ctx)

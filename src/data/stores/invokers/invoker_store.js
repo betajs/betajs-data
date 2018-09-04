@@ -20,47 +20,42 @@ Scoped.define("module:Stores.Invokers.RouteredRestInvokee", [], function () {
 
 
 
-Scoped.define("module:Stores.Invokers.InvokerStore", [
+Scoped.define("module:Stores.Invokers.AbstractInvokerStore", [
     "module:Stores.BaseStore",
     "module:Queries.Constrained"
 ], function (BaseStore, Constrained, scoped) {
 	return BaseStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 			
-			constructor: function (storeInvokee, options) {
-				inherited.constructor.call(this, options);
-				this.__storeInvokee = storeInvokee;
-			},
-			
 			_query_capabilities: function () {
 				return Constrained.fullConstrainedQueryCapabilities();
 			},
 			
-			__invoke: function (member, data, context) {
-				return this.__storeInvokee.storeInvoke(member, data, context);
+			_invoke: function (member, data, context) {
+				throw "Abstract method invoke";
 			},
 
 			_insert: function (data, ctx) {
-				return this.__invoke("insert", data, ctx);
+				return this._invoke("insert", data, ctx);
 			},
 
 			_remove: function (id, ctx) {
-				return this.__invoke("remove", id, ctx);
+				return this._invoke("remove", id, ctx);
 			},
 
 			_get: function (id, ctx) {
-				return this.__invoke("get", id, ctx);
+				return this._invoke("get", id, ctx);
 			},
 
 			_update: function (id, data, ctx) {
-				return this.__invoke("update", {
+				return this._invoke("update", {
 					id: id,
 					data: data
 				}, ctx);
 			},
 
 			_query: function (query, options, ctx) {
-				return this.__invoke("query", {
+				return this._invoke("query", {
 					query: query,
 					options: options
 				}, ctx);
@@ -72,8 +67,33 @@ Scoped.define("module:Stores.Invokers.InvokerStore", [
 
 
 
+Scoped.define("module:Stores.Invokers.InvokerStore", [
+    "module:Stores.Invokers.AbstractInvokerStore"
+], function (AbstractInvokerStore, scoped) {
+    return AbstractInvokerStore.extend({scoped: scoped}, function (inherited) {
+        return {
 
-Scoped.define("module:Stores.Invokers.StoreInvokeeInvoker", ["base:Class", "module:Stores.Invokers.StoreInvokee"], function (Class, Invokee, scoped) {
+            constructor: function (storeInvokee, options) {
+                inherited.constructor.call(this, options);
+                this.__storeInvokee = storeInvokee;
+            },
+
+            _invoke: function (member, data, context) {
+                return this.__storeInvokee.storeInvoke(member, data, context);
+            }
+
+        };
+    });
+});
+
+
+
+
+
+Scoped.define("module:Stores.Invokers.StoreInvokeeInvoker", [
+	"base:Class",
+	"module:Stores.Invokers.StoreInvokee"
+], function (Class, Invokee, scoped) {
 	return Class.extend({scoped: scoped}, [Invokee, function (inherited) {		
 		return {
 					
@@ -103,7 +123,11 @@ Scoped.define("module:Stores.Invokers.StoreInvokeeInvoker", ["base:Class", "modu
 			},
 
 			__query: function (data, context) {
-				return this.__store.query(data.query, data.options, context);
+				return this.__store.query(data.query, data.options, context).mapSuccess(function (iter) {
+					var result = iter.asArray();
+					iter.decreaseRef();
+					return result;
+				});
 			}
 
 		};
