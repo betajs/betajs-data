@@ -337,9 +337,9 @@ Scoped.define("module:Stores.CachedStore", [
 						this.queryCache.remove(query_id, ctx);
 					}
 					// Note: This is probably not good enough in the most general cases.
-					if (Queries.queryDeterminedByAttrs(query, this._options.suppAttrs))
+					if (Queries.queryDeterminedByAttrs(query, this._options.suppAttrs, true))
 						return this.itemCache.query(query, queryOptions, ctx);
-					var remotePromise = this.remoteStore.query(query, queryOptions, ctx).mapSuccess(function (items) {
+					var remotePromise = this.remoteStore.query(this.removeItemSupp(query), queryOptions, ctx).mapSuccess(function (items) {
 						this.online();
 						items = items.asArray();
 						var meta = {

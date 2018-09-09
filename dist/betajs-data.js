@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.119 - 2018-09-04
+betajs-data - v1.0.120 - 2018-09-09
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.119 - 2018-09-04
+betajs-data - v1.0.120 - 2018-09-09
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,7 +1018,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.119"
+    "version": "1.0.120"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -2956,18 +2956,18 @@ Scoped.define("module:Queries", [
             return is_array ? result : result[0];
         },
 
-        queryDeterminedByAttrs: function(query, attributes) {
+        queryDeterminedByAttrs: function(query, attributes, requireInequality) {
             return Objs.exists(query, function(value, key) {
                 if (key === "$and") {
                     return Objs.exists(value, function(q) {
-                        return this.queryDeterminedByAttrs(q, attributes);
+                        return this.queryDeterminedByAttrs(q, attributes, requireInequality);
                     }, this);
                 } else if (key === "$or") {
                     return Objs.all(value, function(q) {
-                        return this.queryDeterminedByAttrs(q, attributes);
+                        return this.queryDeterminedByAttrs(q, attributes, requireInequality);
                     }, this);
                 } else
-                    return attributes[key];
+                    return key in attributes && (!requireInequality || attributes[key] !== value);
             }, this);
         }
 
@@ -6239,9 +6239,9 @@ Scoped.define("module:Stores.CachedStore", [
 						this.queryCache.remove(query_id, ctx);
 					}
 					// Note: This is probably not good enough in the most general cases.
-					if (Queries.queryDeterminedByAttrs(query, this._options.suppAttrs))
+					if (Queries.queryDeterminedByAttrs(query, this._options.suppAttrs, true))
 						return this.itemCache.query(query, queryOptions, ctx);
-					var remotePromise = this.remoteStore.query(query, queryOptions, ctx).mapSuccess(function (items) {
+					var remotePromise = this.remoteStore.query(this.removeItemSupp(query), queryOptions, ctx).mapSuccess(function (items) {
 						this.online();
 						items = items.asArray();
 						var meta = {

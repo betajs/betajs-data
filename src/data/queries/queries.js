@@ -599,18 +599,18 @@ Scoped.define("module:Queries", [
             return is_array ? result : result[0];
         },
 
-        queryDeterminedByAttrs: function(query, attributes) {
+        queryDeterminedByAttrs: function(query, attributes, requireInequality) {
             return Objs.exists(query, function(value, key) {
                 if (key === "$and") {
                     return Objs.exists(value, function(q) {
-                        return this.queryDeterminedByAttrs(q, attributes);
+                        return this.queryDeterminedByAttrs(q, attributes, requireInequality);
                     }, this);
                 } else if (key === "$or") {
                     return Objs.all(value, function(q) {
-                        return this.queryDeterminedByAttrs(q, attributes);
+                        return this.queryDeterminedByAttrs(q, attributes, requireInequality);
                     }, this);
                 } else
-                    return attributes[key];
+                    return key in attributes && (!requireInequality || attributes[key] !== value);
             }, this);
         }
 
