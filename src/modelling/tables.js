@@ -4,8 +4,9 @@ Scoped.define("module:Modelling.Table", [
     "base:Objs",
     "base:Types",
     "base:Iterators.MappedIterator",
-    "base:Classes.ObjectCache"
-], function(Class, EventsMixin, Objs, Types, MappedIterator, ObjectCache, scoped) {
+    "base:Classes.ObjectCache",
+    "base:Promise"
+], function(Class, EventsMixin, Objs, Types, MappedIterator, ObjectCache, Promise, scoped) {
     return Class.extend({
         scoped: scoped
     }, [EventsMixin, function(inherited) {
@@ -27,7 +28,9 @@ Scoped.define("module:Modelling.Table", [
                     // Cache Models
                     cache_models: false,
 
-                    can_weakly_remove: false
+                    can_weakly_remove: false,
+
+                    active_models: true
                 }, options || {});
                 this.__store.on("insert", function(obj) {
                     this.trigger("create", obj);
@@ -103,6 +106,12 @@ Scoped.define("module:Modelling.Table", [
                 }, this);
             },
 
+            findByIdStrict: function(id, ctx) {
+                return this.findById(id, ctx).mapSuccess(function(result) {
+                    return result || Promise.error("Not found");
+                });
+            },
+
             findBy: function(query, options, ctx) {
                 return this.allBy(query, Objs.extend({
                     limit: 1
@@ -110,6 +119,12 @@ Scoped.define("module:Modelling.Table", [
                     var item = iter.next();
                     iter.destroy();
                     return item;
+                });
+            },
+
+            findByStrict: function(query, options, ctx) {
+                return this.findBy(query, options, ctx).mapSuccess(function(result) {
+                    return result || Promise.error("Not found");
                 });
             },
 

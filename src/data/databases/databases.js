@@ -15,10 +15,10 @@ Scoped.define("module:Databases.Database", [
                 return null;
             },
 
-            getTable: function(table_name) {
+            getTable: function(table_name, table_options) {
                 if (!this.__tableCache[table_name]) {
                     var cls = this._tableClass();
-                    this.__tableCache[table_name] = this.auto_destroy(new cls(this, table_name));
+                    this.__tableCache[table_name] = this.auto_destroy(new cls(this, table_name, table_options));
                 }
                 return this.__tableCache[table_name];
             },

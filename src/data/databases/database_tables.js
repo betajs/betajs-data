@@ -8,10 +8,11 @@ Scoped.define("module:Databases.DatabaseTable", [
     }, function(inherited) {
         return {
 
-            constructor: function(database, table_name) {
+            constructor: function(database, table_name, table_options) {
                 inherited.constructor.call(this);
                 this._database = database;
                 this._table_name = table_name;
+                this._table_options = table_options || {};
             },
 
             primary_key: function() {

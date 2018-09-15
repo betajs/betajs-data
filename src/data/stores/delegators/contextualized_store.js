@@ -286,7 +286,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
             _encodeQuery: function (query, ctx) {
                 query = Objs.extend(Objs.objectBy(
                 	this.__contextAccessKey,
-					{"$elemMatch": ctx[this.__contextKey]}
+					{"$elemMatch": {"$eq": ctx[this.__contextKey]}}
 				), query);
                 this.__contextAttributes.forEach(function (key) {
                     // TODO: This currently only works with MongoDB databases

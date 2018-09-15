@@ -10,15 +10,15 @@ Scoped.define("module:Stores.DatabaseStore", [
     }, function(inherited) {
         return {
 
-            constructor: function(database, table_name, id_key, separate_ids) {
+            constructor: function(database, table_name, id_key, separate_ids, table_options) {
                 this.__database = database;
                 this.__table_name = table_name;
-                this.__table = this.__database.getTable(this.__table_name);
+                this.__table = this.__database.getTable(this.__table_name, table_options);
                 inherited.constructor.call(this, {
                     id_key: id_key || this.__table.primary_key()
                 });
                 this.__separate_ids = separate_ids;
-                this.__map_ids = !this.__separate_ids && this.id_key() != this.__table.primary_key();
+                this.__map_ids = !this.__separate_ids && this.id_key() !== this.__table.primary_key();
             },
 
             table: function() {
@@ -41,10 +41,9 @@ Scoped.define("module:Stores.DatabaseStore", [
             },
 
             _update: function(id, data) {
-                var promise = this.__separate_ids ?
+                return this.__separate_ids ?
                     this.table().updateRow(this.id_row(id), data) :
                     this.table().updateById(id, data);
-                return promise;
             },
 
             _query_capabilities: function() {

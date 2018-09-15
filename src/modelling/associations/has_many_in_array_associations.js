@@ -10,7 +10,9 @@ Scoped.define("module:Modelling.Associations.HasManyInArrayAssociation", [
             _buildQuery: function(query, options) {
                 return {
                     "query": Objs.objectBy(this._foreign_key, {
-                        "$elemMatch": this._model.id()
+                        "$elemMatch": {
+                            "$eq": this._model.id()
+                        }
                     })
                 };
             },

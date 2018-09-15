@@ -85,6 +85,8 @@ Scoped.define("module:Modelling.Model", [
             },
 
             _registerEvents: function() {
+                if (!this.table().options().active_models)
+                    return;
                 this.__table.on("update:" + this.id(), function(data) {
                     if (this.isRemoved())
                         return;

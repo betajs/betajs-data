@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.120 - 2018-09-09
+betajs-data - v1.0.121 - 2018-09-15
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.120"
+    "version": "1.0.121"
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -605,15 +605,15 @@ Scoped.define("module:Stores.DatabaseStore", [
     }, function(inherited) {
         return {
 
-            constructor: function(database, table_name, id_key, separate_ids) {
+            constructor: function(database, table_name, id_key, separate_ids, table_options) {
                 this.__database = database;
                 this.__table_name = table_name;
-                this.__table = this.__database.getTable(this.__table_name);
+                this.__table = this.__database.getTable(this.__table_name, table_options);
                 inherited.constructor.call(this, {
                     id_key: id_key || this.__table.primary_key()
                 });
                 this.__separate_ids = separate_ids;
-                this.__map_ids = !this.__separate_ids && this.id_key() != this.__table.primary_key();
+                this.__map_ids = !this.__separate_ids && this.id_key() !== this.__table.primary_key();
             },
 
             table: function() {
@@ -636,10 +636,9 @@ Scoped.define("module:Stores.DatabaseStore", [
             },
 
             _update: function(id, data) {
-                var promise = this.__separate_ids ?
+                return this.__separate_ids ?
                     this.table().updateRow(this.id_row(id), data) :
                     this.table().updateById(id, data);
-                return promise;
             },
 
             _query_capabilities: function() {
@@ -692,10 +691,11 @@ Scoped.define("module:Databases.DatabaseTable", [
     }, function(inherited) {
         return {
 
-            constructor: function(database, table_name) {
+            constructor: function(database, table_name, table_options) {
                 inherited.constructor.call(this);
                 this._database = database;
                 this._table_name = table_name;
+                this._table_options = table_options || {};
             },
 
             primary_key: function() {
@@ -835,10 +835,10 @@ Scoped.define("module:Databases.Database", [
                 return null;
             },
 
-            getTable: function(table_name) {
+            getTable: function(table_name, table_options) {
                 if (!this.__tableCache[table_name]) {
                     var cls = this._tableClass();
-                    this.__tableCache[table_name] = this.auto_destroy(new cls(this, table_name));
+                    this.__tableCache[table_name] = this.auto_destroy(new cls(this, table_name, table_options));
                 }
                 return this.__tableCache[table_name];
             },
@@ -1420,8 +1420,14 @@ Scoped.define("module:Queries", [
                 return object_value === condition_value;
             }
         },
+        "$ne": {
+            target: "atom",
+            evaluate_single: function(object_value, condition_value) {
+                return object_value !== condition_value;
+            }
+        },
         "$elemMatch": {
-            target: "queries",
+            target: "query",
             no_index_support: true,
             evaluate_combine: Objs.exists
         }
@@ -1518,8 +1524,8 @@ Scoped.define("module:Queries", [
                 return this.validate_atoms(value);
             else if (meta.target === "atom")
                 return this.validate_atom(value);
-            else if (meta.target === "queries")
-                return this.validate_queries(value);
+            else if (meta.target === "query")
+                return this.validate_query(value, capabilities);
             return false;
         },
 
@@ -1607,7 +1613,7 @@ Scoped.define("module:Queries", [
                 }, this);
             } else if (rec.target === "atom")
                 return rec.evaluate_single.call(this, object_value, condition_value);
-            else if (rec.target === "queries") {
+            else if (rec.target === "query") {
                 return rec.evaluate_combine.call(Objs, object_value, function(object_single_value) {
                     return this.evaluate_query({
                         value: condition_value
@@ -1839,7 +1845,7 @@ Scoped.define("module:Queries", [
                     }, this);
                     if ((key === "$and" && arr.length > 0) || (key === "$or" && !had_true))
                         result[key] = arr;
-                } else if (Types.is_object(value)) {
+                } else if (Types.is_object(value) && value !== null) {
                     var conds = this.simplifyConditions(value);
                     if (!Types.is_empty(conds))
                         result[key] = conds;
@@ -3541,7 +3547,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
             _encodeQuery: function (query, ctx) {
                 query = Objs.extend(Objs.objectBy(
                 	this.__contextAccessKey,
-					{"$elemMatch": ctx[this.__contextKey]}
+					{"$elemMatch": {"$eq": ctx[this.__contextKey]}}
 				), query);
                 this.__contextAttributes.forEach(function (key) {
                     // TODO: This currently only works with MongoDB databases
@@ -6565,8 +6571,9 @@ Scoped.extend("module:Modelling.ActiveModel", [
     "base:Properties.Properties",
     "base:Async",
     "base:Objs",
+    "base:Promise",
     "module:Queries"
-], function(Properties, Async, Objs, Queries, scoped) {
+], function(Properties, Async, Objs, Promise, Queries, scoped) {
     return Properties.extend({
         scoped: scoped
     }, function(inherited) {
@@ -6576,40 +6583,56 @@ Scoped.extend("module:Modelling.ActiveModel", [
                 inherited.constructor.call(this);
                 this._options = options || {};
                 this._table = table;
-                this._watcher = table.store().watcher();
                 this._query = query;
                 this._queryopts = queryopts || {};
                 this.set("model", null);
                 this._unregisterModel();
-                if (this._watcher) {
-                    this._watcher.watchInsert({
-                        query: this._query,
-                        options: Objs.extend({
-                            limit: 1
-                        }, this._queryopts)
+                if (!this._options.inactive) {
+                    if (this._watcher()) {
+                        this._watcher().watchInsert({
+                            query: this._query,
+                            options: Objs.extend({
+                                limit: 1
+                            }, this._queryopts)
+                        }, this);
+                    }
+                    this._table.on("create", function(data) {
+                        if (!Queries.evaluate(this._query, data))
+                            return;
+                        if (!this._queryopts.sort && this.get("model"))
+                            return;
+                        if (this.get("model"))
+                            this._unregisterModel();
+                        else
+                            this._registerModel(this._table.materialize(data));
                     }, this);
                 }
-                this._table.on("create", function(data) {
-                    if (!Queries.evaluate(this._query, data))
-                        return;
-                    if (!this._queryopts.sort && this.get("model"))
-                        return;
-                    if (this.get("model"))
-                        this._unregisterModel();
-                    else
-                        this._registerModel(this._table.materialize(data));
-                }, this);
             },
 
             destroy: function() {
-                if (this._watcher) {
-                    this._watcher.unwatchInsert(null, this);
-                    this._watcher.unwatchItem(null, this);
+                if (this._watcher()) {
+                    this._watcher().unwatchInsert(null, this);
+                    this._watcher().unwatchItem(null, this);
                 }
                 if (this.get("model"))
                     this.get("model").weakDestroy();
                 this._table.off(null, null, this);
                 inherited.destroy.call(this);
+            },
+
+            assertExistence: function() {
+                if (this.get("model"))
+                    return Promise.value(this.get("model"));
+                if (!this.__find_by_acquiring)
+                    return Promise.error("Not found");
+                var promise = Promise.create();
+                this.once('find-by-acquired', function() {
+                    if (this.get("model"))
+                        promise.asyncSuccess(this.get('model'));
+                    else
+                        promise.asyncError("Not found");
+                }, this);
+                return promise;
             },
 
             _watcher: function() {
@@ -6624,8 +6647,8 @@ Scoped.extend("module:Modelling.ActiveModel", [
 
             _registerModel: function(model) {
                 this.set("model", model);
-                if (this._watcher && !model.isNew())
-                    this._watcher.watchItem(model.id(), this);
+                if (this._watcher() && !model.isNew())
+                    this._watcher().watchItem(model.id(), this);
                 model.on("change", function() {
                     if (!Queries.evaluate(this._query, model.data()))
                         this._unregisterModel();
@@ -6642,14 +6665,18 @@ Scoped.extend("module:Modelling.ActiveModel", [
                         model.weakDestroy();
                     });
                 }
-                if (this._watcher)
-                    this._watcher.unwatchItem(null, this);
+                if (this._watcher())
+                    this._watcher().unwatchItem(null, this);
                 this.set("model", null);
+                this.__find_by_acquiring = true;
                 this._table.findBy(this._query, this._queryopts).success(function(model) {
                     if (model)
                         this._registerModel(model);
                     else if (this._options.create_virtual)
                         this._registerModel(this._options.create_virtual.call(this._options.create_virtual_ctx || this, this._query));
+                }, this).callback(function() {
+                    this.__find_by_acquiring = false;
+                    this.trigger('find-by-acquired');
                 }, this);
             }
 
@@ -6836,7 +6863,9 @@ Scoped.define("module:Modelling.Associations.HasManyInArrayAssociation", [
             _buildQuery: function(query, options) {
                 return {
                     "query": Objs.objectBy(this._foreign_key, {
-                        "$elemMatch": this._model.id()
+                        "$elemMatch": {
+                            "$eq": this._model.id()
+                        }
                     })
                 };
             },
@@ -6998,7 +7027,7 @@ Scoped.define("module:Modelling.Associations.HasOneAssociation", [
         return {
 
             _buildQuery: function(query, options) {
-                return Objs.objectBy(this._foreign_key, this._model.id());
+                return Objs.extend(Objs.objectBy(this._foreign_key, this._model.id()), query);
             },
 
             _unset: function() {
@@ -7050,6 +7079,10 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
             newActiveModel: function(query) {
                 var result = this.buildQuery(query);
                 return new ActiveModel(this._foreignTable(), result, this._options.queryOpts, this._options.activeOpts);
+            },
+
+            assertExistence: function(reference) {
+                return this.active.acquire(reference).assertExistence();
             },
 
             unset: function() {
@@ -7548,6 +7581,8 @@ Scoped.define("module:Modelling.Model", [
             },
 
             _registerEvents: function() {
+                if (!this.table().options().active_models)
+                    return;
                 this.__table.on("update:" + this.id(), function(data) {
                     if (this.isRemoved())
                         return;
@@ -7952,8 +7987,9 @@ Scoped.define("module:Modelling.Table", [
     "base:Objs",
     "base:Types",
     "base:Iterators.MappedIterator",
-    "base:Classes.ObjectCache"
-], function(Class, EventsMixin, Objs, Types, MappedIterator, ObjectCache, scoped) {
+    "base:Classes.ObjectCache",
+    "base:Promise"
+], function(Class, EventsMixin, Objs, Types, MappedIterator, ObjectCache, Promise, scoped) {
     return Class.extend({
         scoped: scoped
     }, [EventsMixin, function(inherited) {
@@ -7975,7 +8011,9 @@ Scoped.define("module:Modelling.Table", [
                     // Cache Models
                     cache_models: false,
 
-                    can_weakly_remove: false
+                    can_weakly_remove: false,
+
+                    active_models: true
                 }, options || {});
                 this.__store.on("insert", function(obj) {
                     this.trigger("create", obj);
@@ -8051,6 +8089,12 @@ Scoped.define("module:Modelling.Table", [
                 }, this);
             },
 
+            findByIdStrict: function(id, ctx) {
+                return this.findById(id, ctx).mapSuccess(function(result) {
+                    return result || Promise.error("Not found");
+                });
+            },
+
             findBy: function(query, options, ctx) {
                 return this.allBy(query, Objs.extend({
                     limit: 1
@@ -8058,6 +8102,12 @@ Scoped.define("module:Modelling.Table", [
                     var item = iter.next();
                     iter.destroy();
                     return item;
+                });
+            },
+
+            findByStrict: function(query, options, ctx) {
+                return this.findBy(query, options, ctx).mapSuccess(function(result) {
+                    return result || Promise.error("Not found");
                 });
             },
 

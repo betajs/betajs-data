@@ -36,6 +36,10 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
                 return new ActiveModel(this._foreignTable(), result, this._options.queryOpts, this._options.activeOpts);
             },
 
+            assertExistence: function(reference) {
+                return this.active.acquire(reference).assertExistence();
+            },
+
             unset: function() {
                 return this._unset();
             },

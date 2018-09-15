@@ -70,8 +70,14 @@ Scoped.define("module:Queries", [
                 return object_value === condition_value;
             }
         },
+        "$ne": {
+            target: "atom",
+            evaluate_single: function(object_value, condition_value) {
+                return object_value !== condition_value;
+            }
+        },
         "$elemMatch": {
-            target: "queries",
+            target: "query",
             no_index_support: true,
             evaluate_combine: Objs.exists
         }
@@ -168,8 +174,8 @@ Scoped.define("module:Queries", [
                 return this.validate_atoms(value);
             else if (meta.target === "atom")
                 return this.validate_atom(value);
-            else if (meta.target === "queries")
-                return this.validate_queries(value);
+            else if (meta.target === "query")
+                return this.validate_query(value, capabilities);
             return false;
         },
 
@@ -257,7 +263,7 @@ Scoped.define("module:Queries", [
                 }, this);
             } else if (rec.target === "atom")
                 return rec.evaluate_single.call(this, object_value, condition_value);
-            else if (rec.target === "queries") {
+            else if (rec.target === "query") {
                 return rec.evaluate_combine.call(Objs, object_value, function(object_single_value) {
                     return this.evaluate_query({
                         value: condition_value
@@ -489,7 +495,7 @@ Scoped.define("module:Queries", [
                     }, this);
                     if ((key === "$and" && arr.length > 0) || (key === "$or" && !had_true))
                         result[key] = arr;
-                } else if (Types.is_object(value)) {
+                } else if (Types.is_object(value) && value !== null) {
                     var conds = this.simplifyConditions(value);
                     if (!Types.is_empty(conds))
                         result[key] = conds;

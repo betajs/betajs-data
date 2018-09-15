@@ -8,7 +8,7 @@ Scoped.define("module:Modelling.Associations.HasOneAssociation", [
         return {
 
             _buildQuery: function(query, options) {
-                return Objs.objectBy(this._foreign_key, this._model.id());
+                return Objs.extend(Objs.objectBy(this._foreign_key, this._model.id()), query);
             },
 
             _unset: function() {

@@ -2,8 +2,9 @@ Scoped.extend("module:Modelling.ActiveModel", [
     "base:Properties.Properties",
     "base:Async",
     "base:Objs",
+    "base:Promise",
     "module:Queries"
-], function(Properties, Async, Objs, Queries, scoped) {
+], function(Properties, Async, Objs, Promise, Queries, scoped) {
     return Properties.extend({
         scoped: scoped
     }, function(inherited) {
@@ -13,40 +14,56 @@ Scoped.extend("module:Modelling.ActiveModel", [
                 inherited.constructor.call(this);
                 this._options = options || {};
                 this._table = table;
-                this._watcher = table.store().watcher();
                 this._query = query;
                 this._queryopts = queryopts || {};
                 this.set("model", null);
                 this._unregisterModel();
-                if (this._watcher) {
-                    this._watcher.watchInsert({
-                        query: this._query,
-                        options: Objs.extend({
-                            limit: 1
-                        }, this._queryopts)
+                if (!this._options.inactive) {
+                    if (this._watcher()) {
+                        this._watcher().watchInsert({
+                            query: this._query,
+                            options: Objs.extend({
+                                limit: 1
+                            }, this._queryopts)
+                        }, this);
+                    }
+                    this._table.on("create", function(data) {
+                        if (!Queries.evaluate(this._query, data))
+                            return;
+                        if (!this._queryopts.sort && this.get("model"))
+                            return;
+                        if (this.get("model"))
+                            this._unregisterModel();
+                        else
+                            this._registerModel(this._table.materialize(data));
                     }, this);
                 }
-                this._table.on("create", function(data) {
-                    if (!Queries.evaluate(this._query, data))
-                        return;
-                    if (!this._queryopts.sort && this.get("model"))
-                        return;
-                    if (this.get("model"))
-                        this._unregisterModel();
-                    else
-                        this._registerModel(this._table.materialize(data));
-                }, this);
             },
 
             destroy: function() {
-                if (this._watcher) {
-                    this._watcher.unwatchInsert(null, this);
-                    this._watcher.unwatchItem(null, this);
+                if (this._watcher()) {
+                    this._watcher().unwatchInsert(null, this);
+                    this._watcher().unwatchItem(null, this);
                 }
                 if (this.get("model"))
                     this.get("model").weakDestroy();
                 this._table.off(null, null, this);
                 inherited.destroy.call(this);
+            },
+
+            assertExistence: function() {
+                if (this.get("model"))
+                    return Promise.value(this.get("model"));
+                if (!this.__find_by_acquiring)
+                    return Promise.error("Not found");
+                var promise = Promise.create();
+                this.once('find-by-acquired', function() {
+                    if (this.get("model"))
+                        promise.asyncSuccess(this.get('model'));
+                    else
+                        promise.asyncError("Not found");
+                }, this);
+                return promise;
             },
 
             _watcher: function() {
@@ -61,8 +78,8 @@ Scoped.extend("module:Modelling.ActiveModel", [
 
             _registerModel: function(model) {
                 this.set("model", model);
-                if (this._watcher && !model.isNew())
-                    this._watcher.watchItem(model.id(), this);
+                if (this._watcher() && !model.isNew())
+                    this._watcher().watchItem(model.id(), this);
                 model.on("change", function() {
                     if (!Queries.evaluate(this._query, model.data()))
                         this._unregisterModel();
@@ -79,14 +96,18 @@ Scoped.extend("module:Modelling.ActiveModel", [
                         model.weakDestroy();
                     });
                 }
-                if (this._watcher)
-                    this._watcher.unwatchItem(null, this);
+                if (this._watcher())
+                    this._watcher().unwatchItem(null, this);
                 this.set("model", null);
+                this.__find_by_acquiring = true;
                 this._table.findBy(this._query, this._queryopts).success(function(model) {
                     if (model)
                         this._registerModel(model);
                     else if (this._options.create_virtual)
                         this._registerModel(this._options.create_virtual.call(this._options.create_virtual_ctx || this, this._query));
+                }, this).callback(function() {
+                    this.__find_by_acquiring = false;
+                    this.trigger('find-by-acquired');
                 }, this);
             }
 
