@@ -21,7 +21,8 @@ QUnit.test("disjunctive normal form 2", function (assert) {
 QUnit.test("validate query", function (assert) {
     assert.equal(BetaJS.Data.Queries.validate({
         foo: {'$ne': null},
-        bar: {'$elemMatch': {"$eq": 123}}
+        bar: {'$elemMatch': {"$eq": 123}},
+        baz: {'$elemMatch': {"type": "abc"}}
     }, BetaJS.Data.Queries.fullQueryCapabilities()), true);
 });
 
@@ -29,6 +30,7 @@ QUnit.test("validate query", function (assert) {
 QUnit.test("elem match query", function (assert) {
     assert.equal(BetaJS.Data.Queries.evaluate({key: {"$elemMatch": {"$eq": 10}}}, {key: [5, 10, 20]}), true);
     assert.equal(BetaJS.Data.Queries.evaluate({key: {"$elemMatch": {"$eq": 11}}}, {key: [5, 10, 20]}), false);
+    assert.equal(BetaJS.Data.Queries.evaluate({key: {"$elemMatch": {"sub": 11}}}, {key: [{sub: 11}]}), true);
 });
 
 

@@ -265,11 +265,17 @@ Scoped.define("module:Queries", [
                 return rec.evaluate_single.call(this, object_value, condition_value);
             else if (rec.target === "query") {
                 return rec.evaluate_combine.call(Objs, object_value, function(object_single_value) {
-                    return this.evaluate_query({
-                        value: condition_value
-                    }, {
-                        value: object_single_value
-                    });
+                    /*
+                     * This fixes the case {value: foo}, {value: bar} where both foo and bar are objects.
+                     * I am assuming that the actual fix would be to make queries work with sub queries...
+                     */
+                    return Types.is_object(condition_value) && Types.is_object(object_single_value) ?
+                        this.evaluate_query(condition_value, object_single_value) :
+                        this.evaluate_query({
+                            value: condition_value
+                        }, {
+                            value: object_single_value
+                        });
                 }, this);
             }
         },

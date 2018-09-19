@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.121 - 2018-09-15
+betajs-data - v1.0.122 - 2018-09-19
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,7 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.121"
+    "version": "1.0.122",
+    "datetime": 1537343817122
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -1615,11 +1616,13 @@ Scoped.define("module:Queries", [
                 return rec.evaluate_single.call(this, object_value, condition_value);
             else if (rec.target === "query") {
                 return rec.evaluate_combine.call(Objs, object_value, function(object_single_value) {
-                    return this.evaluate_query({
-                        value: condition_value
-                    }, {
-                        value: object_single_value
-                    });
+                    return Types.is_object(condition_value) && Types.is_object(object_single_value) ?
+                        this.evaluate_query(condition_value, object_single_value) :
+                        this.evaluate_query({
+                            value: condition_value
+                        }, {
+                            value: object_single_value
+                        });
                 }, this);
             }
         },
