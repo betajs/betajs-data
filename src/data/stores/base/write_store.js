@@ -1,9 +1,9 @@
 Scoped.define("module:Stores.WriteStoreMixin", [
-                                                "module:Stores.StoreException",
-                                                "base:Promise",
-                                                "base:IdGenerators.TimedIdGenerator",
-                                                "base:Types"
-                                                ], function (StoreException, Promise, TimedIdGenerator, Types) {
+	"module:Stores.StoreException",
+	"base:Promise",
+	"base:IdGenerators.TimedIdGenerator",
+	"base:Objs"
+], function (StoreException, Promise, TimedIdGenerator, Objs) {
 	return {
 
 		_initializeWriteStore: function (options) {
@@ -97,12 +97,12 @@ Scoped.define("module:Stores.WriteStoreMixin", [
                 	for (var key in data)
                         pre_data_filtered[key] = pre_data[key];
                 	return this._update(id, data, ctx).success(function (row) {
-                        this._updated(row, data, ctx, pre_data_filtered);
+                        this._updated(Objs.extend(Objs.objectify(this._id_key, id), row), data, ctx, pre_data_filtered);
                     }, this);
                 }, this);
 			} else {
 				return this._update(id, data, ctx).success(function (row) {
-                    this._updated(row, data, ctx);
+                    this._updated(Objs.extend(Objs.objectify(this._id_key, id), row), data, ctx);
                 }, this);
 			}
 		},
