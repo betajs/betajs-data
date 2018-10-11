@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.123 - 2018-10-10
+betajs-data - v1.0.124 - 2018-10-11
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.123 - 2018-10-10
+betajs-data - v1.0.124 - 2018-10-11
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,8 +1018,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.123",
-    "datetime": 1539198808562
+    "version": "1.0.124",
+    "datetime": 1539281832573
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -1499,6 +1499,8 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                     this._activeCreate(merged);
                 else if (!this.isValid(merged))
                     this._activeRemove(id);
+                else if (object.setAllNoChange)
+                    object.setAllNoChange(data);
                 else
                     object.setAll(data);
             },
@@ -4034,9 +4036,9 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			this.trigger("write", "remove", id, ctx, data);
 		},
 
-		_updated: function (row, data, ctx, pre_data) {
-			this.trigger("update", row, data, ctx, pre_data);
-			this.trigger("write", "update", row, data, ctx, pre_data);
+		_updated: function (row, data, ctx, pre_data, transaction_id) {
+			this.trigger("update", row, data, ctx, pre_data, transaction_id);
+			this.trigger("write", "update", row, data, ctx, pre_data, transaction_id);
 		}, 
 
 		insert_all: function (data, ctx) {
@@ -4081,19 +4083,19 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			}, this);
 		},
 
-		update: function (id, data, ctx) {
+		update: function (id, data, ctx, transaction_id) {
 			if (this.preserve_preupdate_data) {
                 return this.get(id, ctx).mapSuccess(function (pre_data) {
                 	var pre_data_filtered = {};
                 	for (var key in data)
                         pre_data_filtered[key] = pre_data[key];
-                	return this._update(id, data, ctx).success(function (row) {
-                        this._updated(Objs.extend(Objs.objectify(this._id_key, id), row), data, ctx, pre_data_filtered);
+                	return this._update(id, data, ctx, transaction_id).success(function (row) {
+                        this._updated(Objs.extend(Objs.objectify(this._id_key, id), row), data, ctx, pre_data_filtered, transaction_id);
                     }, this);
                 }, this);
 			} else {
-				return this._update(id, data, ctx).success(function (row) {
-                    this._updated(Objs.extend(Objs.objectify(this._id_key, id), row), data, ctx);
+				return this._update(id, data, ctx, transaction_id).success(function (row) {
+                    this._updated(Objs.extend(Objs.objectify(this._id_key, id), row), data, ctx, undefined, transaction_id);
                 }, this);
 			}
 		},
@@ -4845,9 +4847,9 @@ Scoped.define("module:Stores.PassthroughStore", [
 				}, this);
 			},
 
-			_update: function (id, data, ctx) {
+			_update: function (id, data, ctx, transaction_id) {
 				return this._preUpdate(id, data).mapSuccess(function (args) {
-					return this.__store.update(args.id, args.data, ctx).mapSuccess(function (row) {
+					return this.__store.update(args.id, args.data, ctx, transaction_id).mapSuccess(function (row) {
 						return this._postUpdate(row);
 					}, this);
 				}, this);
@@ -5597,10 +5599,11 @@ Scoped.define("module:Stores.Invokers.AbstractInvokerStore", [
 				return this._invoke("get", id, ctx);
 			},
 
-			_update: function (id, data, ctx) {
+			_update: function (id, data, ctx, transaction_id) {
 				return this._invoke("update", {
 					id: id,
-					data: data
+					data: data,
+					transaction_id: transaction_id
 				}, ctx);
 			},
 
@@ -5669,7 +5672,7 @@ Scoped.define("module:Stores.Invokers.StoreInvokeeInvoker", [
 			},
 
 			__update: function (data, context) {
-				return this.__store.update(data.id, data.data, context);
+				return this.__store.update(data.id, data.data, context, data.transaction_id);
 			},
 
 			__query: function (data, context) {
@@ -5979,14 +5982,14 @@ Scoped.define("module:Stores.CachedStore", [
 				}, ctx);
 			},
 
-			_update: function (id, data, ctx) {
+			_update: function (id, data, ctx, transaction_id) {
 				return this.cacheUpdate(id, data, {
 					ignoreLock: false,
 					silent: true,
 					lockAttrs: true,
 					refreshMeta: false,
 					accessMeta: true
-				}, ctx);
+				}, ctx, transaction_id);
 			},
 
 			_remove: function (id, ctx) {
@@ -6050,7 +6053,7 @@ Scoped.define("module:Stores.CachedStore", [
 			 *   - unlockItem: boolean (default false)
 			 */
 
-			cacheUpdate: function (id, data, options, ctx) {
+			cacheUpdate: function (id, data, options, ctx, transaction_id) {
 				var foreignKey = options.foreignKey && this._foreignKey;
 				var itemPromise = foreignKey ?
 					              this.itemCache.getBy(this.remoteStore.id_key(), id, ctx)
@@ -6079,16 +6082,16 @@ Scoped.define("module:Stores.CachedStore", [
 						meta.refreshMeta = this.cacheStrategy.itemRefreshMeta(meta.refreshMeta);
 					if (options.accessMeta)
 						meta.accessMeta = this.cacheStrategy.itemAccessMeta(meta.accessMeta);
-					return this.itemCache.update(this.itemCache.id_of(item), this.addItemMeta(data, meta), ctx).mapSuccess(function (result) {
+					return this.itemCache.update(this.itemCache.id_of(item), this.addItemMeta(data, meta), ctx, transaction_id).mapSuccess(function (result) {
 						result = this.removeItemMeta(result);
 						if (!options.silent)
-							this._updated(result, data, ctx);
+							this._updated(result, data, ctx, transaction_id);
 						return result;
 					}, this);
 				}, this);
 			},
 
-			cacheInsertUpdate: function (data, options, ctx) {
+			cacheInsertUpdate: function (data, options, ctx, transaction_id) {
 				var foreignKey = options.foreignKey && this._foreignKey;
 				var itemPromise = foreignKey ?
 					              this.itemCache.getBy(this.remoteStore.id_key(), this.remoteStore.id_of(data), ctx)
@@ -6100,7 +6103,7 @@ Scoped.define("module:Stores.CachedStore", [
 					var backup = Objs.clone(data, 1);
 					var itemId = this.itemCache.id_of(item);
 					backup[this.itemCache.id_key()] = itemId;
-					return this.cacheUpdate(itemId, data, options, ctx).mapSuccess(function (result) {
+					return this.cacheUpdate(itemId, data, options, ctx, transaction_id).mapSuccess(function (result) {
 						return Objs.extend(backup, result);
 					});
 				}, this);
@@ -6521,7 +6524,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.WriteStrategy", [
 
 			remove: function (id, ctx) {},
 
-			update: function (data, ctx) {}
+			update: function (data, ctx, transaction_id) {}
 
 		};
 	});
@@ -6557,7 +6560,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
 				}, this);
 			},
 
-			update: function (cachedId, data, ctx) {
+			update: function (cachedId, data, ctx, transaction_id) {
 				var inner = function (updatedData) {
 					var merger = Objs.extend(Objs.clone(data, 1), updatedData);
                     return this.partialStore.cachedStore.cacheUpdate(cachedId, merger, {
@@ -6566,13 +6569,13 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
                         silent: true,
                         refreshMeta: true,
                         accessMeta: true
-                    }, ctx);
+                    }, ctx, transaction_id);
 				};
                 var remoteRequired = !Types.is_empty(this.partialStore.cachedStore.removeItemSupp(data));
                 if (!remoteRequired)
                 	return inner.call(this);
 				return this.partialStore.cachedStore.cachedIdToRemoteId(cachedId).mapSuccess(function (remoteId) {
-					return this.partialStore.remoteStore.update(remoteId, data, ctx).mapSuccess(function (updatedData) {
+					return this.partialStore.remoteStore.update(remoteId, data, ctx, transaction_id).mapSuccess(function (updatedData) {
 						return inner.call(this, updatedData);
 					}, this);
 				}, this);
@@ -6632,7 +6635,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
 				}, this);
 			},
 
-			update: function (cachedId, data) {
+			update: function (cachedId, data, ctx, transaction_id) {
 				return this.partialStore.cachedStore.cachedIdToRemoteId(cachedId).mapSuccess(function (remoteId) {
 					var promise = this.partialStore.cachedStore.cacheUpdate(cachedId, data, {
 						lockAttrs: true,
@@ -6640,9 +6643,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
 						silent: true,
 						refreshMeta: false,
 						accessMeta: true
-					}).success(function (data) {
+					}, ctx, transaction_id).success(function (data) {
 						data = this.partialStore.cachedStore.removeItemSupp(data);
-						this.partialStore.remoteStore.update(remoteId, data).success(function () {
+						this.partialStore.remoteStore.update(remoteId, data, ctx, transaction_id).success(function () {
 							this.partialStore.cachedStore.unlockItem(cachedId);
 						}, this);
 					}, this);
@@ -6720,14 +6723,14 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 				}, this);
 			},
 
-			update: function (id, data) {
+			update: function (id, data, ctx, transaction_id) {
 				return this.partialStore.cachedStore.cacheUpdate(id, data, {
 					lockAttrs: true,
 					ignoreLock: true, // this was false before, not sure why.
 					silent: true,
 					refreshMeta: false,
 					accessMeta: true
-				}).success(function () {
+				}, ctx, transaction_id).success(function () {
 					data = this.partialStore.cachedStore.removeItemSupp(data);
 					this.storeHistory.sourceUpdate(id, data);
 				}, this);
@@ -6900,10 +6903,10 @@ Scoped.define("module:Stores.PartialStore", [
 				return this.writeStrategy.remove(id, ctx);
 			},
 			
-			_update: function (id, data, ctx) {
+			_update: function (id, data, ctx, transaction_id) {
 				return this.cachedStore.cacheOnlyGet(id, {}, ctx).mapSuccess(function (cachedData) {
 					var diff = Objs.diff(data, cachedData);
-					return Types.is_empty(diff) ? cachedData : this.writeStrategy.update(id, data, ctx);
+					return Types.is_empty(diff) ? cachedData : this.writeStrategy.update(id, data, ctx, transaction_id);
 				}, this);
 			},
 
@@ -8515,8 +8518,9 @@ Scoped.define("module:Modelling.Model", [
     "base:Promise",
     "base:Types",
     "base:Strings",
+    "base:Tokens",
     "module:Modelling.Table"
-], function(AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Strings, Table, scoped) {
+], function(AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Strings, Tokens, Table, scoped) {
     return AssociatedProperties.extend({
         scoped: scoped
     }, function(inherited) {
@@ -8532,6 +8536,7 @@ Scoped.define("module:Modelling.Model", [
                 this.__ctx = ctx;
                 this.__silent = 1;
                 inherited.constructor.call(this, attributes);
+                this.__transactionPrefix = Tokens.generate_token();
                 this.__silent = 0;
                 this.__removeOnDestroy = false;
                 if (!this.isNew()) {
@@ -8549,6 +8554,14 @@ Scoped.define("module:Modelling.Model", [
                     this.table().off(null, null, this);
                 this.trigger("destroy");
                 inherited.destroy.call(this);
+            },
+
+            newTransactionId: function() {
+                return this.__transactionPrefix + "-" + Tokens.generate_token();
+            },
+
+            isMyTransactionId: function(transactionId) {
+                return transactionId && transactionId.indexOf(this.__transactionPrefix) === 0;
             },
 
             ctx: function() {
@@ -8594,20 +8607,26 @@ Scoped.define("module:Modelling.Model", [
                 return this.option("removed");
             },
 
+            setAllNoChange: function(data) {
+                this.__silent++;
+                for (var key in data) {
+                    if (!this._properties_changed[key]) {
+                        this.set(key, data[key]);
+                        delete this._properties_changed[key];
+                    }
+                }
+                this.__silent--;
+            },
+
             _registerEvents: function() {
                 if (!this.table().options().active_models)
                     return;
-                this.__table.on("update:" + this.id(), function(data) {
+                this.__table.on("update:" + this.id(), function(data, row, pre_data, transaction_id) {
                     if (this.isRemoved())
                         return;
-                    this.__silent++;
-                    for (var key in data) {
-                        if (!this._properties_changed[key]) {
-                            this.set(key, data[key]);
-                            delete this._properties_changed[key];
-                        }
-                    }
-                    this.__silent--;
+                    if (this.isMyTransactionId(transaction_id))
+                        return;
+                    this.setAllNoChange(data);
                 }, this);
                 this.__table.on("remove:" + this.id(), function() {
                     if (this.isRemoved())
@@ -8653,7 +8672,7 @@ Scoped.define("module:Modelling.Model", [
                             return Promise.create(attrs);
                     }
                     var wasNew = this.isNew();
-                    var promise = this.isNew() ? this.__table.store().insert(attrs, this.__ctx) : this.__table.store().update(this.id(), attrs, this.__ctx);
+                    var promise = this.isNew() ? this.__table.store().insert(attrs, this.__ctx) : this.__table.store().update(this.id(), attrs, this.__ctx, this.newTransactionId());
                     return promise.mapCallback(function(err, result) {
                         if (this.destroyed())
                             return this;
@@ -8666,7 +8685,8 @@ Scoped.define("module:Modelling.Model", [
                             return new ModelInvalidException(this, err);
                         }
                         this.__silent++;
-                        this.setAll(result);
+                        if (!this.option("oblivious_updates") || wasNew)
+                            this.setAll(result);
                         this.__silent--;
                         this._properties_changed = {};
                         this.trigger("save");
@@ -9027,15 +9047,17 @@ Scoped.define("module:Modelling.Table", [
 
                     can_weakly_remove: false,
 
+                    oblivious_updates: true,
+
                     active_models: true
                 }, options || {});
                 this.__store.on("insert", function(obj) {
                     this.trigger("create", obj);
                 }, this);
-                this.__store.on("update", function(row, data) {
+                this.__store.on("update", function(row, data, ctx, pre_data, transaction_id) {
                     var id = row[this.primary_key()];
-                    this.trigger("update", id, data, row);
-                    this.trigger("update:" + id, data);
+                    this.trigger("update", id, data, row, pre_data, transaction_id);
+                    this.trigger("update:" + id, data, row, pre_data, transaction_id);
                 }, this);
                 this.__store.on("remove", function(id, ctx, data) {
                     this.trigger("remove", id, ctx, data);

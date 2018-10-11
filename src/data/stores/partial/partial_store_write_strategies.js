@@ -12,7 +12,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.WriteStrategy", [
 
 			remove: function (id, ctx) {},
 
-			update: function (data, ctx) {}
+			update: function (data, ctx, transaction_id) {}
 
 		};
 	});
@@ -48,7 +48,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
 				}, this);
 			},
 
-			update: function (cachedId, data, ctx) {
+			update: function (cachedId, data, ctx, transaction_id) {
 				var inner = function (updatedData) {
 					var merger = Objs.extend(Objs.clone(data, 1), updatedData);
                     return this.partialStore.cachedStore.cacheUpdate(cachedId, merger, {
@@ -57,13 +57,13 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PostWriteStrategy", [
                         silent: true,
                         refreshMeta: true,
                         accessMeta: true
-                    }, ctx);
+                    }, ctx, transaction_id);
 				};
                 var remoteRequired = !Types.is_empty(this.partialStore.cachedStore.removeItemSupp(data));
                 if (!remoteRequired)
                 	return inner.call(this);
 				return this.partialStore.cachedStore.cachedIdToRemoteId(cachedId).mapSuccess(function (remoteId) {
-					return this.partialStore.remoteStore.update(remoteId, data, ctx).mapSuccess(function (updatedData) {
+					return this.partialStore.remoteStore.update(remoteId, data, ctx, transaction_id).mapSuccess(function (updatedData) {
 						return inner.call(this, updatedData);
 					}, this);
 				}, this);
@@ -123,7 +123,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
 				}, this);
 			},
 
-			update: function (cachedId, data) {
+			update: function (cachedId, data, ctx, transaction_id) {
 				return this.partialStore.cachedStore.cachedIdToRemoteId(cachedId).mapSuccess(function (remoteId) {
 					var promise = this.partialStore.cachedStore.cacheUpdate(cachedId, data, {
 						lockAttrs: true,
@@ -131,9 +131,9 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.PreWriteStrategy", [
 						silent: true,
 						refreshMeta: false,
 						accessMeta: true
-					}).success(function (data) {
+					}, ctx, transaction_id).success(function (data) {
 						data = this.partialStore.cachedStore.removeItemSupp(data);
-						this.partialStore.remoteStore.update(remoteId, data).success(function () {
+						this.partialStore.remoteStore.update(remoteId, data, ctx, transaction_id).success(function () {
 							this.partialStore.cachedStore.unlockItem(cachedId);
 						}, this);
 					}, this);
@@ -211,14 +211,14 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 				}, this);
 			},
 
-			update: function (id, data) {
+			update: function (id, data, ctx, transaction_id) {
 				return this.partialStore.cachedStore.cacheUpdate(id, data, {
 					lockAttrs: true,
 					ignoreLock: true, // this was false before, not sure why.
 					silent: true,
 					refreshMeta: false,
 					accessMeta: true
-				}).success(function () {
+				}, ctx, transaction_id).success(function () {
 					data = this.partialStore.cachedStore.removeItemSupp(data);
 					this.storeHistory.sourceUpdate(id, data);
 				}, this);

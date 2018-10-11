@@ -43,9 +43,9 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			this.trigger("write", "remove", id, ctx, data);
 		},
 
-		_updated: function (row, data, ctx, pre_data) {
-			this.trigger("update", row, data, ctx, pre_data);
-			this.trigger("write", "update", row, data, ctx, pre_data);
+		_updated: function (row, data, ctx, pre_data, transaction_id) {
+			this.trigger("update", row, data, ctx, pre_data, transaction_id);
+			this.trigger("write", "update", row, data, ctx, pre_data, transaction_id);
 		}, 
 
 		insert_all: function (data, ctx) {
@@ -90,19 +90,19 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			}, this);
 		},
 
-		update: function (id, data, ctx) {
+		update: function (id, data, ctx, transaction_id) {
 			if (this.preserve_preupdate_data) {
                 return this.get(id, ctx).mapSuccess(function (pre_data) {
                 	var pre_data_filtered = {};
                 	for (var key in data)
                         pre_data_filtered[key] = pre_data[key];
-                	return this._update(id, data, ctx).success(function (row) {
-                        this._updated(Objs.extend(Objs.objectify(this._id_key, id), row), data, ctx, pre_data_filtered);
+                	return this._update(id, data, ctx, transaction_id).success(function (row) {
+                        this._updated(Objs.extend(Objs.objectify(this._id_key, id), row), data, ctx, pre_data_filtered, transaction_id);
                     }, this);
                 }, this);
 			} else {
-				return this._update(id, data, ctx).success(function (row) {
-                    this._updated(Objs.extend(Objs.objectify(this._id_key, id), row), data, ctx);
+				return this._update(id, data, ctx, transaction_id).success(function (row) {
+                    this._updated(Objs.extend(Objs.objectify(this._id_key, id), row), data, ctx, undefined, transaction_id);
                 }, this);
 			}
 		},

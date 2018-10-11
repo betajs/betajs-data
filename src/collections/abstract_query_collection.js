@@ -474,6 +474,8 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                     this._activeCreate(merged);
                 else if (!this.isValid(merged))
                     this._activeRemove(id);
+                else if (object.setAllNoChange)
+                    object.setAllNoChange(data);
                 else
                     object.setAll(data);
             },

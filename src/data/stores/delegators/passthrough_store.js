@@ -55,9 +55,9 @@ Scoped.define("module:Stores.PassthroughStore", [
 				}, this);
 			},
 
-			_update: function (id, data, ctx) {
+			_update: function (id, data, ctx, transaction_id) {
 				return this._preUpdate(id, data).mapSuccess(function (args) {
-					return this.__store.update(args.id, args.data, ctx).mapSuccess(function (row) {
+					return this.__store.update(args.id, args.data, ctx, transaction_id).mapSuccess(function (row) {
 						return this._postUpdate(row);
 					}, this);
 				}, this);

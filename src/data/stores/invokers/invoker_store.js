@@ -47,10 +47,11 @@ Scoped.define("module:Stores.Invokers.AbstractInvokerStore", [
 				return this._invoke("get", id, ctx);
 			},
 
-			_update: function (id, data, ctx) {
+			_update: function (id, data, ctx, transaction_id) {
 				return this._invoke("update", {
 					id: id,
-					data: data
+					data: data,
+					transaction_id: transaction_id
 				}, ctx);
 			},
 
@@ -119,7 +120,7 @@ Scoped.define("module:Stores.Invokers.StoreInvokeeInvoker", [
 			},
 
 			__update: function (data, context) {
-				return this.__store.update(data.id, data.data, context);
+				return this.__store.update(data.id, data.data, context, data.transaction_id);
 			},
 
 			__query: function (data, context) {

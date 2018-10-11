@@ -64,14 +64,14 @@ Scoped.define("module:Stores.CachedStore", [
 				}, ctx);
 			},
 
-			_update: function (id, data, ctx) {
+			_update: function (id, data, ctx, transaction_id) {
 				return this.cacheUpdate(id, data, {
 					ignoreLock: false,
 					silent: true,
 					lockAttrs: true,
 					refreshMeta: false,
 					accessMeta: true
-				}, ctx);
+				}, ctx, transaction_id);
 			},
 
 			_remove: function (id, ctx) {
@@ -135,7 +135,7 @@ Scoped.define("module:Stores.CachedStore", [
 			 *   - unlockItem: boolean (default false)
 			 */
 
-			cacheUpdate: function (id, data, options, ctx) {
+			cacheUpdate: function (id, data, options, ctx, transaction_id) {
 				var foreignKey = options.foreignKey && this._foreignKey;
 				var itemPromise = foreignKey ?
 					              this.itemCache.getBy(this.remoteStore.id_key(), id, ctx)
@@ -164,16 +164,16 @@ Scoped.define("module:Stores.CachedStore", [
 						meta.refreshMeta = this.cacheStrategy.itemRefreshMeta(meta.refreshMeta);
 					if (options.accessMeta)
 						meta.accessMeta = this.cacheStrategy.itemAccessMeta(meta.accessMeta);
-					return this.itemCache.update(this.itemCache.id_of(item), this.addItemMeta(data, meta), ctx).mapSuccess(function (result) {
+					return this.itemCache.update(this.itemCache.id_of(item), this.addItemMeta(data, meta), ctx, transaction_id).mapSuccess(function (result) {
 						result = this.removeItemMeta(result);
 						if (!options.silent)
-							this._updated(result, data, ctx);
+							this._updated(result, data, ctx, transaction_id);
 						return result;
 					}, this);
 				}, this);
 			},
 
-			cacheInsertUpdate: function (data, options, ctx) {
+			cacheInsertUpdate: function (data, options, ctx, transaction_id) {
 				var foreignKey = options.foreignKey && this._foreignKey;
 				var itemPromise = foreignKey ?
 					              this.itemCache.getBy(this.remoteStore.id_key(), this.remoteStore.id_of(data), ctx)
@@ -185,7 +185,7 @@ Scoped.define("module:Stores.CachedStore", [
 					var backup = Objs.clone(data, 1);
 					var itemId = this.itemCache.id_of(item);
 					backup[this.itemCache.id_key()] = itemId;
-					return this.cacheUpdate(itemId, data, options, ctx).mapSuccess(function (result) {
+					return this.cacheUpdate(itemId, data, options, ctx, transaction_id).mapSuccess(function (result) {
 						return Objs.extend(backup, result);
 					});
 				}, this);

@@ -5,8 +5,9 @@ Scoped.define("module:Modelling.Model", [
     "base:Promise",
     "base:Types",
     "base:Strings",
+    "base:Tokens",
     "module:Modelling.Table"
-], function(AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Strings, Table, scoped) {
+], function(AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Strings, Tokens, Table, scoped) {
     return AssociatedProperties.extend({
         scoped: scoped
     }, function(inherited) {
@@ -22,6 +23,7 @@ Scoped.define("module:Modelling.Model", [
                 this.__ctx = ctx;
                 this.__silent = 1;
                 inherited.constructor.call(this, attributes);
+                this.__transactionPrefix = Tokens.generate_token();
                 this.__silent = 0;
                 this.__removeOnDestroy = false;
                 if (!this.isNew()) {
@@ -39,6 +41,14 @@ Scoped.define("module:Modelling.Model", [
                     this.table().off(null, null, this);
                 this.trigger("destroy");
                 inherited.destroy.call(this);
+            },
+
+            newTransactionId: function() {
+                return this.__transactionPrefix + "-" + Tokens.generate_token();
+            },
+
+            isMyTransactionId: function(transactionId) {
+                return transactionId && transactionId.indexOf(this.__transactionPrefix) === 0;
             },
 
             ctx: function() {
@@ -84,20 +94,26 @@ Scoped.define("module:Modelling.Model", [
                 return this.option("removed");
             },
 
+            setAllNoChange: function(data) {
+                this.__silent++;
+                for (var key in data) {
+                    if (!this._properties_changed[key]) {
+                        this.set(key, data[key]);
+                        delete this._properties_changed[key];
+                    }
+                }
+                this.__silent--;
+            },
+
             _registerEvents: function() {
                 if (!this.table().options().active_models)
                     return;
-                this.__table.on("update:" + this.id(), function(data) {
+                this.__table.on("update:" + this.id(), function(data, row, pre_data, transaction_id) {
                     if (this.isRemoved())
                         return;
-                    this.__silent++;
-                    for (var key in data) {
-                        if (!this._properties_changed[key]) {
-                            this.set(key, data[key]);
-                            delete this._properties_changed[key];
-                        }
-                    }
-                    this.__silent--;
+                    if (this.isMyTransactionId(transaction_id))
+                        return;
+                    this.setAllNoChange(data);
                 }, this);
                 this.__table.on("remove:" + this.id(), function() {
                     if (this.isRemoved())
@@ -143,7 +159,7 @@ Scoped.define("module:Modelling.Model", [
                             return Promise.create(attrs);
                     }
                     var wasNew = this.isNew();
-                    var promise = this.isNew() ? this.__table.store().insert(attrs, this.__ctx) : this.__table.store().update(this.id(), attrs, this.__ctx);
+                    var promise = this.isNew() ? this.__table.store().insert(attrs, this.__ctx) : this.__table.store().update(this.id(), attrs, this.__ctx, this.newTransactionId());
                     return promise.mapCallback(function(err, result) {
                         if (this.destroyed())
                             return this;
@@ -156,7 +172,8 @@ Scoped.define("module:Modelling.Model", [
                             return new ModelInvalidException(this, err);
                         }
                         this.__silent++;
-                        this.setAll(result);
+                        if (!this.option("oblivious_updates") || wasNew)
+                            this.setAll(result);
                         this.__silent--;
                         this._properties_changed = {};
                         this.trigger("save");

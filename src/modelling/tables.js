@@ -30,15 +30,17 @@ Scoped.define("module:Modelling.Table", [
 
                     can_weakly_remove: false,
 
+                    oblivious_updates: true,
+
                     active_models: true
                 }, options || {});
                 this.__store.on("insert", function(obj) {
                     this.trigger("create", obj);
                 }, this);
-                this.__store.on("update", function(row, data) {
+                this.__store.on("update", function(row, data, ctx, pre_data, transaction_id) {
                     var id = row[this.primary_key()];
-                    this.trigger("update", id, data, row);
-                    this.trigger("update:" + id, data);
+                    this.trigger("update", id, data, row, pre_data, transaction_id);
+                    this.trigger("update:" + id, data, row, pre_data, transaction_id);
                 }, this);
                 this.__store.on("remove", function(id, ctx, data) {
                     this.trigger("remove", id, ctx, data);
