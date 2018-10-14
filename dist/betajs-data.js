@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.124 - 2018-10-11
+betajs-data - v1.0.125 - 2018-10-14
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.124 - 2018-10-11
+betajs-data - v1.0.125 - 2018-10-14
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,8 +1018,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.124",
-    "datetime": 1539281832573
+    "version": "1.0.125",
+    "datetime": 1539549759103
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -4090,12 +4090,12 @@ Scoped.define("module:Stores.WriteStoreMixin", [
                 	for (var key in data)
                         pre_data_filtered[key] = pre_data[key];
                 	return this._update(id, data, ctx, transaction_id).success(function (row) {
-                        this._updated(Objs.extend(Objs.objectify(this._id_key, id), row), data, ctx, pre_data_filtered, transaction_id);
+                        this._updated(Objs.extend(Objs.objectBy(this._id_key, id), row), data, ctx, pre_data_filtered, transaction_id);
                     }, this);
                 }, this);
 			} else {
 				return this._update(id, data, ctx, transaction_id).success(function (row) {
-                    this._updated(Objs.extend(Objs.objectify(this._id_key, id), row), data, ctx, undefined, transaction_id);
+                    this._updated(Objs.extend(Objs.objectBy(this._id_key, id), row), data, ctx, undefined, transaction_id);
                 }, this);
 			}
 		},
@@ -5552,7 +5552,8 @@ Scoped.define("module:Stores.Invokers.RestInvokeeAjaxInvoker", [
 });
 Scoped.define("module:Stores.Invokers.StoreInvokee", [], function () {
 	return {
-		storeInvoke: function (member, data, context) {}
+		storeInvoke: function (member, data, context) {},
+        storeInvokeWatcher: function (member, data, context) {}
 	};
 });
 
@@ -5587,6 +5588,10 @@ Scoped.define("module:Stores.Invokers.AbstractInvokerStore", [
 				throw "Abstract method invoke";
 			},
 
+            _invokeWatcher: function (member, data, context) {
+                throw "Abstract method invokeWatcher";
+			},
+
 			_insert: function (data, ctx) {
 				return this._invoke("insert", data, ctx);
 			},
@@ -5615,6 +5620,31 @@ Scoped.define("module:Stores.Invokers.AbstractInvokerStore", [
 			}
 
 		};
+	});
+});
+
+
+Scoped.define("module:Stores.Invokers.InvokerStoreWatcher", [
+    "module:Stores.Watchers.LocalWatcher"
+], function (LocalWatcher, scoped) {
+	return LocalWatcher.extend({scoped: scoped}, {
+
+        _watchItem : function(id) {
+            this._store._invokeWatcher("watchItem", id);
+		},
+
+        _unwatchItem : function(id) {
+            this._store._invokeWatcher("unwatchItem", id);
+		},
+
+        _watchInsert : function(query) {
+            this._store._invokeWatcher("watchInsert", query);
+		},
+
+        _unwatchInsert : function(query) {
+            this._store._invokeWatcher("unwatchInsert", query);
+		}
+
 	});
 });
 
@@ -5654,34 +5684,63 @@ Scoped.define("module:Stores.Invokers.StoreInvokeeInvoker", [
 				inherited.constructor.apply(this);
 				this.__store = store;
 			},
+
+			_store: function () {
+				return this.__store;
+			},
 			
 			storeInvoke: function (member, data, context) {
 				return this["__" + member](data, context);
 			},
-			
+
+            storeInvokeWatcher: function (member, data, context) {
+                this["__" + member](data, context);
+                return true;
+			},
+
 			__insert: function (data, context) {
-				return this.__store.insert(data, context);
+				return this._store().insert(data, context);
 			},
 		
 			__remove: function (id, context) {
-				return this.__store.remove(id, context);
+				return this._store().remove(id, context);
 			},
 
 			__get: function (id, context) {
-				return this.__store.get(id, context);
+				return this._store().get(id, context);
 			},
 
 			__update: function (data, context) {
-				return this.__store.update(data.id, data.data, context, data.transaction_id);
+				return this._store().update(data.id, data.data, context, data.transaction_id);
 			},
 
 			__query: function (data, context) {
-				return this.__store.query(data.query, data.options, context).mapSuccess(function (iter) {
+				return this._store().query(data.query, data.options, context).mapSuccess(function (iter) {
 					var result = iter.asArray();
 					iter.decreaseRef();
 					return result;
 				});
-			}
+			},
+
+            __watchItem: function (id, ctx) {
+                if (this._store().watcher())
+                    this._store().watcher().watchItem(id, ctx);
+            },
+
+            __unwatchItem: function (id, ctx) {
+                if (this._store().watcher())
+                    this._store().watcher().unwatchItem(id, ctx);
+            },
+
+            __watchInsert: function (query, ctx) {
+                if (this._store().watcher())
+                    this._store().watcher().watchInsert(query, ctx);
+            },
+
+            __unwatchInsert: function (query, ctx) {
+                if (this._store().watcher())
+                    this._store().watcher().unwatchInsert(query, ctx);
+            }
 
 		};
 	}]);
@@ -7025,6 +7084,14 @@ Scoped.define("module:Stores.ChannelClientStore", [
                     data: data,
                     context: context
                 });
+            },
+
+            _invokeWatcher: function (member, data, context) {
+                return this.transport.send("invokewatcher", {
+                    member: member,
+                    data: data,
+                    context: context
+                });
             }
 
         };
@@ -7046,6 +7113,8 @@ Scoped.define("module:Stores.ChannelServerStore", [
                 this.transport._reply = Functions.as_method(function (message, data) {
                     if (message === "invoke")
                         return this.storeInvoke(data.member, data.data, data.context);
+                    if (message === "invokewatcher")
+                        return this.storeInvokeWatcher(data.member, data.data, data.context);
                 }, this);
                 store.on('all', function (eventName) {
                     this.transport.send("event", {
@@ -7510,7 +7579,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 
 			watchItem : function(id, context) {
 				if (this.__items.register(id, context))
-					this._watchItem(id);
+                    this._watchItem(id);
 			},
 
 			unwatchItem : function(id, context) {
@@ -8672,7 +8741,7 @@ Scoped.define("module:Modelling.Model", [
                             return Promise.create(attrs);
                     }
                     var wasNew = this.isNew();
-                    var promise = this.isNew() ? this.__table.store().insert(attrs, this.__ctx) : this.__table.store().update(this.id(), attrs, this.__ctx, this.newTransactionId());
+                    var promise = this.isNew() ? this.__table._insertModel(attrs, this.__ctx) : this.__table._updateModel(this.id(), attrs, this.__ctx, this.newTransactionId());
                     return promise.mapCallback(function(err, result) {
                         if (this.destroyed())
                             return this;
@@ -8685,8 +8754,7 @@ Scoped.define("module:Modelling.Model", [
                             return new ModelInvalidException(this, err);
                         }
                         this.__silent++;
-                        if (!this.option("oblivious_updates") || wasNew)
-                            this.setAll(result);
+                        this.setAll(result);
                         this.__silent--;
                         this._properties_changed = {};
                         this.trigger("save");
@@ -9047,11 +9115,19 @@ Scoped.define("module:Modelling.Table", [
 
                     can_weakly_remove: false,
 
-                    oblivious_updates: true,
+                    oblivious_updates: false,
+                    oblivious_inserts: false,
 
-                    active_models: true
+                    active_models: true,
+
+                    id_generator: null
                 }, options || {});
+                this.__filteredInserts = {};
                 this.__store.on("insert", function(obj) {
+                    if (obj[this.primary_key()] in this.__filteredInserts) {
+                        delete this.__filteredInserts[obj[this.primary_key()]];
+                        return;
+                    }
                     this.trigger("create", obj);
                 }, this);
                 this.__store.on("update", function(row, data, ctx, pre_data, transaction_id) {
@@ -9181,6 +9257,22 @@ Scoped.define("module:Modelling.Table", [
                         this.__store.ensure_index(key);
                 }
                 return true;
+            },
+
+            _insertModel: function(attrs, ctx) {
+                if (!this.__options.oblivious_inserts)
+                    return this.store().insert(attrs, ctx);
+                var id = this.__options.id_generator.generate();
+                attrs[this.primary_key()] = id;
+                this.__filteredInserts[id] = true;
+                this.trigger("create", attrs);
+                this.store().insert(attrs, ctx);
+                return Promise.value(attrs);
+            },
+
+            _updateModel: function(id, attrs, ctx, transaction_id) {
+                var promise = this.store().update(id, attrs, ctx, transaction_id);
+                return this.__options.oblivious_updates ? Promise.value(attrs) : promise;
             }
 
         };

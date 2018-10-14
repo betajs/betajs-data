@@ -30,11 +30,19 @@ Scoped.define("module:Modelling.Table", [
 
                     can_weakly_remove: false,
 
-                    oblivious_updates: true,
+                    oblivious_updates: false,
+                    oblivious_inserts: false,
 
-                    active_models: true
+                    active_models: true,
+
+                    id_generator: null
                 }, options || {});
+                this.__filteredInserts = {};
                 this.__store.on("insert", function(obj) {
+                    if (obj[this.primary_key()] in this.__filteredInserts) {
+                        delete this.__filteredInserts[obj[this.primary_key()]];
+                        return;
+                    }
                     this.trigger("create", obj);
                 }, this);
                 this.__store.on("update", function(row, data, ctx, pre_data, transaction_id) {
@@ -164,6 +172,22 @@ Scoped.define("module:Modelling.Table", [
                         this.__store.ensure_index(key);
                 }
                 return true;
+            },
+
+            _insertModel: function(attrs, ctx) {
+                if (!this.__options.oblivious_inserts)
+                    return this.store().insert(attrs, ctx);
+                var id = this.__options.id_generator.generate();
+                attrs[this.primary_key()] = id;
+                this.__filteredInserts[id] = true;
+                this.trigger("create", attrs);
+                this.store().insert(attrs, ctx);
+                return Promise.value(attrs);
+            },
+
+            _updateModel: function(id, attrs, ctx, transaction_id) {
+                var promise = this.store().update(id, attrs, ctx, transaction_id);
+                return this.__options.oblivious_updates ? Promise.value(attrs) : promise;
             }
 
         };

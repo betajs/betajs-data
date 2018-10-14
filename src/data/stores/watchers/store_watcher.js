@@ -80,7 +80,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 
 			watchItem : function(id, context) {
 				if (this.__items.register(id, context))
-					this._watchItem(id);
+                    this._watchItem(id);
 			},
 
 			unwatchItem : function(id, context) {

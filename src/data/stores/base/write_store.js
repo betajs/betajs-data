@@ -97,12 +97,12 @@ Scoped.define("module:Stores.WriteStoreMixin", [
                 	for (var key in data)
                         pre_data_filtered[key] = pre_data[key];
                 	return this._update(id, data, ctx, transaction_id).success(function (row) {
-                        this._updated(Objs.extend(Objs.objectify(this._id_key, id), row), data, ctx, pre_data_filtered, transaction_id);
+                        this._updated(Objs.extend(Objs.objectBy(this._id_key, id), row), data, ctx, pre_data_filtered, transaction_id);
                     }, this);
                 }, this);
 			} else {
 				return this._update(id, data, ctx, transaction_id).success(function (row) {
-                    this._updated(Objs.extend(Objs.objectify(this._id_key, id), row), data, ctx, undefined, transaction_id);
+                    this._updated(Objs.extend(Objs.objectBy(this._id_key, id), row), data, ctx, undefined, transaction_id);
                 }, this);
 			}
 		},

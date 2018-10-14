@@ -159,7 +159,7 @@ Scoped.define("module:Modelling.Model", [
                             return Promise.create(attrs);
                     }
                     var wasNew = this.isNew();
-                    var promise = this.isNew() ? this.__table.store().insert(attrs, this.__ctx) : this.__table.store().update(this.id(), attrs, this.__ctx, this.newTransactionId());
+                    var promise = this.isNew() ? this.__table._insertModel(attrs, this.__ctx) : this.__table._updateModel(this.id(), attrs, this.__ctx, this.newTransactionId());
                     return promise.mapCallback(function(err, result) {
                         if (this.destroyed())
                             return this;
@@ -172,8 +172,7 @@ Scoped.define("module:Modelling.Model", [
                             return new ModelInvalidException(this, err);
                         }
                         this.__silent++;
-                        if (!this.option("oblivious_updates") || wasNew)
-                            this.setAll(result);
+                        this.setAll(result);
                         this.__silent--;
                         this._properties_changed = {};
                         this.trigger("save");

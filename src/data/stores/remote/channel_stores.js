@@ -21,6 +21,14 @@ Scoped.define("module:Stores.ChannelClientStore", [
                     data: data,
                     context: context
                 });
+            },
+
+            _invokeWatcher: function (member, data, context) {
+                return this.transport.send("invokewatcher", {
+                    member: member,
+                    data: data,
+                    context: context
+                });
             }
 
         };
@@ -42,6 +50,8 @@ Scoped.define("module:Stores.ChannelServerStore", [
                 this.transport._reply = Functions.as_method(function (message, data) {
                     if (message === "invoke")
                         return this.storeInvoke(data.member, data.data, data.context);
+                    if (message === "invokewatcher")
+                        return this.storeInvokeWatcher(data.member, data.data, data.context);
                 }, this);
                 store.on('all', function (eventName) {
                     this.transport.send("event", {
