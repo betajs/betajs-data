@@ -175,6 +175,7 @@ Scoped.define("module:Modelling.Table", [
             },
 
             _insertModel: function(attrs, ctx) {
+                delete attrs[this.primary_key()];
                 if (!this.__options.oblivious_inserts)
                     return this.store().insert(attrs, ctx);
                 var id = this.__options.id_generator.generate();
