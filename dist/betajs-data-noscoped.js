@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.127 - 2018-10-16
+betajs-data - v1.0.128 - 2018-10-19
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.127",
-    "datetime": 1539740887138
+    "version": "1.0.128",
+    "datetime": 1539880339692
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -490,7 +490,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 var merged = Objs.extend(row, data);
                 if (!object)
                     this._activeCreate(merged);
-                else if (!this.isValid(merged))
+                else if (!this.isValid(Objs.extend(Objs.clone(object.getAll(), 1), merged)))
                     this._activeRemove(id);
                 else if (object.setAllNoChange)
                     object.setAllNoChange(data);

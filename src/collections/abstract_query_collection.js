@@ -472,7 +472,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 var merged = Objs.extend(row, data);
                 if (!object)
                     this._activeCreate(merged);
-                else if (!this.isValid(merged))
+                else if (!this.isValid(Objs.extend(Objs.clone(object.getAll(), 1), merged)))
                     this._activeRemove(id);
                 else if (object.setAllNoChange)
                     object.setAllNoChange(data);
