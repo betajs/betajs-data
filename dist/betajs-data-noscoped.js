@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.128 - 2018-10-19
+betajs-data - v1.0.129 - 2018-10-22
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.128",
-    "datetime": 1539880339692
+    "version": "1.0.129",
+    "datetime": 1540156458295
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -7693,8 +7693,8 @@ Scoped.define("module:Modelling.Model", [
                 this.__table.on("remove:" + this.id(), function() {
                     if (this.isRemoved())
                         return;
-                    this.trigger("remove");
                     this.__options.removed = true;
+                    this.trigger("remove");
                 }, this);
             },
 
@@ -8020,8 +8020,9 @@ Scoped.define("module:Modelling.SchemedProperties", [
 
 
 Scoped.define("module:Modelling.AssociatedProperties", [
-    "module:Modelling.SchemedProperties"
-], function(SchemedProperties, scoped) {
+    "module:Modelling.SchemedProperties",
+    "base:Objs"
+], function(SchemedProperties, Objs, scoped) {
     return SchemedProperties.extend({
         scoped: scoped
     }, function(inherited) {
@@ -8037,8 +8038,10 @@ Scoped.define("module:Modelling.AssociatedProperties", [
             },
 
             destroy: function() {
-                for (var key in this.assocs)
-                    this.assocs[key].destroy();
+                Objs.iter(this.assocs, function(assoc) {
+                    if (assoc && assoc.weakDestroy)
+                        assoc.weakDestroy();
+                });
                 inherited.destroy.call(this);
             },
 

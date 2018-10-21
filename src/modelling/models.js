@@ -118,8 +118,8 @@ Scoped.define("module:Modelling.Model", [
                 this.__table.on("remove:" + this.id(), function() {
                     if (this.isRemoved())
                         return;
-                    this.trigger("remove");
                     this.__options.removed = true;
+                    this.trigger("remove");
                 }, this);
             },
 

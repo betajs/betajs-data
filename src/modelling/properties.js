@@ -211,8 +211,9 @@ Scoped.define("module:Modelling.SchemedProperties", [
 
 
 Scoped.define("module:Modelling.AssociatedProperties", [
-    "module:Modelling.SchemedProperties"
-], function(SchemedProperties, scoped) {
+    "module:Modelling.SchemedProperties",
+    "base:Objs"
+], function(SchemedProperties, Objs, scoped) {
     return SchemedProperties.extend({
         scoped: scoped
     }, function(inherited) {
@@ -228,8 +229,10 @@ Scoped.define("module:Modelling.AssociatedProperties", [
             },
 
             destroy: function() {
-                for (var key in this.assocs)
-                    this.assocs[key].destroy();
+                Objs.iter(this.assocs, function(assoc) {
+                    if (assoc && assoc.weakDestroy)
+                        assoc.weakDestroy();
+                });
                 inherited.destroy.call(this);
             },
 
