@@ -18,27 +18,26 @@ Scoped.define("module:Queries.Engine", [
     return {
 
         indexQueryConditionsSize: function(conds, index, ignoreCase) {
-            var add = ignoreCase ? "ic" : "";
             var postfix = ignoreCase ? "_ic" : "";
             var info = index.info();
             var subSize = info.row_count;
             var rows_per_key = info.row_count / Math.max(info["key_count" + postfix], 1);
-            if (conds["$eq" + add])
+            if (conds.$eq)
                 subSize = rows_per_key;
-            else if (conds["$in" + add])
-                subSize = rows_per_key * conds["$in" + add].length;
+            else if (conds.$in)
+                subSize = rows_per_key * conds.$in.length;
             else {
                 var keys = 0;
                 var g = null;
-                if (conds["$gt" + add] || conds["$gte" + add]) {
-                    g = conds["$gt" + add] || conds["$gte" + add];
-                    if (conds["$gt" + add])
+                if (conds.$gt || conds.$gte) {
+                    g = conds.$gt || conds.$gte;
+                    if (conds.$gt)
                         keys--;
                 }
                 var l = null;
-                if (conds["$lt" + add] || conds["$lte" + add]) {
-                    l = conds["$lt" + add] || conds["$lte" + add];
-                    if (conds["$lt" + add])
+                if (conds.$lt || conds.$lte) {
+                    l = conds.$lt || conds.$lte;
+                    if (conds.$lt)
                         keys--;
                 }
                 if (g !== null && l !== null)
@@ -154,25 +153,24 @@ Scoped.define("module:Queries.Engine", [
                         if (this.indexQueryConditionsSize(conds, index, true) < this.indexQueryConditionsSize(conds, index, false))
                             ignoreCase = true;
                     }
-                    var add = ignoreCase ? "ic" : "";
                     var postfix = ignoreCase ? "_ic" : "";
-                    if (conds["$eq" + add] || !Types.is_object(conds)) {
+                    if (conds.$eq || !Types.is_object(conds)) {
                         var materialized = [];
-                        var value = Types.is_object(conds) ? conds["$eq" + add] : conds;
+                        var value = Types.is_object(conds) ? conds.$eq : conds;
                         index["itemIterate" + postfix](value, primarySortDirection, function(dataKey, data) {
                             if (dataKey !== value)
                                 return false;
                             materialized.push(data);
                         });
                         iter = new ArrayIterator(materialized);
-                    } else if (conds["$in" + add]) {
+                    } else if (conds.$in) {
                         var i = 0;
                         iter = new LazyMultiArrayIterator(function() {
-                            if (i >= conds["$in" + add].length)
+                            if (i >= conds.$in.length)
                                 return null;
                             var materialized = [];
-                            index["itemIterate" + postfix](conds["$in" + add][i], primarySortDirection, function(dataKey, data) {
-                                if (dataKey !== conds["in" + add][i])
+                            index["itemIterate" + postfix](conds.$in[i], primarySortDirection, function(dataKey, data) {
+                                if (dataKey !== conds["in"][i])
                                     return false;
                                 materialized.push(data);
                             });
@@ -182,10 +180,10 @@ Scoped.define("module:Queries.Engine", [
                     } else {
                         var currentKey = null;
                         var lastKey = null;
-                        if (conds["$gt" + add] || conds["$gte" + add])
-                            currentKey = conds["$gt" + add] || conds["$gte" + add];
-                        if (conds["$lt" + add] || conds["$lte" + add])
-                            lastKey = conds["$lt" + add] || conds["$lte" + add];
+                        if (conds.$gt || conds.$gte)
+                            currentKey = conds.$gt || conds.$gte;
+                        if (conds.$lt || conds.$lte)
+                            lastKey = conds.$lt || conds.$lte;
                         if (primarySortDirection < 0) {
                             var temp = currentKey;
                             currentKey = lastKey;
@@ -265,7 +263,7 @@ Scoped.define("module:Queries.Engine", [
 
         _queryResultRectify: function(result, materialize) {
             result = result || [];
-            if (Types.is_array(result) == materialize)
+            if (Types.is_array(result) === materialize)
                 return result;
             if (materialize)
                 return result.asArray();

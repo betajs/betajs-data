@@ -137,3 +137,9 @@ QUnit.test("query diff both", function (assert) {
     assert.deepEqual(BetaJS.Data.Queries.rangeSuperQueryDiffQuery(supr, sub), diff);
 });
 
+QUnit.test("query with regex", function (assert) {
+    assert.equal(BetaJS.Data.Queries.evaluate({key: {"$regex": "oo B"}}, {key: "Foo Bar"}), true);
+    assert.equal(BetaJS.Data.Queries.evaluate({key: {"$regex": "op B"}}, {key: "Foo Bar"}), false);
+    assert.equal(BetaJS.Data.Queries.evaluate({key: {"$regex": "oo b"}}, {key: "Foo Bar"}), false);
+    assert.equal(BetaJS.Data.Queries.evaluate({key: {"$regex": "oo b", "$options": "i"}}, {key: "Foo Bar"}), true);
+});

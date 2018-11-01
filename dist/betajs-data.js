@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.129 - 2018-10-22
+betajs-data - v1.0.130 - 2018-11-01
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.129 - 2018-10-22
+betajs-data - v1.0.130 - 2018-11-01
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,8 +1018,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.129",
-    "datetime": 1540156458295
+    "version": "1.0.130",
+    "datetime": 1541038744639
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -2411,19 +2411,6 @@ Scoped.define("module:Queries", [
                 return object_value <= condition_value;
             }
         },
-        "$sw": {
-            target: "atom",
-            evaluate_single: function(object_value, condition_value) {
-                return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) === 0);
-            }
-        },
-        "$ct": {
-            target: "atom",
-            no_index_support: true,
-            evaluate_single: function(object_value, condition_value) {
-                return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) >= 0);
-            }
-        },
         "$eq": {
             target: "atom",
             evaluate_single: function(object_value, condition_value) {
@@ -2436,21 +2423,24 @@ Scoped.define("module:Queries", [
                 return object_value !== condition_value;
             }
         },
+        "$regex": {
+            target: "atom",
+            evaluate_single: function(object_value, condition_value, all_conditions) {
+                return Strings.cachedRegExp(condition_value, all_conditions.$options).test(object_value);
+            }
+        },
+        "$options": {
+            target: "atom",
+            evaluate_single: function(object_value, condition_value) {
+                return true;
+            }
+        },
         "$elemMatch": {
             target: "query",
             no_index_support: true,
             evaluate_combine: Objs.exists
         }
     };
-
-    Objs.iter(Objs.clone(SYNTAX_CONDITION_KEYS, 1), function(value, key) {
-        var valueic = Objs.clone(value, 1);
-        valueic.evaluate_single = function(object_value, condition_value) {
-            return value.evaluate_single(Types.is_string(object_value) ? object_value.toLowerCase() : object_value, Types.is_string(condition_value) ? condition_value.toLowerCase() : condition_value);
-        };
-        valueic.ignore_case = true;
-        SYNTAX_CONDITION_KEYS[key + "ic"] = valueic;
-    });
 
 
     return {
@@ -2465,7 +2455,7 @@ Scoped.define("module:Queries", [
          * pair :== key: value | $or : queries | $and: queries
          * value :== atom | conditions
          * conditions :== {condition, ...}  
-         * condition :== $in: atoms | $gt: atom | $lt: atom | $gte: atom | $lte: atom | $sw: atom | $ct: atom | all with ic
+         * condition :== $in: atoms | $gt: atom | $lt: atom | $gte: atom | $lte: atom | $regex: atom | $elemMatch
          *
          */
 
@@ -2611,18 +2601,18 @@ Scoped.define("module:Queries", [
 
         evaluate_conditions: function(value, object_value) {
             return Objs.all(value, function(condition_value, condition_key) {
-                return this.evaluate_condition(condition_value, condition_key, object_value);
+                return this.evaluate_condition(condition_value, condition_key, object_value, value);
             }, this);
         },
 
-        evaluate_condition: function(condition_value, condition_key, object_value) {
+        evaluate_condition: function(condition_value, condition_key, object_value, all_conditions) {
             var rec = this.SYNTAX_CONDITION_KEYS[condition_key];
             if (rec.target === "atoms") {
                 return rec.evaluate_combine.call(Objs, condition_value, function(condition_single_value) {
-                    return rec.evaluate_single.call(this, object_value, condition_single_value);
+                    return rec.evaluate_single.call(this, object_value, condition_single_value, all_conditions);
                 }, this);
             } else if (rec.target === "atom")
-                return rec.evaluate_single.call(this, object_value, condition_value);
+                return rec.evaluate_single.call(this, object_value, condition_value, all_conditions);
             else if (rec.target === "query") {
                 return rec.evaluate_combine.call(Objs, object_value, function(object_single_value) {
                     /*
@@ -2773,12 +2763,6 @@ Scoped.define("module:Queries", [
                             }
                         });
                     }
-                    if (Strings.starts_with(condition, "$sw")) {
-                        if (Strings.starts_with(base, target))
-                            obj[condition] = target;
-                        else if (!Strings.starts_with(target, base))
-                            fail = true;
-                    }
                     if (Strings.starts_with(condition, "$gt"))
                         if (Comparators.byValue(base, target) < 0)
                             obj[condition] = target;
@@ -2904,28 +2888,10 @@ Scoped.define("module:Queries", [
                         lte = true;
                         lt = conditions["$lte" + add];
                     }
-                    if (conditions["$sw" + add]) {
-                        var s = conditions["$sw" + add];
-                        if (gt === null || compare(gt, s) <= 0) {
-                            gte = true;
-                            gt = s;
-                        }
-                        var swnext = null;
-                        if (typeof(s) === 'number')
-                            swnext = s + 1;
-                        else if (typeof(s) === 'string' && s.length > 0)
-                            swnext = s.substring(0, s.length - 1) + String.fromCharCode(s.charCodeAt(s.length - 1) + 1);
-                        if (swnext !== null && (lt === null || compare(lt, swnext) >= 0)) {
-                            lte = true;
-                            lt = swnext;
-                        }
-                    }
                     if (lt !== null)
                         result[(lte ? "$lte" : "$lt") + add] = lt;
                     if (gt !== null)
                         result[(gte ? "$gte" : "$gt") + add] = gt;
-                    if (conditions["$ct" + add])
-                        result["$ct" + add] = conditions["$ct" + add];
                 }
             }, this);
             return result;
@@ -2984,6 +2950,13 @@ Scoped.define("module:Queries", [
                 } else
                     return key in attributes && (!requireInequality || attributes[key] !== value);
             }, this);
+        },
+
+        searchTextQuery: function(text, ignoreCase) {
+            return {
+                $regex: Strings.regexEscape(text || ""),
+                $options: ignoreCase ? "i" : ""
+            };
         }
 
     };
@@ -3244,27 +3217,26 @@ Scoped.define("module:Queries.Engine", [
     return {
 
         indexQueryConditionsSize: function(conds, index, ignoreCase) {
-            var add = ignoreCase ? "ic" : "";
             var postfix = ignoreCase ? "_ic" : "";
             var info = index.info();
             var subSize = info.row_count;
             var rows_per_key = info.row_count / Math.max(info["key_count" + postfix], 1);
-            if (conds["$eq" + add])
+            if (conds.$eq)
                 subSize = rows_per_key;
-            else if (conds["$in" + add])
-                subSize = rows_per_key * conds["$in" + add].length;
+            else if (conds.$in)
+                subSize = rows_per_key * conds.$in.length;
             else {
                 var keys = 0;
                 var g = null;
-                if (conds["$gt" + add] || conds["$gte" + add]) {
-                    g = conds["$gt" + add] || conds["$gte" + add];
-                    if (conds["$gt" + add])
+                if (conds.$gt || conds.$gte) {
+                    g = conds.$gt || conds.$gte;
+                    if (conds.$gt)
                         keys--;
                 }
                 var l = null;
-                if (conds["$lt" + add] || conds["$lte" + add]) {
-                    l = conds["$lt" + add] || conds["$lte" + add];
-                    if (conds["$lt" + add])
+                if (conds.$lt || conds.$lte) {
+                    l = conds.$lt || conds.$lte;
+                    if (conds.$lt)
                         keys--;
                 }
                 if (g !== null && l !== null)
@@ -3380,25 +3352,24 @@ Scoped.define("module:Queries.Engine", [
                         if (this.indexQueryConditionsSize(conds, index, true) < this.indexQueryConditionsSize(conds, index, false))
                             ignoreCase = true;
                     }
-                    var add = ignoreCase ? "ic" : "";
                     var postfix = ignoreCase ? "_ic" : "";
-                    if (conds["$eq" + add] || !Types.is_object(conds)) {
+                    if (conds.$eq || !Types.is_object(conds)) {
                         var materialized = [];
-                        var value = Types.is_object(conds) ? conds["$eq" + add] : conds;
+                        var value = Types.is_object(conds) ? conds.$eq : conds;
                         index["itemIterate" + postfix](value, primarySortDirection, function(dataKey, data) {
                             if (dataKey !== value)
                                 return false;
                             materialized.push(data);
                         });
                         iter = new ArrayIterator(materialized);
-                    } else if (conds["$in" + add]) {
+                    } else if (conds.$in) {
                         var i = 0;
                         iter = new LazyMultiArrayIterator(function() {
-                            if (i >= conds["$in" + add].length)
+                            if (i >= conds.$in.length)
                                 return null;
                             var materialized = [];
-                            index["itemIterate" + postfix](conds["$in" + add][i], primarySortDirection, function(dataKey, data) {
-                                if (dataKey !== conds["in" + add][i])
+                            index["itemIterate" + postfix](conds.$in[i], primarySortDirection, function(dataKey, data) {
+                                if (dataKey !== conds["in"][i])
                                     return false;
                                 materialized.push(data);
                             });
@@ -3408,10 +3379,10 @@ Scoped.define("module:Queries.Engine", [
                     } else {
                         var currentKey = null;
                         var lastKey = null;
-                        if (conds["$gt" + add] || conds["$gte" + add])
-                            currentKey = conds["$gt" + add] || conds["$gte" + add];
-                        if (conds["$lt" + add] || conds["$lte" + add])
-                            lastKey = conds["$lt" + add] || conds["$lte" + add];
+                        if (conds.$gt || conds.$gte)
+                            currentKey = conds.$gt || conds.$gte;
+                        if (conds.$lt || conds.$lte)
+                            lastKey = conds.$lt || conds.$lte;
                         if (primarySortDirection < 0) {
                             var temp = currentKey;
                             currentKey = lastKey;
@@ -3491,7 +3462,7 @@ Scoped.define("module:Queries.Engine", [
 
         _queryResultRectify: function(result, materialize) {
             result = result || [];
-            if (Types.is_array(result) == materialize)
+            if (Types.is_array(result) === materialize)
                 return result;
             if (materialize)
                 return result.asArray();

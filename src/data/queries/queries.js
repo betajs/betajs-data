@@ -51,19 +51,6 @@ Scoped.define("module:Queries", [
                 return object_value <= condition_value;
             }
         },
-        "$sw": {
-            target: "atom",
-            evaluate_single: function(object_value, condition_value) {
-                return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) === 0);
-            }
-        },
-        "$ct": {
-            target: "atom",
-            no_index_support: true,
-            evaluate_single: function(object_value, condition_value) {
-                return object_value === condition_value || (Types.is_string(object_value) && object_value.indexOf(condition_value) >= 0);
-            }
-        },
         "$eq": {
             target: "atom",
             evaluate_single: function(object_value, condition_value) {
@@ -76,21 +63,24 @@ Scoped.define("module:Queries", [
                 return object_value !== condition_value;
             }
         },
+        "$regex": {
+            target: "atom",
+            evaluate_single: function(object_value, condition_value, all_conditions) {
+                return Strings.cachedRegExp(condition_value, all_conditions.$options).test(object_value);
+            }
+        },
+        "$options": {
+            target: "atom",
+            evaluate_single: function(object_value, condition_value) {
+                return true;
+            }
+        },
         "$elemMatch": {
             target: "query",
             no_index_support: true,
             evaluate_combine: Objs.exists
         }
     };
-
-    Objs.iter(Objs.clone(SYNTAX_CONDITION_KEYS, 1), function(value, key) {
-        var valueic = Objs.clone(value, 1);
-        valueic.evaluate_single = function(object_value, condition_value) {
-            return value.evaluate_single(Types.is_string(object_value) ? object_value.toLowerCase() : object_value, Types.is_string(condition_value) ? condition_value.toLowerCase() : condition_value);
-        };
-        valueic.ignore_case = true;
-        SYNTAX_CONDITION_KEYS[key + "ic"] = valueic;
-    });
 
 
     return {
@@ -105,7 +95,7 @@ Scoped.define("module:Queries", [
          * pair :== key: value | $or : queries | $and: queries
          * value :== atom | conditions
          * conditions :== {condition, ...}  
-         * condition :== $in: atoms | $gt: atom | $lt: atom | $gte: atom | $lte: atom | $sw: atom | $ct: atom | all with ic
+         * condition :== $in: atoms | $gt: atom | $lt: atom | $gte: atom | $lte: atom | $regex: atom | $elemMatch
          *
          */
 
@@ -251,18 +241,18 @@ Scoped.define("module:Queries", [
 
         evaluate_conditions: function(value, object_value) {
             return Objs.all(value, function(condition_value, condition_key) {
-                return this.evaluate_condition(condition_value, condition_key, object_value);
+                return this.evaluate_condition(condition_value, condition_key, object_value, value);
             }, this);
         },
 
-        evaluate_condition: function(condition_value, condition_key, object_value) {
+        evaluate_condition: function(condition_value, condition_key, object_value, all_conditions) {
             var rec = this.SYNTAX_CONDITION_KEYS[condition_key];
             if (rec.target === "atoms") {
                 return rec.evaluate_combine.call(Objs, condition_value, function(condition_single_value) {
-                    return rec.evaluate_single.call(this, object_value, condition_single_value);
+                    return rec.evaluate_single.call(this, object_value, condition_single_value, all_conditions);
                 }, this);
             } else if (rec.target === "atom")
-                return rec.evaluate_single.call(this, object_value, condition_value);
+                return rec.evaluate_single.call(this, object_value, condition_value, all_conditions);
             else if (rec.target === "query") {
                 return rec.evaluate_combine.call(Objs, object_value, function(object_single_value) {
                     /*
@@ -413,12 +403,6 @@ Scoped.define("module:Queries", [
                             }
                         });
                     }
-                    if (Strings.starts_with(condition, "$sw")) {
-                        if (Strings.starts_with(base, target))
-                            obj[condition] = target;
-                        else if (!Strings.starts_with(target, base))
-                            fail = true;
-                    }
                     if (Strings.starts_with(condition, "$gt"))
                         if (Comparators.byValue(base, target) < 0)
                             obj[condition] = target;
@@ -544,28 +528,10 @@ Scoped.define("module:Queries", [
                         lte = true;
                         lt = conditions["$lte" + add];
                     }
-                    if (conditions["$sw" + add]) {
-                        var s = conditions["$sw" + add];
-                        if (gt === null || compare(gt, s) <= 0) {
-                            gte = true;
-                            gt = s;
-                        }
-                        var swnext = null;
-                        if (typeof(s) === 'number')
-                            swnext = s + 1;
-                        else if (typeof(s) === 'string' && s.length > 0)
-                            swnext = s.substring(0, s.length - 1) + String.fromCharCode(s.charCodeAt(s.length - 1) + 1);
-                        if (swnext !== null && (lt === null || compare(lt, swnext) >= 0)) {
-                            lte = true;
-                            lt = swnext;
-                        }
-                    }
                     if (lt !== null)
                         result[(lte ? "$lte" : "$lt") + add] = lt;
                     if (gt !== null)
                         result[(gte ? "$gte" : "$gt") + add] = gt;
-                    if (conditions["$ct" + add])
-                        result["$ct" + add] = conditions["$ct" + add];
                 }
             }, this);
             return result;
@@ -624,6 +590,13 @@ Scoped.define("module:Queries", [
                 } else
                     return key in attributes && (!requireInequality || attributes[key] !== value);
             }, this);
+        },
+
+        searchTextQuery: function(text, ignoreCase) {
+            return {
+                $regex: Strings.regexEscape(text || ""),
+                $options: ignoreCase ? "i" : ""
+            };
         }
 
     };
