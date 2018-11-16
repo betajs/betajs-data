@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.130 - 2018-11-01
+betajs-data - v1.0.130 - 2018-11-16
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -12,7 +12,7 @@ Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
     "version": "1.0.130",
-    "datetime": 1541038744639
+    "datetime": 1542405096906
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6874,6 +6874,8 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
             _remove: function(item) {},
 
             add: function(item) {
+                if (this.collection.isAcquired())
+                    this.collection.value().add(item);
                 return this._add(item);
             },
 
@@ -7007,7 +7009,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                 return {
                     "query": Objs.extend(Objs.objectBy(
                         this._options.foreign_attr || this._foreignTable().primary_key(), Objs.objectBy(
-                            this._options.ignore_case ? "$inic" : "$in",
+                            "$in",
                             arr
                         )), query)
                 };
@@ -7028,8 +7030,6 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
             _mapValue: function(value) {
                 if (this._options.map)
                     value = this._options.map.call(this._options.mapctx || this, value);
-                if (this._options.ignore_case)
-                    value = value.toLowerCase();
                 return value;
             },
 
@@ -8087,7 +8087,9 @@ Scoped.define("module:Modelling.Table", [
 
                     active_models: true,
 
-                    id_generator: null
+                    id_generator: null,
+
+                    keep_primary_keys: false
                 }, options || {});
                 this.__filteredInserts = {};
                 this.__store.on("insert", function(obj) {
@@ -8227,7 +8229,8 @@ Scoped.define("module:Modelling.Table", [
             },
 
             _insertModel: function(attrs, ctx) {
-                delete attrs[this.primary_key()];
+                if (!this.__options.keep_primary_keys)
+                    delete attrs[this.primary_key()];
                 if (!this.__options.oblivious_inserts)
                     return this.store().insert(attrs, ctx);
                 var id = this.__options.id_generator.generate();

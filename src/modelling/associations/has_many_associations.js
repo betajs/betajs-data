@@ -87,6 +87,8 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
             _remove: function(item) {},
 
             add: function(item) {
+                if (this.collection.isAcquired())
+                    this.collection.value().add(item);
                 return this._add(item);
             },
 

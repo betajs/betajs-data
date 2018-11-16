@@ -35,7 +35,9 @@ Scoped.define("module:Modelling.Table", [
 
                     active_models: true,
 
-                    id_generator: null
+                    id_generator: null,
+
+                    keep_primary_keys: false
                 }, options || {});
                 this.__filteredInserts = {};
                 this.__store.on("insert", function(obj) {
@@ -175,7 +177,8 @@ Scoped.define("module:Modelling.Table", [
             },
 
             _insertModel: function(attrs, ctx) {
-                delete attrs[this.primary_key()];
+                if (!this.__options.keep_primary_keys)
+                    delete attrs[this.primary_key()];
                 if (!this.__options.oblivious_inserts)
                     return this.store().insert(attrs, ctx);
                 var id = this.__options.id_generator.generate();

@@ -38,7 +38,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                 return {
                     "query": Objs.extend(Objs.objectBy(
                         this._options.foreign_attr || this._foreignTable().primary_key(), Objs.objectBy(
-                            this._options.ignore_case ? "$inic" : "$in",
+                            "$in",
                             arr
                         )), query)
                 };
@@ -59,8 +59,6 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
             _mapValue: function(value) {
                 if (this._options.map)
                     value = this._options.map.call(this._options.mapctx || this, value);
-                if (this._options.ignore_case)
-                    value = value.toLowerCase();
                 return value;
             },
 
