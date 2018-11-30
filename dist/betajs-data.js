@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.130 - 2018-11-16
+betajs-data - v1.0.132 - 2018-11-30
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.130 - 2018-11-16
+betajs-data - v1.0.132 - 2018-11-30
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,8 +1018,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.130",
-    "datetime": 1542405096906
+    "version": "1.0.132",
+    "datetime": 1543604449262
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -3803,8 +3803,9 @@ Scoped.define("module:Stores.StoreHistory", [
 	"base:Events.EventsMixin",
 	"base:Objs",
 	"base:Types",
+	"base:Promise",
 	"module:Stores.MemoryStore"
-], function (Class, EventsMixin, Objs, Types, MemoryStore, scoped) {
+], function (Class, EventsMixin, Objs, Types, Promise, MemoryStore, scoped) {
 	return Class.extend({scoped: scoped}, [EventsMixin, function (inherited) {
 		return {
 
@@ -3853,6 +3854,7 @@ Scoped.define("module:Stores.StoreHistory", [
 				this.commitId++;
 				var row_id = Types.is_object(row) ? row[this._options.source_id_key] : row;
 				var target_type = "update";
+				var cont = Promise.create();
 				if (this._options.combine_insert_update || this._options.combine_update_update) {
 					var types = [];
 					if (this._options.combine_insert_update)
@@ -3865,67 +3867,72 @@ Scoped.define("module:Stores.StoreHistory", [
 					if (this.lockedCommits)
 						query.commit_id = {"$gt": this.lockedCommits};
 					if (types.length === 1)
-						query.type = types[0];
+						query = Objs.extend(query, types[0]);
 					else
 						query.$or = types;
-					var iter = this.historyStore.query(query, {sort: {commit_id: 1}}).value();
-					while (iter.hasNext()) {
-						var itemData = iter.next();
-						if (itemData.type === "insert")
-							target_type = "insert";
-						combined_data = Objs.extend(combined_data, itemData.row);
-						delete_ids.push(this.historyStore.id_of(itemData));
-					}
-					iter.destroy();
-					data = Objs.extend(combined_data, data);
-					Objs.iter(delete_ids, this.historyStore.remove, this.historyStore);
-				}
-				this.historyStore.insert(Objs.extend({
-					row: data,
-					pre_data: pre_data,
-					type: target_type,
-					row_id: row_id,
-					commit_id: this.commitId
-				}, this._options.row_data));
-                this.trigger("update", this.commitId);
-                this.trigger("update:" + row_id, this.commitId);
-                return this.commitId;
+                    this.historyStore.query(query, {sort: {commit_id: 1}}).success(function (iter) {
+                        while (iter.hasNext()) {
+                            var itemData = iter.next();
+                            if (itemData.type === "insert")
+                                target_type = "insert";
+                            combined_data = Objs.extend(combined_data, itemData.row);
+                            delete_ids.push(this.historyStore.id_of(itemData));
+                        }
+                        iter.destroy();
+                        data = Objs.extend(combined_data, data);
+                        this.historyStore.removeAllByIds(delete_ids);
+                        cont.asyncSuccess(true);
+					}, this);
+				} else
+					cont.asyncSuccess(true);
+				cont.success(function () {
+                    this.historyStore.insert(Objs.extend({
+                        row: data,
+                        pre_data: pre_data,
+                        type: target_type,
+                        row_id: row_id,
+                        commit_id: this.commitId
+                    }, this._options.row_data));
+                    this.trigger("update", this.commitId);
+                    this.trigger("update:" + row_id, this.commitId);
+				}, this);
 			},
 
 			sourceRemove: function (id, data) {
-				this.commitId++;
+                this.commitId++;
+                var cont = Promise.create();
 				if (this._options.combine_insert_remove) {
-					if (this.historyStore.query(Objs.extend({
-						type: "insert",
-						row_id: id
-					}, this._options.filter_data)).value().hasNext()) {
-						var iter = this.historyStore.query(Objs.extend({
-							row_id: id
-						}, this._options.filter_data)).value();
-						while (iter.hasNext())
-							this.historyStore.remove(this.historyStore.id_of(iter.next()));
+                    this.historyStore.query(Objs.extend({
+                        type: "insert",
+                        row_id: id
+                    }, this._options.filter_data)).success(function (iter) {
+						if (iter.hasNext()) {
+                            this.historyStore.removeAllByQuery(Objs.extend({
+                                row_id: id
+                            }, this._options.filter_data));
+                            return;
+						} else
+							cont.asyncSuccess(true);
 						iter.destroy();
-						return;
-					}
-				}
-				if (this._options.combine_update_remove) {
-					var iter2 = this.historyStore.query(Objs.extend({
-						type: "update",
-						row_id: id
-					}, this._options.filter_data)).value();
-					while (iter2.hasNext())
-						this.historyStore.remove(this.historyStore.id_of(iter2.next()));
-					iter2.destroy();
-				}
-				this.historyStore.insert(Objs.extend({
-					type: "remove",
-					row_id: id,
-					row: data,
-					commit_id: this.commitId
-				}, this._options.row_data));
-                this.trigger("remove", this.commitId);
-                this.trigger("remove:" + id, this.commitId);
-                return this.commitId;
+					}, this);
+				} else
+					cont.asyncSuccess(true);
+				cont.success(function () {
+                    if (this._options.combine_update_remove) {
+                        this.historyStore.removeAllByQuery(Objs.extend({
+                            type: "update",
+                            row_id: id
+                        }, this._options.filter_data));
+                    }
+                    this.historyStore.insert(Objs.extend({
+                        type: "remove",
+                        row_id: id,
+                        row: data,
+                        commit_id: this.commitId
+                    }, this._options.row_data));
+                    this.trigger("remove", this.commitId);
+                    this.trigger("remove:" + id, this.commitId);
+				}, this);
 			},
 
 			getCommitById: function (commitId) {
@@ -4051,6 +4058,18 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 		remove: function (id, ctx) {
 			return this._remove(id, ctx).success(function (data) {
 				this._removed(id, ctx, data);
+			}, this);
+		},
+
+		removeAllByIds: function (ids, ctx) {
+			return Promise.and(ids.map(function (id) {
+				return this.remove(id, ctx);
+			}, this));
+		},
+
+		removeAllByQuery: function (query, options, ctx) {
+			return this.query(query, options, ctx).mapSuccess(function (iter) {
+				return this.removeAllByIds(iter.asArray().map(this.id_of, this));
 			}, this);
 		},
 
@@ -6715,7 +6734,8 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					},
 					filter_data: {
 						pushed: false
-					}
+					},
+                    pushedStateOnFail: true
 				}, this._options)));
 				if (this._options.auto_push) {
 					this._timer = this.auto_destroy(new Timer({
@@ -6797,7 +6817,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					var commit_id = hs.id_of(commit);
 					if (commit_id in failedIds) {
 						hs.update(commit_id, {
-							pushed: true,
+							pushed: this._options.pushedStateOnFail,
 							success: false
 						});
 						return next.apply(this);
@@ -6826,7 +6846,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 							return next.apply(this);
 						}, this).mapError(function () {
 							hs.update(commit_id, {
-								pushed: true,
+								pushed: this._options.pushedStateOnFail,
 								success: false
 							});
 							failedIds[commit_id] = true;

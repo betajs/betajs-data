@@ -173,7 +173,8 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					},
 					filter_data: {
 						pushed: false
-					}
+					},
+                    pushedStateOnFail: true
 				}, this._options)));
 				if (this._options.auto_push) {
 					this._timer = this.auto_destroy(new Timer({
@@ -255,7 +256,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					var commit_id = hs.id_of(commit);
 					if (commit_id in failedIds) {
 						hs.update(commit_id, {
-							pushed: true,
+							pushed: this._options.pushedStateOnFail,
 							success: false
 						});
 						return next.apply(this);
@@ -284,7 +285,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 							return next.apply(this);
 						}, this).mapError(function () {
 							hs.update(commit_id, {
-								pushed: true,
+								pushed: this._options.pushedStateOnFail,
 								success: false
 							});
 							failedIds[commit_id] = true;

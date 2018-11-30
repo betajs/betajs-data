@@ -1,4 +1,4 @@
-# betajs-data 1.0.130
+# betajs-data 1.0.132
 [![Build Status](https://api.travis-ci.org/betajs/betajs-data.svg?branch=master)](https://travis-ci.org/betajs/betajs-data)
 [![Code Climate](https://codeclimate.com/github/betajs/betajs-data/badges/gpa.svg)](https://codeclimate.com/github/betajs/betajs-data)
 [![NPM](https://img.shields.io/npm/v/betajs-data.svg?style=flat)](https://www.npmjs.com/package/betajs-data)
@@ -143,7 +143,7 @@ The BetaJS Data module contains the following subsystems:
 | Edge | 12 - Latest |
 | Yandex | Latest |
 | iOS | 3.0 - Latest |
-| Android | 2.2 - Latest |
+| Android | 4.4 - Latest |
 | NodeJS | 4.0 - Latest |
 
 

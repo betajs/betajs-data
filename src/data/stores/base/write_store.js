@@ -90,6 +90,18 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			}, this);
 		},
 
+		removeAllByIds: function (ids, ctx) {
+			return Promise.and(ids.map(function (id) {
+				return this.remove(id, ctx);
+			}, this));
+		},
+
+		removeAllByQuery: function (query, options, ctx) {
+			return this.query(query, options, ctx).mapSuccess(function (iter) {
+				return this.removeAllByIds(iter.asArray().map(this.id_of, this));
+			}, this);
+		},
+
 		update: function (id, data, ctx, transaction_id) {
 			if (this.preserve_preupdate_data) {
                 return this.get(id, ctx).mapSuccess(function (pre_data) {
