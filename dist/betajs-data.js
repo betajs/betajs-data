@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.132 - 2018-11-30
+betajs-data - v1.0.133 - 2018-12-09
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.132 - 2018-11-30
+betajs-data - v1.0.133 - 2018-12-09
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,8 +1018,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.132",
-    "datetime": 1543604449262
+    "version": "1.0.133",
+    "datetime": 1544401178983
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -7691,8 +7691,10 @@ Scoped.extend("module:Modelling.ActiveModel", [
                     this._watcher().unwatchInsert(null, this);
                     this._watcher().unwatchItem(null, this);
                 }
-                if (this.get("model"))
-                    this.get("model").weakDestroy();
+                if (this.get("model")) {
+                    this.get("model").off(null, null, this);
+                    this.get("model").decreaseRef();
+                }
                 this._table.off(null, null, this);
                 inherited.destroy.call(this);
             },
@@ -7724,6 +7726,7 @@ Scoped.extend("module:Modelling.ActiveModel", [
 
             _registerModel: function(model) {
                 this.set("model", model);
+                model.increaseRef();
                 if (this._watcher() && !model.isNew())
                     this._watcher().watchItem(model.id(), this);
                 model.on("change", function() {
@@ -7739,7 +7742,7 @@ Scoped.extend("module:Modelling.ActiveModel", [
                 var model = this.get("model");
                 if (model && Properties.is_class_instance(model)) {
                     Async.eventually(function() {
-                        model.weakDestroy();
+                        model.decreaseRef();
                     });
                 }
                 if (this._watcher())
@@ -7751,6 +7754,11 @@ Scoped.extend("module:Modelling.ActiveModel", [
                         this._registerModel(model);
                     else if (this._options.create_virtual)
                         this._registerModel(this._options.create_virtual.call(this._options.create_virtual_ctx || this, this._query));
+                    else if (this._options.create_on_demand) {
+                        model = this._table.newModel(this._query);
+                        this._registerModel(model);
+                        model.save();
+                    }
                 }, this).callback(function() {
                     this.__find_by_acquiring = false;
                     this.trigger('find-by-acquired');
@@ -8134,6 +8142,15 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
             constructor: function() {
                 inherited.constructor.apply(this, arguments);
                 this.active = new SharedObjectFactory(this.newActiveModel, this);
+                if (this._model && this._model.isNew && !this._model.destroyed()) {
+                    if (this._options.delete_cascade)
+                        this._model.once("remove", this.remove, this);
+                }
+            },
+
+            destroy: function() {
+                this.active.destroy();
+                inherited.destroy.apply(this);
             },
 
             _buildQuery: function(query) {},
@@ -8160,6 +8177,16 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
 
             assertExistence: function(reference) {
                 return this.active.acquire(reference).assertExistence();
+            },
+
+            remove: function() {
+                this.assertExistence().success(function(model) {
+                    model.increaseRef();
+                    this.active.destroy();
+                    model.weaklyRemove();
+                    model.weakDestroy();
+                    this.active = new SharedObjectFactory(this.newActiveModel, this);
+                }, this);
             },
 
             unset: function() {

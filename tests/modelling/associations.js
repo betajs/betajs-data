@@ -147,3 +147,59 @@ QUnit.test("has many through array delete cascade", function (assert) {
     assert.equal(store2.count().value(), 0);
 });
 
+
+
+
+QUnit.test("has one create on demand and delete cascade", function (assert) {
+    var Model2 = BetaJS.Data.Modelling.Model.extend("Model2", {}, {
+        _initializeScheme: function () {
+            var scheme = this._inherited(Model2, "_initializeScheme");
+            scheme.owner_id = {
+                type: "id"
+            };
+            return scheme;
+        }
+    });
+    var store2 = new BetaJS.Data.Stores.MemoryStore();
+    var table2 = new BetaJS.Data.Modelling.Table(store2, Model2, {
+        can_weakly_remove: true
+    });
+    var Model1 = BetaJS.Data.Modelling.Model.extend("Model1", {
+        _initializeAssociations: function () {
+            var assocs = this._inherited(Model1, "_initializeAssociations");
+            assocs.item = new BetaJS.Data.Modelling.Associations.HasOneAssociation(
+                this,
+                table2,
+                "owner_id", {
+                    activeOpts: {
+                        create_on_demand: true
+                    },
+                    delete_cascade: true
+                }
+            );
+            return assocs;
+        }
+    });
+    var store1 = new BetaJS.Data.Stores.MemoryStore();
+    var table1 = new BetaJS.Data.Modelling.Table(store1, Model1, {});
+    var model = table1.newModel();
+    model.save();
+
+    assert.equal(store1.count().value(), 1);
+    assert.equal(store2.count().value(), 0);
+
+    model.assocs.item.active.acquire();
+    assert.equal(store2.count().value(), 1);
+
+    model.destroy();
+    assert.equal(store2.count().value(), 1);
+
+    model = table1.findBy().value();
+    model.assocs.item.active.acquire();
+    assert.equal(store2.count().value(), 1);
+
+    model.remove();
+
+    assert.equal(store1.count().value(), 0);
+    assert.equal(store2.count().value(), 0);
+});

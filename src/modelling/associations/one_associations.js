@@ -12,6 +12,15 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
             constructor: function() {
                 inherited.constructor.apply(this, arguments);
                 this.active = new SharedObjectFactory(this.newActiveModel, this);
+                if (this._model && this._model.isNew && !this._model.destroyed()) {
+                    if (this._options.delete_cascade)
+                        this._model.once("remove", this.remove, this);
+                }
+            },
+
+            destroy: function() {
+                this.active.destroy();
+                inherited.destroy.apply(this);
             },
 
             _buildQuery: function(query) {},
@@ -38,6 +47,16 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
 
             assertExistence: function(reference) {
                 return this.active.acquire(reference).assertExistence();
+            },
+
+            remove: function() {
+                this.assertExistence().success(function(model) {
+                    model.increaseRef();
+                    this.active.destroy();
+                    model.weaklyRemove();
+                    model.weakDestroy();
+                    this.active = new SharedObjectFactory(this.newActiveModel, this);
+                }, this);
             },
 
             unset: function() {

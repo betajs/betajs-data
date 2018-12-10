@@ -45,8 +45,10 @@ Scoped.extend("module:Modelling.ActiveModel", [
                     this._watcher().unwatchInsert(null, this);
                     this._watcher().unwatchItem(null, this);
                 }
-                if (this.get("model"))
-                    this.get("model").weakDestroy();
+                if (this.get("model")) {
+                    this.get("model").off(null, null, this);
+                    this.get("model").decreaseRef();
+                }
                 this._table.off(null, null, this);
                 inherited.destroy.call(this);
             },
@@ -78,6 +80,7 @@ Scoped.extend("module:Modelling.ActiveModel", [
 
             _registerModel: function(model) {
                 this.set("model", model);
+                model.increaseRef();
                 if (this._watcher() && !model.isNew())
                     this._watcher().watchItem(model.id(), this);
                 model.on("change", function() {
@@ -93,7 +96,7 @@ Scoped.extend("module:Modelling.ActiveModel", [
                 var model = this.get("model");
                 if (model && Properties.is_class_instance(model)) {
                     Async.eventually(function() {
-                        model.weakDestroy();
+                        model.decreaseRef();
                     });
                 }
                 if (this._watcher())
@@ -105,6 +108,11 @@ Scoped.extend("module:Modelling.ActiveModel", [
                         this._registerModel(model);
                     else if (this._options.create_virtual)
                         this._registerModel(this._options.create_virtual.call(this._options.create_virtual_ctx || this, this._query));
+                    else if (this._options.create_on_demand) {
+                        model = this._table.newModel(this._query);
+                        this._registerModel(model);
+                        model.save();
+                    }
                 }, this).callback(function() {
                     this.__find_by_acquiring = false;
                     this.trigger('find-by-acquired');

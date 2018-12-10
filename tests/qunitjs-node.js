@@ -12,6 +12,7 @@ require(__dirname + "/data/store_history.js");
 require(__dirname + "/modelling/tables.js");
 require(__dirname + "/modelling/model_validations.js");
 require(__dirname + "/modelling/scheme_validations.js");
+require(__dirname + "/modelling/associations.js");
 require(__dirname + "/collections/collections.js");
 require(__dirname + "/data/complex_store_uses.js");
 require(__dirname + "/data/channel_stores.js");
