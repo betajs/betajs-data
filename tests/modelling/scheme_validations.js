@@ -140,3 +140,91 @@ QUnit.test("test schemed prop length validation max action", function (assert) {
 		done2();
 	});
 });
+
+QUnit.test("test schemed prop value validation from null", function (assert) {
+	var done = assert.async();
+	var done1 = assert.async();
+	var done2 = assert.async();
+	var schemedProp = BetaJS.Data.Modelling.SchemedProperties.extend(null, {}, function (inherited) {
+		return {
+			_initializeScheme: function () {
+				var scheme = inherited._initializeScheme.call(this);
+				scheme.example_property = {
+					type: "integer",
+					validate: new BetaJS.Data.Modelling.Validators.MinMaxValidator({max_value: 8})
+				};
+				return scheme;
+			}
+		};
+	});
+
+	var example = new schemedProp({"example_property": null});
+	example.validate().mapSuccess(function (val) {
+		assert.ok(val);
+		done();
+	}).mapError(function () {
+		assert.ok(false);
+		done();
+	});
+	example.set("example_property", 5);
+	example.validate().mapSuccess(function (val) {
+		assert.ok(val);
+		done1();
+	}).mapError(function () {
+		assert.ok(false);
+		done1();
+	});
+
+	example.set("example_property", 9);
+	example.validate().mapSuccess(function (val) {
+		assert.ok(!val);
+		done2();
+	}).mapError(function () {
+		assert.ok(false);
+		done2();
+	});
+});
+
+QUnit.test("test schemed prop value validation from min", function (assert) {
+	var done = assert.async();
+	var done1 = assert.async();
+	var done2 = assert.async();
+	var schemedProp = BetaJS.Data.Modelling.SchemedProperties.extend(null, {}, function (inherited) {
+		return {
+			_initializeScheme: function () {
+				var scheme = inherited._initializeScheme.call(this);
+				scheme.example_property = {
+					type: "string",
+					validate: new BetaJS.Data.Modelling.Validators.MinMaxValidator({min_value: 4, max_value: 8})
+				};
+				return scheme;
+			}
+		};
+	});
+
+	var example = new schemedProp({"example_property": 4});
+	example.validate().mapSuccess(function (val) {
+		assert.ok(val);
+		done();
+	}).mapError(function () {
+		assert.ok(false);
+		done();
+	});
+	example.set("example_property", 5);
+	example.validate().mapSuccess(function (val) {
+		assert.ok(val);
+		done1();
+	}).mapError(function () {
+		assert.ok(false);
+		done1();
+	});
+
+	example.set("example_property", 2);
+	example.validate().mapSuccess(function (val) {
+		assert.ok(!val);
+		done2();
+	}).mapError(function () {
+		assert.ok(false);
+		done2();
+	});
+});
