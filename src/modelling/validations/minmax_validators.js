@@ -24,8 +24,7 @@ Scoped.define('module:Modelling.Validators.MinMaxValidator', [
                 if (!this.__error_string) {
                     if (this.__min_value !== null) {
                         if (this.__max_value !== null) {
-                            this.__error_string = 'Between ' + this.__min_value + ' and ' + this.__max_value +
-                                ' characters';
+                            this.__error_string = 'Between ' + this.__min_value + ' and ' + this.__max_value;
                         } else {
                             this.__error_string = 'At least ' + this.__min_value;
                         }

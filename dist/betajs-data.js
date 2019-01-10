@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.134 - 2019-01-02
+betajs-data - v1.0.135 - 2019-01-09
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.134 - 2019-01-02
+betajs-data - v1.0.135 - 2019-01-09
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -1018,8 +1018,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.134",
-    "datetime": 1546447065112
+    "version": "1.0.135",
+    "datetime": 1547053516359
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -9439,8 +9439,7 @@ Scoped.define('module:Modelling.Validators.MinMaxValidator', [
                 if (!this.__error_string) {
                     if (this.__min_value !== null) {
                         if (this.__max_value !== null) {
-                            this.__error_string = 'Between ' + this.__min_value + ' and ' + this.__max_value +
-                                ' characters';
+                            this.__error_string = 'Between ' + this.__min_value + ' and ' + this.__max_value;
                         } else {
                             this.__error_string = 'At least ' + this.__min_value;
                         }
