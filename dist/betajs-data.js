@@ -1,6 +1,6 @@
 /*!
-betajs-data - v1.0.135 - 2019-01-09
-Copyright (c) Oliver Friedmann
+betajs-data - v1.0.136 - 2019-01-10
+Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
 /** @flow **//*!
@@ -1006,8 +1006,8 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.135 - 2019-01-09
-Copyright (c) Oliver Friedmann
+betajs-data - v1.0.136 - 2019-01-10
+Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
 
@@ -1018,8 +1018,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.135",
-    "datetime": 1547053516359
+    "version": "1.0.136",
+    "datetime": 1547162986545
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -8751,8 +8751,22 @@ Scoped.define("module:Modelling.Model", [
                     var attrs;
                     if (this.isNew()) {
                         attrs = this.cls.filterPersistent(this.get_all_properties());
-                        if (this.__options.type_column)
-                            attrs[this.__options.type_column] = this.cls.classname;
+                        if (this.option("type_column")) {
+                            var classname = this.cls.classname;
+                            var column = this.option("type_column");
+                            var type = this.get(column);
+                            if (this.option("types") && typeof this.option("types") === "object") {
+                                if (this.option("types")[type]) {
+                                    classname = type;
+                                } else {
+                                    Objs.iter(Objs.values(this.option("types")), function(item) {
+                                        if (this instanceof item)
+                                            classname = item;
+                                    }, this);
+                                }
+                            }
+                            attrs[this.option("type_column")] = classname;
+                        }
                     } else {
                         attrs = this.cls.filterPersistent(this.properties_changed());
                         if (Types.is_empty(attrs))
@@ -9125,6 +9139,8 @@ Scoped.define("module:Modelling.Table", [
                 this.__options = Objs.extend({
                     // Attribute that describes the type
                     type_column: null,
+                    // Object with the different types related to type_column
+                    types: null,
                     // Creation options
                     auto_create: false,
                     // Update options
@@ -9171,10 +9187,14 @@ Scoped.define("module:Modelling.Table", [
 
             modelClass: function(cls) {
                 cls = cls || this.__model_type;
+                if (this.__options.types && typeof this.__options.types === "object")
+                    cls = this.__options.types[cls] || cls;
                 return Types.is_string(cls) ? Scoped.getGlobal(cls) : cls;
             },
 
             newModel: function(attributes, cls, ctx) {
+                if (!cls || typeof cls === "undefined")
+                    cls = this.__options.type_column && attributes[this.__options.type_column] ? attributes[this.__options.type_column] : null;
                 cls = this.modelClass(cls);
                 var model = new cls(attributes, this, {}, ctx);
                 if (this.__options.auto_create)
@@ -9194,7 +9214,7 @@ Scoped.define("module:Modelling.Table", [
             materialize: function(obj, ctx) {
                 if (!obj)
                     return null;
-                var cls = this.modelClass(this.__options.type_column && obj[this.__options.type_column] ? this.__options.type_column : null);
+                var cls = this.modelClass(this.__options.type_column && obj[this.__options.type_column] ? obj[this.__options.type_column] : null);
                 if (this.model_cache) {
                     var cachedModel = this.model_cache.get(obj[this.primary_key()]);
                     if (cachedModel) {
