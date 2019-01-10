@@ -19,6 +19,8 @@ Scoped.define("module:Modelling.Table", [
                 this.__options = Objs.extend({
                     // Attribute that describes the type
                     type_column: null,
+                    // Object with the different types related to type_column
+                    types: null,
                     // Creation options
                     auto_create: false,
                     // Update options
@@ -65,10 +67,14 @@ Scoped.define("module:Modelling.Table", [
 
             modelClass: function(cls) {
                 cls = cls || this.__model_type;
+                if (this.__options.types && typeof this.__options.types === "object")
+                    cls = this.__options.types[cls] || cls;
                 return Types.is_string(cls) ? Scoped.getGlobal(cls) : cls;
             },
 
             newModel: function(attributes, cls, ctx) {
+                if (!cls || typeof cls === "undefined")
+                    cls = this.__options.type_column && attributes[this.__options.type_column] ? attributes[this.__options.type_column] : null;
                 cls = this.modelClass(cls);
                 var model = new cls(attributes, this, {}, ctx);
                 if (this.__options.auto_create)
@@ -88,7 +94,7 @@ Scoped.define("module:Modelling.Table", [
             materialize: function(obj, ctx) {
                 if (!obj)
                     return null;
-                var cls = this.modelClass(this.__options.type_column && obj[this.__options.type_column] ? this.__options.type_column : null);
+                var cls = this.modelClass(this.__options.type_column && obj[this.__options.type_column] ? obj[this.__options.type_column] : null);
                 if (this.model_cache) {
                     var cachedModel = this.model_cache.get(obj[this.primary_key()]);
                     if (cachedModel) {

@@ -151,8 +151,22 @@ Scoped.define("module:Modelling.Model", [
                     var attrs;
                     if (this.isNew()) {
                         attrs = this.cls.filterPersistent(this.get_all_properties());
-                        if (this.__options.type_column)
-                            attrs[this.__options.type_column] = this.cls.classname;
+                        if (this.option("type_column")) {
+                            var classname = this.cls.classname;
+                            var column = this.option("type_column");
+                            var type = this.get(column);
+                            if (this.option("types") && typeof this.option("types") === "object") {
+                                if (this.option("types")[type]) {
+                                    classname = type;
+                                } else {
+                                    Objs.iter(Objs.values(this.option("types")), function(item) {
+                                        if (this instanceof item)
+                                            classname = item;
+                                    }, this);
+                                }
+                            }
+                            attrs[this.option("type_column")] = classname;
+                        }
                     } else {
                         attrs = this.cls.filterPersistent(this.properties_changed());
                         if (Types.is_empty(attrs))
