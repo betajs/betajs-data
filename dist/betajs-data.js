@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.136 - 2019-01-10
+betajs-data - v1.0.136 - 2019-01-14
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.136 - 2019-01-10
+betajs-data - v1.0.136 - 2019-01-14
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1019,7 +1019,7 @@ Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
     "version": "1.0.136",
-    "datetime": 1547162986545
+    "datetime": 1547498931685
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -9498,6 +9498,37 @@ Scoped.define("module:Modelling.Validators.PresentValidator", [
 
             validate: function(value, context) {
                 return Types.is_null(value) || value === "" ? this.__error_string : null;
+            }
+
+        };
+    });
+});
+Scoped.define("module:Modelling.Validators.RegexValidator", [
+    "module:Modelling.Validators.Validator",
+    "base:Strings"
+], function(Validator, Strings, scoped) {
+    return Validator.extend({
+        scoped: scoped
+    }, function(inherited) {
+        return {
+
+            constructor: function(options) {
+                inherited.constructor.call(this);
+                this.__regex = options.regex ? new RegExp(options.regex) : null;
+                this.__function = options.use_function ? options.use_function : "test";
+                this.__error_string = options.error_string ? options.error_string : "String doesn't match regular expression.";
+            },
+
+            validate: function(value, context) {
+                if (!this.__regex)
+                    return "You must add a regex to use this validator.";
+                if (["test", "match"].indexOf(this.__function) === -1)
+                    return "You must choose between 'test' and 'match' to validate the regex.";
+                if (this.__function === "test")
+                    return this.__regex.test(value) ? null : this.__error_string;
+                if (this.__function === "match")
+                    return value.match(this.__regex) ? null : this.__error_string;
+                return this.__error_string;
             }
 
         };
