@@ -228,3 +228,47 @@ QUnit.test("test schemed prop value validation from min", function (assert) {
 		done2();
 	});
 });
+
+QUnit.test("test schemed prop regex validation", function (assert) {
+	var done = assert.async();
+	var done1 = assert.async();
+	var done2 = assert.async();
+	var schemedProp = BetaJS.Data.Modelling.SchemedProperties.extend(null, {}, function (inherited) {
+		return {
+			_initializeScheme: function () {
+				var scheme = inherited._initializeScheme.call(this);
+				scheme.example_property = {
+					type: "string",
+					validate: new BetaJS.Data.Modelling.Validators.RegexValidator({regex: '[A-Z0-9]+'})
+				};
+				return scheme;
+			}
+		};
+	});
+
+	var example = new schemedProp({"example_property": "TESTABC"});
+	example.validate().mapSuccess(function (val) {
+		assert.ok(val);
+		done();
+	}).mapError(function () {
+		assert.ok(false);
+		done();
+	});
+	example.set("example_property", "1234TEST");
+	example.validate().mapSuccess(function (val) {
+		assert.ok(val);
+		done1();
+	}).mapError(function () {
+		assert.ok(false);
+		done1();
+	});
+
+	example.set("example_property", "abcsdcs");
+	example.validate().mapSuccess(function (val) {
+		assert.ok(!val);
+		done2();
+	}).mapError(function () {
+		assert.ok(false);
+		done2();
+	});
+});
