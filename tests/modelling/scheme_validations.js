@@ -229,17 +229,18 @@ QUnit.test("test schemed prop value validation from min", function (assert) {
 	});
 });
 
-QUnit.test("test schemed prop regex validation", function (assert) {
+QUnit.test("test schemed prop regex validation using test", function (assert) {
 	var done = assert.async();
 	var done1 = assert.async();
 	var done2 = assert.async();
+	var done3 = assert.async();
 	var schemedProp = BetaJS.Data.Modelling.SchemedProperties.extend(null, {}, function (inherited) {
 		return {
 			_initializeScheme: function () {
 				var scheme = inherited._initializeScheme.call(this);
 				scheme.example_property = {
 					type: "string",
-					validate: new BetaJS.Data.Modelling.Validators.RegexValidator({regex: '[A-Z0-9]+'})
+					validate: new BetaJS.Data.Modelling.Validators.RegexValidator({regex: '^\\b([A-Z0-9])+\\b$', use_function: 'test'})
 				};
 				return scheme;
 			}
@@ -270,5 +271,68 @@ QUnit.test("test schemed prop regex validation", function (assert) {
 	}).mapError(function () {
 		assert.ok(false);
 		done2();
+	});
+
+	example.set("example_property", "ABC 123");
+	example.validate().mapSuccess(function (val) {
+		assert.ok(!val);
+		done3();
+	}).mapError(function () {
+		assert.ok(false);
+		done3();
+	});
+});
+
+QUnit.test("test schemed prop regex validation using match", function (assert) {
+	var done = assert.async();
+	var done1 = assert.async();
+	var done2 = assert.async();
+	var done3 = assert.async();
+	var schemedProp = BetaJS.Data.Modelling.SchemedProperties.extend(null, {}, function (inherited) {
+		return {
+			_initializeScheme: function () {
+				var scheme = inherited._initializeScheme.call(this);
+				scheme.example_property = {
+					type: "string",
+					validate: new BetaJS.Data.Modelling.Validators.RegexValidator({regex: '[A-Z0-9]', use_function: 'test'})
+				};
+				return scheme;
+			}
+		};
+	});
+
+	var example = new schemedProp({"example_property": "TESTABC"});
+	example.validate().mapSuccess(function (val) {
+		assert.ok(val);
+		done();
+	}).mapError(function () {
+		assert.ok(false);
+		done();
+	});
+	example.set("example_property", "1234TEST");
+	example.validate().mapSuccess(function (val) {
+		assert.ok(val);
+		done1();
+	}).mapError(function () {
+		assert.ok(false);
+		done1();
+	});
+
+	example.set("example_property", "abcsdc s");
+	example.validate().mapSuccess(function (val) {
+		assert.ok(!val);
+		done2();
+	}).mapError(function () {
+		assert.ok(false);
+		done2();
+	});
+
+	example.set("example_property", "ABC 123");
+	example.validate().mapSuccess(function (val) {
+		assert.ok(val);
+		done3();
+	}).mapError(function () {
+		assert.ok(false);
+		done3();
 	});
 });
