@@ -16,7 +16,7 @@ Scoped.define("module:Modelling.Validators.RegexValidator", [
             validate: function(value, context) {
                 if (!this.__regex)
                     return "You must add a regex to use this validator.";
-                return value.match(this.__regex) ? null : this.__error_string;
+                return this.__regex.match(value) ? null : this.__error_string;
             }
 
         };
