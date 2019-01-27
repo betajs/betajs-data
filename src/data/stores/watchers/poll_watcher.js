@@ -81,6 +81,9 @@ Scoped.define("module:Stores.Watchers.PollWatcher", [
 								if (updatable)
 									this._updatedItem(data, data);
 							}
+						}, this).error(function (err) {
+							if (err && err.error && err.error == 404)
+								this._removedItem(id);
 						}, this);
 					}, this);
 				}
