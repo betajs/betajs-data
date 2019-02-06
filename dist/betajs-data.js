@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.138 - 2019-01-26
+betajs-data - v1.0.139 - 2019-02-05
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.138 - 2019-01-26
+betajs-data - v1.0.139 - 2019-02-05
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1018,8 +1018,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.138",
-    "datetime": 1548554438521
+    "version": "1.0.139",
+    "datetime": 1549419147628
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -4537,6 +4537,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 this.__contextAttributes = options.contextAttributes || [];
                 this.__contextAccessKey = options.contextAccessKey;
                 this.__immediateRemove = options.immediateRemove;
+                this.__keepContextAccessKey = options.keepContextAccessKey;
                 this.__contextAccessExpander = options.contextAccessExpander || function () {
                     return [];
                 };
@@ -4594,7 +4595,8 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                     return data;
                 data = Objs.clone(data, 2);
                 var ctxId = ctx[this.__contextKey];
-                delete data[this.__contextAccessKey];
+                if (!this.__keepContextAccessKey)
+                    delete data[this.__contextAccessKey];
                 this.__contextAttributes.forEach(function (ctxAttrKey) {
                     if (data[ctxAttrKey])
                         data[ctxAttrKey] = data[ctxAttrKey][ctxId];
@@ -4652,7 +4654,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
 
             _undecodedUpdated: function (id, updatedData, ctx, row) {
                 (row[this.__contextAccessKey]).forEach(function (cctxId) {
-                    if (ctx[this.__contextKey] == cctxId)
+                    if (ctx[this.__contextKey] === cctxId)
                         return;
                     var cctx = Objs.objectBy(this.__contextKey, cctxId);
                     this._updated(row, updatedData, cctx, row);
@@ -4661,7 +4663,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
 
             _undecodedInserted: function (data, ctx) {
                 (data[this.__contextAccessKey]).forEach(function (cctxId) {
-                    if (ctx[this.__contextKey] == cctxId)
+                    if (ctx[this.__contextKey] === cctxId)
                         return;
                     var cctx = Objs.objectBy(this.__contextKey, cctxId);
                     this._inserted(data, cctx);

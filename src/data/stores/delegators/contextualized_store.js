@@ -270,6 +270,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 this.__contextAttributes = options.contextAttributes || [];
                 this.__contextAccessKey = options.contextAccessKey;
                 this.__immediateRemove = options.immediateRemove;
+                this.__keepContextAccessKey = options.keepContextAccessKey;
                 this.__contextAccessExpander = options.contextAccessExpander || function () {
                     return [];
                 };
@@ -327,7 +328,8 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                     return data;
                 data = Objs.clone(data, 2);
                 var ctxId = ctx[this.__contextKey];
-                delete data[this.__contextAccessKey];
+                if (!this.__keepContextAccessKey)
+                    delete data[this.__contextAccessKey];
                 this.__contextAttributes.forEach(function (ctxAttrKey) {
                     if (data[ctxAttrKey])
                         data[ctxAttrKey] = data[ctxAttrKey][ctxId];
@@ -385,7 +387,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
 
             _undecodedUpdated: function (id, updatedData, ctx, row) {
                 (row[this.__contextAccessKey]).forEach(function (cctxId) {
-                    if (ctx[this.__contextKey] == cctxId)
+                    if (ctx[this.__contextKey] === cctxId)
                         return;
                     var cctx = Objs.objectBy(this.__contextKey, cctxId);
                     this._updated(row, updatedData, cctx, row);
@@ -394,7 +396,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
 
             _undecodedInserted: function (data, ctx) {
                 (data[this.__contextAccessKey]).forEach(function (cctxId) {
-                    if (ctx[this.__contextKey] == cctxId)
+                    if (ctx[this.__contextKey] === cctxId)
                         return;
                     var cctx = Objs.objectBy(this.__contextKey, cctxId);
                     this._inserted(data, cctx);
