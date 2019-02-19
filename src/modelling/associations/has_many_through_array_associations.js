@@ -46,12 +46,21 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
 
             _queryCollectionUpdated: function(coll) {
                 if (this._options.create_virtual) {
-                    this.__readForeignKey().filter(function(key) {
-                        return !coll.has(function(item) {
-                            return this._matchItem(item, key);
+                    this.__readForeignKey().forEach(function(key) {
+                        var models = [];
+                        var realModels = 0;
+                        coll.iterate(function(item) {
+                            if (!this._matchItem(item, key))
+                                return;
+                            if (item.hasId())
+                                realModels = 1;
+                            else
+                                models.push(item);
                         }, this);
-                    }, this).forEach(function(key) {
-                        coll.add(this._options.create_virtual.call(this._options.create_virtual_ctx || this, key));
+                        while (models.length + realModels > 1)
+                            coll.remove(models.shift());
+                        if (models.length + realModels === 0)
+                            coll.add(this._options.create_virtual.call(this._options.create_virtual_ctx || this, key));
                     }, this);
                 }
             },

@@ -245,7 +245,7 @@ Scoped.define("module:Modelling.AssociatedProperties", [
             },
 
             hasId: function() {
-                return this.has(this.cls.primary_key());
+                return this.has(this.cls.primary_key()) && this.get(this.cls.primary_key()) !== null;
             }
 
         };

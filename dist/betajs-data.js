@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.139 - 2019-02-05
+betajs-data - v1.0.140 - 2019-02-18
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.139 - 2019-02-05
+betajs-data - v1.0.140 - 2019-02-18
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1018,8 +1018,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.139",
-    "datetime": 1549419147628
+    "version": "1.0.140",
+    "datetime": 1550534349338
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -7893,7 +7893,9 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
                 var coll = new TableQueryCollection(this._foreignTable(), result.query, Objs.extend(Objs.extend(result.options, this._options.collectionOptions), options));
                 coll.on("replaced-objects collection-updated", function() {
                     this._queryCollectionUpdated(coll);
-                }, this);
+                }, this, {
+                    norecursion: true
+                });
                 this._queryCollectionUpdated(coll);
                 return coll;
             },
@@ -8057,12 +8059,21 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
 
             _queryCollectionUpdated: function(coll) {
                 if (this._options.create_virtual) {
-                    this.__readForeignKey().filter(function(key) {
-                        return !coll.has(function(item) {
-                            return this._matchItem(item, key);
+                    this.__readForeignKey().forEach(function(key) {
+                        var models = [];
+                        var realModels = 0;
+                        coll.iterate(function(item) {
+                            if (!this._matchItem(item, key))
+                                return;
+                            if (item.hasId())
+                                realModels = 1;
+                            else
+                                models.push(item);
                         }, this);
-                    }, this).forEach(function(key) {
-                        coll.add(this._options.create_virtual.call(this._options.create_virtual_ctx || this, key));
+                        while (models.length + realModels > 1)
+                            coll.remove(models.shift());
+                        if (models.length + realModels === 0)
+                            coll.add(this._options.create_virtual.call(this._options.create_virtual_ctx || this, key));
                     }, this);
                 }
             },
@@ -9098,7 +9109,7 @@ Scoped.define("module:Modelling.AssociatedProperties", [
             },
 
             hasId: function() {
-                return this.has(this.cls.primary_key());
+                return this.has(this.cls.primary_key()) && this.get(this.cls.primary_key()) !== null;
             }
 
         };

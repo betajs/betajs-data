@@ -66,7 +66,9 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
                 var coll = new TableQueryCollection(this._foreignTable(), result.query, Objs.extend(Objs.extend(result.options, this._options.collectionOptions), options));
                 coll.on("replaced-objects collection-updated", function() {
                     this._queryCollectionUpdated(coll);
-                }, this);
+                }, this, {
+                    norecursion: true
+                });
                 this._queryCollectionUpdated(coll);
                 return coll;
             },
