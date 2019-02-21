@@ -32,7 +32,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
                 delete this._properties_changed[key];
             },
 
-            _beforeSet: function(key, value) {
+            _beforeSet: function(key, value, oldValue) {
                 var scheme = this.cls.scheme();
                 if (!(key in scheme))
                     return value;
@@ -40,7 +40,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
                 if (sch.type)
                     value = Types.parseType(value, sch.type);
                 if (sch.transform)
-                    value = sch.transform.apply(this, [value]);
+                    value = sch.transform.call(this, value, oldValue);
                 return value;
             },
 

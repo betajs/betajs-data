@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.140 - 2019-02-18
+betajs-data - v1.0.140 - 2019-02-20
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -12,7 +12,7 @@ Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
     "version": "1.0.140",
-    "datetime": 1550534349338
+    "datetime": 1550721286874
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -7889,7 +7889,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
                 delete this._properties_changed[key];
             },
 
-            _beforeSet: function(key, value) {
+            _beforeSet: function(key, value, oldValue) {
                 var scheme = this.cls.scheme();
                 if (!(key in scheme))
                     return value;
@@ -7897,7 +7897,7 @@ Scoped.define("module:Modelling.SchemedProperties", [
                 if (sch.type)
                     value = Types.parseType(value, sch.type);
                 if (sch.transform)
-                    value = sch.transform.apply(this, [value]);
+                    value = sch.transform.call(this, value, oldValue);
                 return value;
             },
 
