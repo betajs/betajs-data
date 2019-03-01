@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.140 - 2019-02-20
+betajs-data - v1.0.142 - 2019-03-01
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.140",
-    "datetime": 1550721286874
+    "version": "1.0.142",
+    "datetime": 1551464549081
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -3527,6 +3527,8 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
             constructor: function (store, options) {
                 inherited.constructor.call(this, store, options);
                 this.__contextKey = options.contextKey;
+                this.__subContext = options.subContext || "$eq";
+                this.__newContextSupplements = options.newContextSupplements || {};
                 this.__contextAttributes = options.contextAttributes || [];
                 this.__contextAccessKey = options.contextAccessKey;
                 this.__immediateRemove = options.immediateRemove;
@@ -3547,7 +3549,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
             _encodeQuery: function (query, ctx) {
                 query = Objs.extend(Objs.objectBy(
                 	this.__contextAccessKey,
-					{"$elemMatch": {"$eq": ctx[this.__contextKey]}}
+					{"$elemMatch": Objs.objectBy(this.__subContext, ctx[this.__contextKey])}
 				), query);
                 this.__contextAttributes.forEach(function (key) {
                     // TODO: This currently only works with MongoDB databases
@@ -3616,7 +3618,10 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 var ctxId = ctx[this.__contextKey];
                 data = Objs.clone(data, 1);
                 var contextData = {};
-                data[this.__contextAccessKey] = [ctxId];
+                var newCtx = ctxId;
+                if (this.__subContext !== "$eq")
+                    newCtx = Objs.extend(this.__newContextSupplements, Objs.objectBy(this.__subContext, ctxId));
+                data[this.__contextAccessKey] = [newCtx];
                 this.__contextAttributes.forEach(function (ctxAttrKey) {
                     contextData[ctxAttrKey] = data[ctxAttrKey];
                     data[ctxAttrKey] = Objs.objectBy(
