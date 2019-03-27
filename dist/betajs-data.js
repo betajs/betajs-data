@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.142 - 2019-03-01
+betajs-data - v1.0.143 - 2019-03-26
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.142 - 2019-03-01
+betajs-data - v1.0.143 - 2019-03-26
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1018,8 +1018,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.142",
-    "datetime": 1551464549081
+    "version": "1.0.143",
+    "datetime": 1553647720396
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -4639,8 +4639,8 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 var otherContexts = Promise.value(this.__contextAccessExpander.call(this, data, ctx));
                 return otherContexts.mapSuccess(function (otherContexts) {
                     otherContexts = otherContexts.filter(function (otherCtxId) {
-                        return otherCtxId !== ctxId;
-                    });
+                        return this.__subContext === "$eq" ? otherCtxId !== ctxId : otherCtxId[this.__subContext] !== ctxId;
+                    }, this);
                     data[this.__contextAccessKey] = data[this.__contextAccessKey].concat(otherContexts);
                     var clonedDataPromises = otherContexts.map(function (otherCtxId) {
                         return Promise.value(this.__contextDataCloner.call(this, data, ctx, otherCtxId));
@@ -4649,7 +4649,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                         otherContexts.forEach(function (otherCtxId, i) {
                             var otherData = clonedDatas[i];
                             this.__contextAttributes.forEach(function (ctxAttrKey) {
-                                data[ctxAttrKey][otherCtxId] = otherData[ctxAttrKey];
+                                data[ctxAttrKey][this.__subContext === "$eq" ? otherCtxId : otherCtxId[this.__subContext]] = otherData[ctxAttrKey];
                             }, this);
                         }, this);
                         return data;

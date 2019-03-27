@@ -372,8 +372,8 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 var otherContexts = Promise.value(this.__contextAccessExpander.call(this, data, ctx));
                 return otherContexts.mapSuccess(function (otherContexts) {
                     otherContexts = otherContexts.filter(function (otherCtxId) {
-                        return otherCtxId !== ctxId;
-                    });
+                        return this.__subContext === "$eq" ? otherCtxId !== ctxId : otherCtxId[this.__subContext] !== ctxId;
+                    }, this);
                     data[this.__contextAccessKey] = data[this.__contextAccessKey].concat(otherContexts);
                     var clonedDataPromises = otherContexts.map(function (otherCtxId) {
                         return Promise.value(this.__contextDataCloner.call(this, data, ctx, otherCtxId));
@@ -382,7 +382,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                         otherContexts.forEach(function (otherCtxId, i) {
                             var otherData = clonedDatas[i];
                             this.__contextAttributes.forEach(function (ctxAttrKey) {
-                                data[ctxAttrKey][otherCtxId] = otherData[ctxAttrKey];
+                                data[ctxAttrKey][this.__subContext === "$eq" ? otherCtxId : otherCtxId[this.__subContext]] = otherData[ctxAttrKey];
                             }, this);
                         }, this);
                         return data;
