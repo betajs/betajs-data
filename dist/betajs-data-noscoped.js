@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.143 - 2019-03-26
+betajs-data - v1.0.144 - 2019-04-07
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.143",
-    "datetime": 1553647720396
+    "version": "1.0.144",
+    "datetime": 1554679198542
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6551,6 +6551,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				else
 					this.id_key = "id";
 				this.__ctx = options.ctx;
+				this.__customCtxFilter = options.customCtxFilter;
 				this.__items = new ContextRegistry();
 				this.__inserts = new ContextRegistry(Queries.serialize, Queries);
 			},
@@ -6589,8 +6590,8 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				this.__inserts.unregister(query, context).forEach(this._unwatchInsert, this);
 			},
 
-			_ctxFilter: function (ctx) {
-				return !this.__ctx || !ctx || Comparators.deepEqual(this.__ctx, ctx, 2);
+			_ctxFilter: function (ctx, data) {
+				return !this.__ctx || !ctx || Comparators.deepEqual(this.__ctx, ctx, 2) || (this.__customCtxFilter && this.__customCtxFilter(this.__ctx, ctx, data));
 			},
 
 			_removedItem : function(id, ctx) {
@@ -6604,7 +6605,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			},
 
 			_updatedItem : function(row, data, ctx) {
-                if (!this._ctxFilter(ctx))
+                if (!this._ctxFilter(ctx, row))
                     return;
 				var id = row[this.id_key];
 				if (!this.__items.get(id))
@@ -6613,7 +6614,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			},
 
 			_insertedInsert : function(data, ctx) {
-                if (!this._ctxFilter(ctx))
+                if (!this._ctxFilter(ctx, data))
                     return;
 				var trig = false;
 				var iter = this.__inserts.iterator();
@@ -7024,12 +7025,20 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                 return Types.is_array(this._foreign_key) ? this._foreign_key : [this._foreign_key];
             },
 
+            __arrayMapToKeys: function(a) {
+                if (!this._options.sub_key)
+                    return a;
+                return a.map(function(i) {
+                    return i[this._options.sub_key];
+                }, this);
+            },
+
             __readForeignKey: function() {
                 var result = [];
                 this.__foreignKeyArray().forEach(function(fk) {
                     result = result.concat(this._model.get(fk) || []);
                 }, this);
-                return result;
+                return this.__arrayMapToKeys(result);
             },
 
             constructor: function() {
@@ -7093,7 +7102,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
             _remove: function(item) {
                 this.__foreignKeyArray().forEach(function(fk) {
                     this._model.set(fk, this._model.get(fk).filter(function(key) {
-                        return !this._matchItem(item, key);
+                        return !this._matchItem(item, this._options.sub_key ? key[this._options.sub_key] : key);
                     }, this));
                 }, this);
                 if (this._options.create_virtual && this.collection.value() && !item.destroyed())
@@ -7106,7 +7115,8 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                     }, this)) {
                     var fk = Types.is_array(this._foreign_key) ? this._foreign_key[0] : this._foreign_key;
                     var current = Objs.clone(this._model.get(fk) || [], 1);
-                    current.push(item.get(this._options.foreign_attr || this._foreignTable().primary_key()));
+                    var add = item.get(this._options.foreign_attr || this._foreignTable().primary_key());
+                    current.push(this._options.sub_key ? Objs.objectBy(this._options.sub_key, add) : add);
                     if (this._options.create_virtual && this.collection.value())
                         this.collection.value().add(item);
                     this._model.set(fk, current);

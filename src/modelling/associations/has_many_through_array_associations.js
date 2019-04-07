@@ -13,12 +13,20 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                 return Types.is_array(this._foreign_key) ? this._foreign_key : [this._foreign_key];
             },
 
+            __arrayMapToKeys: function(a) {
+                if (!this._options.sub_key)
+                    return a;
+                return a.map(function(i) {
+                    return i[this._options.sub_key];
+                }, this);
+            },
+
             __readForeignKey: function() {
                 var result = [];
                 this.__foreignKeyArray().forEach(function(fk) {
                     result = result.concat(this._model.get(fk) || []);
                 }, this);
-                return result;
+                return this.__arrayMapToKeys(result);
             },
 
             constructor: function() {
@@ -82,7 +90,7 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
             _remove: function(item) {
                 this.__foreignKeyArray().forEach(function(fk) {
                     this._model.set(fk, this._model.get(fk).filter(function(key) {
-                        return !this._matchItem(item, key);
+                        return !this._matchItem(item, this._options.sub_key ? key[this._options.sub_key] : key);
                     }, this));
                 }, this);
                 if (this._options.create_virtual && this.collection.value() && !item.destroyed())
@@ -95,7 +103,8 @@ Scoped.define("module:Modelling.Associations.HasManyThroughArrayAssociation", [
                     }, this)) {
                     var fk = Types.is_array(this._foreign_key) ? this._foreign_key[0] : this._foreign_key;
                     var current = Objs.clone(this._model.get(fk) || [], 1);
-                    current.push(item.get(this._options.foreign_attr || this._foreignTable().primary_key()));
+                    var add = item.get(this._options.foreign_attr || this._foreignTable().primary_key());
+                    current.push(this._options.sub_key ? Objs.objectBy(this._options.sub_key, add) : add);
                     if (this._options.create_virtual && this.collection.value())
                         this.collection.value().add(item);
                     this._model.set(fk, current);

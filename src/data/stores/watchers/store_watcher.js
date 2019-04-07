@@ -58,6 +58,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				else
 					this.id_key = "id";
 				this.__ctx = options.ctx;
+				this.__customCtxFilter = options.customCtxFilter;
 				this.__items = new ContextRegistry();
 				this.__inserts = new ContextRegistry(Queries.serialize, Queries);
 			},
@@ -96,8 +97,8 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				this.__inserts.unregister(query, context).forEach(this._unwatchInsert, this);
 			},
 
-			_ctxFilter: function (ctx) {
-				return !this.__ctx || !ctx || Comparators.deepEqual(this.__ctx, ctx, 2);
+			_ctxFilter: function (ctx, data) {
+				return !this.__ctx || !ctx || Comparators.deepEqual(this.__ctx, ctx, 2) || (this.__customCtxFilter && this.__customCtxFilter(this.__ctx, ctx, data));
 			},
 
 			_removedItem : function(id, ctx) {
@@ -111,7 +112,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			},
 
 			_updatedItem : function(row, data, ctx) {
-                if (!this._ctxFilter(ctx))
+                if (!this._ctxFilter(ctx, row))
                     return;
 				var id = row[this.id_key];
 				if (!this.__items.get(id))
@@ -120,7 +121,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 			},
 
 			_insertedInsert : function(data, ctx) {
-                if (!this._ctxFilter(ctx))
+                if (!this._ctxFilter(ctx, data))
                     return;
 				var trig = false;
 				var iter = this.__inserts.iterator();
