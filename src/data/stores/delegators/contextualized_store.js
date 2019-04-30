@@ -313,6 +313,8 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                     return false;
                 }
                 var filtered = data[this.__contextAccessKey].filter(function (contextValue) {
+                    if (this.__subContext !== "$eq")
+                        contextValue = contextValue[this.__subContext];
                 	return contextValue !== ctxId;
 				}, this);
                 if (filtered.length === 0)
