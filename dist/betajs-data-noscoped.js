@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.145 - 2019-04-30
+betajs-data - v1.0.146 - 2019-05-02
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.145",
-    "datetime": 1556660649290
+    "version": "1.0.146",
+    "datetime": 1556834728012
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -3623,7 +3623,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 var newCtx = ctxId;
                 if (this.__subContext !== "$eq")
                     newCtx = Objs.extend(this.__newContextSupplements, Objs.objectBy(this.__subContext, ctxId));
-                data[this.__contextAccessKey] = [newCtx];
+                data[this.__contextAccessKey] = data[this.__contextAccessKey] && data[this.__contextAccessKey].length > 0 ? data[this.__contextAccessKey] : [newCtx];
                 this.__contextAttributes.forEach(function (ctxAttrKey) {
                     contextData[ctxAttrKey] = data[ctxAttrKey];
                     data[ctxAttrKey] = Objs.objectBy(

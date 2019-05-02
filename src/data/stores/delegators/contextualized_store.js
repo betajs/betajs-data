@@ -363,7 +363,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 var newCtx = ctxId;
                 if (this.__subContext !== "$eq")
                     newCtx = Objs.extend(this.__newContextSupplements, Objs.objectBy(this.__subContext, ctxId));
-                data[this.__contextAccessKey] = [newCtx];
+                data[this.__contextAccessKey] = data[this.__contextAccessKey] && data[this.__contextAccessKey].length > 0 ? data[this.__contextAccessKey] : [newCtx];
                 this.__contextAttributes.forEach(function (ctxAttrKey) {
                     contextData[ctxAttrKey] = data[ctxAttrKey];
                     data[ctxAttrKey] = Objs.objectBy(
