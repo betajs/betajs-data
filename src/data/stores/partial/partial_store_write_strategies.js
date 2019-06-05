@@ -244,12 +244,12 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 								} else {
 									this.partialStore.cachedStore.cacheUpdate(id, value, {
 										unlockItem: true,
-										silent: true
+										silent: false
 									});
 								}
 							}
 						}, this);
-                        iter.destroy();
+						iter.destroy();
 						return Promise.value(true);
 					}
 					var commit = iter.next();

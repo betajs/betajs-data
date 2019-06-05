@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.146 - 2019-05-02
+betajs-data - v1.0.147 - 2019-06-05
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.146 - 2019-05-02
+betajs-data - v1.0.147 - 2019-06-05
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1018,8 +1018,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.146",
-    "datetime": 1556834728012
+    "version": "1.0.147",
+    "datetime": 1559763849433
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6814,12 +6814,12 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 								} else {
 									this.partialStore.cachedStore.cacheUpdate(id, value, {
 										unlockItem: true,
-										silent: true
+										silent: false
 									});
 								}
 							}
 						}, this);
-                        iter.destroy();
+						iter.destroy();
 						return Promise.value(true);
 					}
 					var commit = iter.next();
