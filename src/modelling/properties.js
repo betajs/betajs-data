@@ -14,18 +14,20 @@ Scoped.define("module:Modelling.SchemedProperties", [
                 var scheme = this.cls.scheme();
                 this._properties_changed = {};
                 this.__errors = {};
-                for (var key in scheme) {
-                    if ("def" in scheme[key])
-                        this.set(key, Types.is_function(scheme[key].def) ? scheme[key].def(attributes) : scheme[key].def);
-                    else if (scheme[key].auto_create)
-                        this.set(key, scheme[key].auto_create(this));
-                    else
-                        this.set(key, null);
-                }
+                for (var key in scheme)
+                    this.set(key, this._defaultForKey(scheme[key], attributes));
                 this._properties_changed = {};
                 this.__errors = {};
                 for (key in attributes)
                     this.set(key, attributes[key]);
+            },
+
+            _defaultForKey: function(schemeValue, attributes) {
+                if ("def" in schemeValue)
+                    return Types.is_function(schemeValue.def) ? schemeValue.def(attributes) : schemeValue.def;
+                else if (schemeValue.auto_create)
+                    return schemeValue.auto_create(this);
+                return null;
             },
 
             _unsetChanged: function(key) {
@@ -174,6 +176,15 @@ Scoped.define("module:Modelling.SchemedProperties", [
                 for (var key in data)
                     if (key in scheme)
                         setInner.call(this, key);
+            },
+
+            isEmpty: function() {
+                var empty = true;
+                var attrs = this.getAll();
+                Objs.iter(this.cls.scheme(), function(value, key) {
+                    empty = empty && (value.ignore_for_emptiness || this._defaultForKey(value, attrs) === attrs[key]);
+                }, this);
+                return empty;
             }
 
         };
@@ -263,7 +274,8 @@ Scoped.define("module:Modelling.AssociatedProperties", [
                 tags: ["read"],
 
                 after_set: null,
-                persistent: true
+                persistent: true,
+                ignore_for_emptiness: true
             };
             return s;
         }

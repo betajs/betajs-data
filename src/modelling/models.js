@@ -37,6 +37,8 @@ Scoped.define("module:Modelling.Model", [
             destroy: function() {
                 if (this.__removeOnDestroy)
                     this.remove();
+                if (this.__removeOnDestroyIfEmpty)
+                    this.removeIfEmpty();
                 if (this.table())
                     this.table().off(null, null, this);
                 this.trigger("destroy");
@@ -230,6 +232,16 @@ Scoped.define("module:Modelling.Model", [
 
             removeOnDestroy: function() {
                 this.__removeOnDestroy = true;
+                return this;
+            },
+
+            removeIfEmpty: function() {
+                if (this.isEmpty())
+                    this.remove();
+            },
+
+            removeOnDestroyIfEmpty: function() {
+                this.__removeOnDestroyIfEmpty = true;
                 return this;
             }
 

@@ -9,6 +9,7 @@ require(__dirname + "/data/cached_stores.js");
 require(__dirname + "/data/partial_stores.js");
 require(__dirname + "/data/invokers.js");
 require(__dirname + "/data/store_history.js");
+require(__dirname + "/modelling/properties.js");
 require(__dirname + "/modelling/tables.js");
 require(__dirname + "/modelling/model_validations.js");
 require(__dirname + "/modelling/scheme_validations.js");

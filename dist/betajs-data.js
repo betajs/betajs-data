@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.147 - 2019-06-05
+betajs-data - v1.0.147 - 2019-06-16
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.147 - 2019-06-05
+betajs-data - v1.0.147 - 2019-06-16
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1019,7 +1019,7 @@ Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
     "version": "1.0.147",
-    "datetime": 1559763849433
+    "datetime": 1560737827939
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -8670,6 +8670,8 @@ Scoped.define("module:Modelling.Model", [
             destroy: function() {
                 if (this.__removeOnDestroy)
                     this.remove();
+                if (this.__removeOnDestroyIfEmpty)
+                    this.removeIfEmpty();
                 if (this.table())
                     this.table().off(null, null, this);
                 this.trigger("destroy");
@@ -8864,6 +8866,16 @@ Scoped.define("module:Modelling.Model", [
             removeOnDestroy: function() {
                 this.__removeOnDestroy = true;
                 return this;
+            },
+
+            removeIfEmpty: function() {
+                if (this.isEmpty())
+                    this.remove();
+            },
+
+            removeOnDestroyIfEmpty: function() {
+                this.__removeOnDestroyIfEmpty = true;
+                return this;
             }
 
         };
@@ -8895,18 +8907,20 @@ Scoped.define("module:Modelling.SchemedProperties", [
                 var scheme = this.cls.scheme();
                 this._properties_changed = {};
                 this.__errors = {};
-                for (var key in scheme) {
-                    if ("def" in scheme[key])
-                        this.set(key, Types.is_function(scheme[key].def) ? scheme[key].def(attributes) : scheme[key].def);
-                    else if (scheme[key].auto_create)
-                        this.set(key, scheme[key].auto_create(this));
-                    else
-                        this.set(key, null);
-                }
+                for (var key in scheme)
+                    this.set(key, this._defaultForKey(scheme[key], attributes));
                 this._properties_changed = {};
                 this.__errors = {};
                 for (key in attributes)
                     this.set(key, attributes[key]);
+            },
+
+            _defaultForKey: function(schemeValue, attributes) {
+                if ("def" in schemeValue)
+                    return Types.is_function(schemeValue.def) ? schemeValue.def(attributes) : schemeValue.def;
+                else if (schemeValue.auto_create)
+                    return schemeValue.auto_create(this);
+                return null;
             },
 
             _unsetChanged: function(key) {
@@ -9055,6 +9069,15 @@ Scoped.define("module:Modelling.SchemedProperties", [
                 for (var key in data)
                     if (key in scheme)
                         setInner.call(this, key);
+            },
+
+            isEmpty: function() {
+                var empty = true;
+                var attrs = this.getAll();
+                Objs.iter(this.cls.scheme(), function(value, key) {
+                    empty = empty && (value.ignore_for_emptiness || this._defaultForKey(value, attrs) === attrs[key]);
+                }, this);
+                return empty;
             }
 
         };
@@ -9144,7 +9167,8 @@ Scoped.define("module:Modelling.AssociatedProperties", [
                 tags: ["read"],
 
                 after_set: null,
-                persistent: true
+                persistent: true,
+                ignore_for_emptiness: true
             };
             return s;
         }
