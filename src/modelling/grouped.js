@@ -121,7 +121,8 @@ Scoped.define("module:Modelling.GroupedProperties", [
             all: function(items, methodName, methodArgs) {
                 var result = null;
                 items.iterate(function(item) {
-                    result = item[methodName].apply(item, methodArgs) || result;
+                    var itemResult = item[methodName].apply(item, methodArgs);
+                    result = itemResult || result;
                 });
                 return result;
             },
