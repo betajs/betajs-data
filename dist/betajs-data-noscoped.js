@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.148 - 2019-08-07
+betajs-data - v1.0.150 - 2019-08-14
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.148",
-    "datetime": 1565234680882
+    "version": "1.0.150",
+    "datetime": 1565809879432
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -7869,6 +7869,11 @@ Scoped.define("module:Modelling.Model", [
 
             removeOnDestroyIfEmpty: function() {
                 this.__removeOnDestroyIfEmpty = true;
+                return this;
+            },
+
+            destroyOnRemove: function() {
+                this.once("remove", this.weakDestroy, this);
                 return this;
             }
 

@@ -243,6 +243,11 @@ Scoped.define("module:Modelling.Model", [
             removeOnDestroyIfEmpty: function() {
                 this.__removeOnDestroyIfEmpty = true;
                 return this;
+            },
+
+            destroyOnRemove: function() {
+                this.once("remove", this.weakDestroy, this);
+                return this;
             }
 
         };
