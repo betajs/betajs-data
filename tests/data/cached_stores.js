@@ -1,9 +1,9 @@
 QUnit.test("test cached stores with same id", function (assert) {
-	var remoteStore = new BetaJS.Data.Stores.MemoryStore({id_key: "tassert.oken"});
+	var remoteStore = new BetaJS.Data.Stores.MemoryStore({id_key: "tassertoken"});
 	for (var i = 0; i <= 4; ++i)
 		for (var j = 0; j <= 9; ++j)
 			remoteStore.insert({i:i,j:j});
-	var itemCache = new BetaJS.Data.Stores.MemoryStore({id_key: "tassert.oken"});
+	var itemCache = new BetaJS.Data.Stores.MemoryStore({id_key: "tassertoken"});
 	var queryCache = new BetaJS.Data.Stores.MemoryStore();
 	var globalTime = 0;
 	var strategy = new BetaJS.Data.Stores.CacheStrategies.ExpiryCacheStrategy({
@@ -36,7 +36,7 @@ QUnit.test("test cached stores with same id", function (assert) {
 
 
 QUnit.test("test cached stores with different ids", function (assert) {
-	var remoteStore = new BetaJS.Data.Stores.MemoryStore({id_key: "tassert.oken"});
+	var remoteStore = new BetaJS.Data.Stores.MemoryStore({id_key: "tassertoken"});
 	for (var i = 0; i <= 4; ++i)
 		for (var j = 0; j <= 9; ++j)
 			remoteStore.insert({i:i,j:j});
@@ -73,11 +73,11 @@ QUnit.test("test cached stores with different ids", function (assert) {
 
 
 QUnit.test("test cached stores with supplementary attrs", function (assert) {
-	var remoteStore = new BetaJS.Data.Stores.MemoryStore({id_key: "tassert.oken"});
+	var remoteStore = new BetaJS.Data.Stores.MemoryStore({id_key: "tassertoken"});
 	for (var i = 0; i <= 4; ++i)
 		for (var j = 0; j <= 9; ++j)
 			remoteStore.insert({i:i,j:j});
-	var itemCache = new BetaJS.Data.Stores.MemoryStore({id_key: "tassert.oken"});
+	var itemCache = new BetaJS.Data.Stores.MemoryStore({id_key: "tassertoken"});
 	var queryCache = new BetaJS.Data.Stores.MemoryStore();
 	var globalTime = 0;
 	var strategy = new BetaJS.Data.Stores.CacheStrategies.ExpiryCacheStrategy({

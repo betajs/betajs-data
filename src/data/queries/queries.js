@@ -228,7 +228,12 @@ Scoped.define("module:Queries", [
                     return this.evaluate_query(query, object);
                 }, this);
             } else
-                return this.evaluate_value(value, object[key]);
+                return this.evaluate_key_value(value, key, object);
+        },
+
+        evaluate_key_value: function(value, key, object) {
+            var i = key.indexOf(".");
+            return i >= 0 ? this.evaluate_key_value(value, key.substring(i + 1), object[key.substring(0, i)]) : this.evaluate_value(value, object[key]);
         },
 
         evaluate_value: function(value, object_value) {

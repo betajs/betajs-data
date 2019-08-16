@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.150 - 2019-08-14
+betajs-data - v1.0.151 - 2019-08-15
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.150",
-    "datetime": 1565809879432
+    "version": "1.0.151",
+    "datetime": 1565926155282
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -1581,7 +1581,12 @@ Scoped.define("module:Queries", [
                     return this.evaluate_query(query, object);
                 }, this);
             } else
-                return this.evaluate_value(value, object[key]);
+                return this.evaluate_key_value(value, key, object);
+        },
+
+        evaluate_key_value: function(value, key, object) {
+            var i = key.indexOf(".");
+            return i >= 0 ? this.evaluate_key_value(value, key.substring(i + 1), object[key.substring(0, i)]) : this.evaluate_value(value, object[key]);
         },
 
         evaluate_value: function(value, object_value) {
