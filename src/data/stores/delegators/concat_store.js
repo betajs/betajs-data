@@ -1,7 +1,14 @@
 
 Scoped.define("module:Stores.ConcatStore", [
-    "module:Stores.BaseStore"
-], function (BaseStore, scoped) {
+    "module:Stores.BaseStore",
+	"base:Promise",
+	"base:Comparators",
+	"base:Iterators.SkipIterator",
+	"base:Iterators.LimitIterator",
+	"base:Iterators.SortedOrIterator",
+	"base:Iterators.ConcatIterator",
+	"base:Iterators.ArrayIterator"
+], function (BaseStore, Promise, Comparators, SkipIterator, LimitIterator, SortedOrIterator, ConcatIterator, ArrayIterator, scoped) {
 	return BaseStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -50,17 +57,7 @@ Scoped.define("module:Stores.ConcatStore", [
 			},
 
 			_query: function (q, c, ctx) {
-				c = c || {};
-				return this._primary().query(q, c, ctx).mapSuccess(function (result) {
-					result = result.asArray();
-					if (c.limit && result.length >= c.limit)
-						return result;
-					if (c.limit)
-						c.limit -= result.length;
-					return this._secondary().query(q, c, ctx).mapSuccess(function (result2) {
-						return result.concat(result2.asArray());
-					}, this);
-				}, this);
+				return this.cls.queryOnMultipleStores([this._primary(), this._secondary()], q, c, ctx);
 			},
 
 			_primary: function () {
@@ -71,8 +68,35 @@ Scoped.define("module:Stores.ConcatStore", [
                 return this.__secondary;
             }
 
-
 		};
+	}, {
+
+		queryOnMultipleStores: function (stores, query, options, ctx) {
+			if (stores.length === 0)
+				return [];
+			if (stores.length === 1)
+				return stores[0].query(query, options, ctx);
+			options = options || {};
+			var postLimit = options.limit;
+			var postSkip = options.skip;
+			if (options.skip) {
+				delete options.skip;
+				if (options.limit)
+					options.limit += postSkip;
+			}
+			return Promise.and(stores.map(function (store) {
+				return store.query(query, options, ctx);
+			})).mapSuccess(function (iterators) {
+				var iterator = options.sort ? new SortedOrIterator(iterators, Comparators.byObject(options.sort))
+					         : new ConcatIterator(new ArrayIterator(iterators));
+				if (postSkip)
+					iterator = new SkipIterator(iterator, postSkip);
+				if (postLimit)
+					iterator = new LimitIterator(iterator, postLimit);
+				return iterator;
+			});
+		}
+
 	});
 });
 

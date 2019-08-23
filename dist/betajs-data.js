@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.151 - 2019-08-15
+betajs-data - v1.0.152 - 2019-08-23
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1006,7 +1006,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.151 - 2019-08-15
+betajs-data - v1.0.152 - 2019-08-23
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1018,8 +1018,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.151",
-    "datetime": 1565926155282
+    "version": "1.0.152",
+    "datetime": 1566591921420
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -4193,8 +4193,15 @@ Scoped.define("module:Stores.AsyncStore", [
 
 
 Scoped.define("module:Stores.ConcatStore", [
-    "module:Stores.BaseStore"
-], function (BaseStore, scoped) {
+    "module:Stores.BaseStore",
+	"base:Promise",
+	"base:Comparators",
+	"base:Iterators.SkipIterator",
+	"base:Iterators.LimitIterator",
+	"base:Iterators.SortedOrIterator",
+	"base:Iterators.ConcatIterator",
+	"base:Iterators.ArrayIterator"
+], function (BaseStore, Promise, Comparators, SkipIterator, LimitIterator, SortedOrIterator, ConcatIterator, ArrayIterator, scoped) {
 	return BaseStore.extend({scoped: scoped}, function (inherited) {			
 		return {
 
@@ -4243,17 +4250,7 @@ Scoped.define("module:Stores.ConcatStore", [
 			},
 
 			_query: function (q, c, ctx) {
-				c = c || {};
-				return this._primary().query(q, c, ctx).mapSuccess(function (result) {
-					result = result.asArray();
-					if (c.limit && result.length >= c.limit)
-						return result;
-					if (c.limit)
-						c.limit -= result.length;
-					return this._secondary().query(q, c, ctx).mapSuccess(function (result2) {
-						return result.concat(result2.asArray());
-					}, this);
-				}, this);
+				return this.cls.queryOnMultipleStores([this._primary(), this._secondary()], q, c, ctx);
 			},
 
 			_primary: function () {
@@ -4264,8 +4261,35 @@ Scoped.define("module:Stores.ConcatStore", [
                 return this.__secondary;
             }
 
-
 		};
+	}, {
+
+		queryOnMultipleStores: function (stores, query, options, ctx) {
+			if (stores.length === 0)
+				return [];
+			if (stores.length === 1)
+				return stores[0].query(query, options, ctx);
+			options = options || {};
+			var postLimit = options.limit;
+			var postSkip = options.skip;
+			if (options.skip) {
+				delete options.skip;
+				if (options.limit)
+					options.limit += postSkip;
+			}
+			return Promise.and(stores.map(function (store) {
+				return store.query(query, options, ctx);
+			})).mapSuccess(function (iterators) {
+				var iterator = options.sort ? new SortedOrIterator(iterators, Comparators.byObject(options.sort))
+					         : new ConcatIterator(new ArrayIterator(iterators));
+				if (postSkip)
+					iterator = new SkipIterator(iterator, postSkip);
+				if (postLimit)
+					iterator = new LimitIterator(iterator, postLimit);
+				return iterator;
+			});
+		}
+
 	});
 });
 
@@ -5072,6 +5096,63 @@ Scoped.define("module:Stores.ResilientStore", [
 	});
 });
 
+
+Scoped.define("module:Stores.ShardedStore", [
+	"module:Stores.BaseStore",
+	"module:Queries.Constrained",
+	"module:Stores.ConcatStore"
+], function (BaseStore, Constrained, ConcatStore, scoped) {
+	return BaseStore.extend({scoped: scoped}, function (inherited) {			
+		return {
+
+			constructor: function (options) {
+				inherited.constructor.call(this, options);
+				this.__context = options.context || this;
+				this.__shardSelector = options.shardSelector;
+			},
+			
+			_selectShards: function (data, ctx, countExpected) {
+				var shards = this.__shardSelector.call(this.__context, data, ctx);
+				if (countExpected !== undefined && shards.length !== countExpected)
+					throw "Count of shards do not match.";
+				return shards;
+			},
+
+			_selectSingleShard: function (data, ctx) {
+				return (this._selectShards(data, ctx, 1))[0];
+			},
+
+			_selectShardById: function (id, ctx) {
+				return this._selectSingleShard(this.id_row(id), ctx);
+			},
+
+			_query_capabilities: function () {
+				return Constrained.fullConstrainedQueryCapabilities();
+			},
+
+			_insert: function (data, ctx) {
+				return this._selectSingleShard(data, ctx).insert(data, ctx);
+			},
+			
+			_remove: function (id, ctx) {
+				return this._selectShardById(id, ctx).remove(id, ctx);
+			},
+
+			_get: function (id, ctx) {
+				return this._selectShardById(id, ctx).get(id, ctx);
+			},
+
+			_update: function (id, data, ctx) {
+				return this._selectShardById(id, ctx).update(id, data, ctx);
+			},
+
+			_query: function (query, options, ctx) {
+				return ConcatStore.queryOnMultipleStores(this._selectShards(query, ctx), query, options, ctx);
+			}
+
+		};
+	});
+});
 
 Scoped.define("module:Stores.SimulatorStore", [
                                                "module:Stores.PassthroughStore",
