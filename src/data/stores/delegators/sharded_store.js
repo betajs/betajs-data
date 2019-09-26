@@ -10,6 +10,12 @@ Scoped.define("module:Stores.ShardedStore", [
 				inherited.constructor.call(this, options);
 				this.__context = options.context || this;
 				this.__shardSelector = options.shardSelector;
+				this.__allShards = options.allShards;
+				if (this.__allShards) {
+					this.__allShards.forEach(function (shard) {
+						this.delegateEvents(["insert", "update", "remove"], shard);
+					}, this);
+				}
 			},
 			
 			_selectShards: function (data, ctx, countExpected) {
