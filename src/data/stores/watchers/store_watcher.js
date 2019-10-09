@@ -41,12 +41,13 @@ Scoped.define("module:Stores.Watchers.StoreWatcherMixin", [], function() {
 
 Scoped.define("module:Stores.Watchers.StoreWatcher", [
 	"base:Class",
+	"base:Objs",
 	"base:Events.EventsMixin",
 	"base:Classes.ContextRegistry",
 	"base:Comparators",
 	"module:Stores.Watchers.StoreWatcherMixin",
 	"module:Queries"
-], function(Class, EventsMixin, ContextRegistry, Comparators, StoreWatcherMixin, Queries, scoped) {
+], function(Class, Objs, EventsMixin, ContextRegistry, Comparators, StoreWatcherMixin, Queries, scoped) {
 	return Class.extend({scoped: scoped}, [EventsMixin, StoreWatcherMixin, function (inherited) {
 		return {
 
@@ -115,9 +116,9 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
                 if (!this._ctxFilter(ctx, row))
                     return;
 				var id = row[this.id_key];
-				if (!this.__items.get(id))
-					return;
-				this._updatedWatchedItem(row, data);
+				if (this.__items.get(id))
+					this._updatedWatchedItem(row, data);
+				this._insertedInsert(Objs.extend(Objs.clone(row, 1), data), ctx);
 			},
 
 			_insertedInsert : function(data, ctx) {
@@ -127,9 +128,8 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				var iter = this.__inserts.iterator();
 				while (!trig && iter.hasNext())
 					trig = Queries.evaluate(iter.next().query, data);
-				if (!trig)
-					return;
-				this._insertedWatchedInsert(data);
+				if (trig)
+					this._insertedWatchedInsert(data);
 			},
 
 			unregisterItem: function (id, context) {

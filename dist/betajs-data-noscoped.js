@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.153 - 2019-09-25
+betajs-data - v1.0.154 - 2019-10-09
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.153",
-    "datetime": 1569459957174
+    "version": "1.0.154",
+    "datetime": 1570657324249
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6629,12 +6629,13 @@ Scoped.define("module:Stores.Watchers.StoreWatcherMixin", [], function() {
 
 Scoped.define("module:Stores.Watchers.StoreWatcher", [
 	"base:Class",
+	"base:Objs",
 	"base:Events.EventsMixin",
 	"base:Classes.ContextRegistry",
 	"base:Comparators",
 	"module:Stores.Watchers.StoreWatcherMixin",
 	"module:Queries"
-], function(Class, EventsMixin, ContextRegistry, Comparators, StoreWatcherMixin, Queries, scoped) {
+], function(Class, Objs, EventsMixin, ContextRegistry, Comparators, StoreWatcherMixin, Queries, scoped) {
 	return Class.extend({scoped: scoped}, [EventsMixin, StoreWatcherMixin, function (inherited) {
 		return {
 
@@ -6703,9 +6704,9 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
                 if (!this._ctxFilter(ctx, row))
                     return;
 				var id = row[this.id_key];
-				if (!this.__items.get(id))
-					return;
-				this._updatedWatchedItem(row, data);
+				if (this.__items.get(id))
+					this._updatedWatchedItem(row, data);
+				this._insertedInsert(Objs.extend(Objs.clone(row, 1), data), ctx);
 			},
 
 			_insertedInsert : function(data, ctx) {
@@ -6715,9 +6716,8 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				var iter = this.__inserts.iterator();
 				while (!trig && iter.hasNext())
 					trig = Queries.evaluate(iter.next().query, data);
-				if (!trig)
-					return;
-				this._insertedWatchedInsert(data);
+				if (trig)
+					this._insertedWatchedInsert(data);
 			},
 
 			unregisterItem: function (id, context) {
