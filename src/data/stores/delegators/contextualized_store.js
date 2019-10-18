@@ -170,10 +170,11 @@ Scoped.define("module:Stores.AbstractDecontextualizedStore", [
             	return this._rawGet(id, ctx).mapSuccess(function (row) {
             		if (!row)
             			return true;
-            		var updatedData = this._encodeUpdate(id, data, ctx, row);
-            		return this.__store.update(id, updatedData).mapSuccess(function (updatedData) {
-            		    this._undecodedUpdated(id, updatedData, ctx, row);
-            		    return this._decodeRow(updatedData, ctx);
+            		return Promise.box(this._encodeUpdate, this, [id, data, ctx, row]).mapSuccess(function (updatedData) {
+            		    this.__store.update(id, updatedData).mapSuccess(function (updatedData) {
+                            this._undecodedUpdated(id, updatedData, ctx, row);
+                            return this._decodeRow(updatedData, ctx);
+                        }, this);
                     }, this);
 				}, this);
             },
@@ -351,9 +352,16 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                         data[ctxAttrKey][ctxId] = value;
                     }
                 }, this);
-                if (this.__contextDataUpdater)
-                    data = this.__contextDataUpdater(id, data, ctx, row);
-                return data;
+                if (row && !data[this.__contextAccessKey])
+                    data[this.__contextAccessKey] = row[this.__contextAccessKey];
+                if (data[this.__contextAccessKey]) {
+                    return this.__expandContextAccess(ctxId, data, ctx).mapSuccess(function (data) {
+                        if (this.__contextDataUpdater)
+                            data = this.__contextDataUpdater(id, data, ctx, row);
+                        return data;
+                    }, this);
+                } else
+                    return data;
             },
 
             _encodeRow: function (data, ctx) {
@@ -372,6 +380,10 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                         contextData[ctxAttrKey]
                     );
                 }, this);
+                return this.__expandContextAccess(ctxId, data, ctx);
+            },
+
+            __expandContextAccess: function (ctxId, data, ctx) {
                 var otherContexts = Promise.value(this.__contextAccessExpander.call(this, data, ctx));
                 return otherContexts.mapSuccess(function (otherContexts) {
                     otherContexts = otherContexts.filter(function (otherCtxId) {
@@ -381,7 +393,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                     var clonedDataPromises = otherContexts.map(function (otherCtxId) {
                         return Promise.value(this.__contextDataCloner.call(this, data, ctx, otherCtxId));
                     }, this);
-                	return Promise.and(clonedDataPromises).mapSuccess(function (clonedDatas) {
+                    return Promise.and(clonedDataPromises).mapSuccess(function (clonedDatas) {
                         otherContexts.forEach(function (otherCtxId, i) {
                             var otherData = clonedDatas[i];
                             this.__contextAttributes.forEach(function (ctxAttrKey) {
@@ -389,8 +401,8 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                             }, this);
                         }, this);
                         return data;
-					}, this);
-				}, this);
+                    }, this);
+                }, this);
             },
 
             _undecodedUpdated: function (id, updatedData, ctx, row) {
