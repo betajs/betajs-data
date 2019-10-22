@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.155 - 2019-10-17
+betajs-data - v1.0.156 - 2019-10-22
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.155",
-    "datetime": 1571365990802
+    "version": "1.0.156",
+    "datetime": 1571773909381
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -5104,7 +5104,8 @@ Scoped.define("module:Stores.CachedStore", [
 					queryKey: "query",
 					cacheKey: null,
 					suppAttrs: {},
-					optimisticRead: false
+					optimisticRead: false,
+					hideMetaData: true
 				}, options);
 				this._online = true;
 				this.itemCache = this._options.itemCache || this.auto_destroy(new MemoryStore({
@@ -5191,7 +5192,7 @@ Scoped.define("module:Stores.CachedStore", [
 					accessMeta: options.accessMeta ? this.cacheStrategy.itemAccessMeta() : null
 				};
 				return this.itemCache.insert(this.addItemSupp(this.addItemMeta(data, meta)), ctx).mapSuccess(function (result) {
-					data = this.removeItemMeta(result);
+					data = this._options.hideMetaData ? this.removeItemMeta(result) : result;
 					if (!options.silent)
 						this._inserted(data, ctx);
 					return data;
@@ -5239,7 +5240,7 @@ Scoped.define("module:Stores.CachedStore", [
 					if (options.accessMeta)
 						meta.accessMeta = this.cacheStrategy.itemAccessMeta(meta.accessMeta);
 					return this.itemCache.update(this.itemCache.id_of(item), this.addItemMeta(data, meta), ctx, transaction_id).mapSuccess(function (result) {
-						result = this.removeItemMeta(result);
+						result = this._options.hideMetaData ? this.removeItemMeta(result) : result;
 						if (!options.silent)
 							this._updated(result, data, ctx, transaction_id);
 						return result;
@@ -5336,7 +5337,7 @@ Scoped.define("module:Stores.CachedStore", [
 							meta.accessMeta = this.cacheStrategy.itemAccessMeta(meta.accessMeta);
 							this.itemCache.update(cached_id, this.addItemMeta({}, meta), ctx);
 						}
-						return this.removeItemMeta(data);
+						return this._options.hideMetaData ? this.removeItemMeta(data) : data;
 					}
 					return this.remoteStore.get(remote_id, ctx).mapSuccess(function (data) {
 						this.online();
@@ -5374,7 +5375,7 @@ Scoped.define("module:Stores.CachedStore", [
 						}, ctx);
 					}, this);
 					var arrIter = new ArrayIterator(items);
-					return (new MappedIterator(arrIter, this.removeItemMeta, this)).auto_destroy(arrIter, true);
+					return this._options.hideMetaData ? (new MappedIterator(arrIter, this.removeItemMeta, this)).auto_destroy(arrIter, true) : arrIter;
 				}, this);
 			},
 
@@ -5560,9 +5561,9 @@ Scoped.define("module:Stores.CachedStore", [
 			unserialize: function (data) {
 				return this.itemCache.unserialize(data.items).mapSuccess(function (items) {
 					this.queryCache.unserialize(data.queries);
-					return items.map(function (item) {
+					return this._options.hideMetaData ? items.map(function (item) {
 						return this.removeItemMeta(item);
-					}, this);
+					}, this) : items;
 				}, this);
 			}
 
