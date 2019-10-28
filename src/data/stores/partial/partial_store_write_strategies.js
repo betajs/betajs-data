@@ -193,7 +193,10 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					lockItem: true,
 					silent: true,
 					refreshMeta: true,
-					accessMeta: true
+					accessMeta: true,
+					meta: {
+						pendingInsert: true
+					}
 				}).success(function (data) {
 					data = this.partialStore.cachedStore.removeItemSupp(data);
 					this.storeHistory.sourceInsert(data);
@@ -218,7 +221,10 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					ignoreLock: true, // this was false before, not sure why.
 					silent: true,
 					refreshMeta: false,
-					accessMeta: true
+					accessMeta: true,
+					meta: {
+						pendingUpdate: true
+					}
 				}, ctx, transaction_id).success(function () {
 					data = this.partialStore.cachedStore.removeItemSupp(data);
 					this.storeHistory.sourceUpdate(id, data);
@@ -240,11 +246,18 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 						Objs.iter(unlockIds, function (value, id) {
 							if (value) {
 								if (value === true) {
-									this.partialStore.cachedStore.unlockItem(id);
+									this.partialStore.cachedStore.unlockItem(id, undefined, {
+										meta: {
+											pendingUpdate: false
+										}
+									});
 								} else {
 									this.partialStore.cachedStore.cacheUpdate(id, value, {
 										unlockItem: true,
-										silent: false
+										silent: false,
+										meta: {
+											pendingInsert: false
+										}
 									});
 								}
 							}

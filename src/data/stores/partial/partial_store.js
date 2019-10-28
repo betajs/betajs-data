@@ -52,7 +52,7 @@ Scoped.define("module:Stores.PartialStore", [
 			
 			_update: function (id, data, ctx, transaction_id) {
 				return this.cachedStore.cacheOnlyGet(id, {}, ctx).mapSuccess(function (cachedData) {
-					var diff = Objs.diff(data, cachedData);
+					var diff = Objs.diff(data, cachedData || {});
 					return Types.is_empty(diff) ? cachedData : this.writeStrategy.update(id, data, ctx, transaction_id);
 				}, this);
 			},

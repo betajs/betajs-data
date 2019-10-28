@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.156 - 2019-10-22
+betajs-data - v1.0.157 - 2019-10-28
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.156",
-    "datetime": 1571773909381
+    "version": "1.0.157",
+    "datetime": 1572282287748
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -5191,6 +5191,8 @@ Scoped.define("module:Stores.CachedStore", [
 					refreshMeta: options.refreshMeta ? this.cacheStrategy.itemRefreshMeta() : null,
 					accessMeta: options.accessMeta ? this.cacheStrategy.itemAccessMeta() : null
 				};
+				if (options.meta)
+					meta = Objs.extend(meta, options.meta);
 				return this.itemCache.insert(this.addItemSupp(this.addItemMeta(data, meta)), ctx).mapSuccess(function (result) {
 					data = this._options.hideMetaData ? this.removeItemMeta(result) : result;
 					if (!options.silent)
@@ -5223,6 +5225,8 @@ Scoped.define("module:Stores.CachedStore", [
 						meta.lockedItem = false;
 						meta.lockedAttrs = {};
 					}
+					if (options.meta)
+						meta = Objs.extend(Objs.clone(meta, 1), options.meta);
 					data = Objs.filter(data, function (value, key) {
 						return (options.ignoreLock || (!meta.lockedItem && !meta.lockedAttrs[key])) && (!(key in item) || item[key] != value);
 					}, this);
@@ -5243,6 +5247,8 @@ Scoped.define("module:Stores.CachedStore", [
 						result = this._options.hideMetaData ? this.removeItemMeta(result) : result;
 						if (!options.silent)
 							this._updated(result, data, ctx, transaction_id);
+						else if (options.meta)
+							this._updated(result, this.addItemMeta({}, meta), ctx, transaction_id);
 						return result;
 					}, this);
 				}, this);
@@ -5504,14 +5510,19 @@ Scoped.define("module:Stores.CachedStore", [
 				return data[this._options.queryMetaKey];
 			},
 
-			unlockItem: function (id, ctx) {
+			unlockItem: function (id, ctx, opts) {
 				this.itemCache.get(id, ctx).success(function (data) {
 					if (!data)
 						return;
 					var meta = this.readItemMeta(data);
 					meta.lockedItem = false;
 					meta.lockedAttrs = {};
+					opts = opts || {};
+					if (opts.meta)
+						meta = Objs.extend(Objs.clone(meta, 1), opts.meta);
 					this.itemCache.update(id, this.addItemMeta({}, meta), ctx);
+					if (opts.meta)
+                        this._updated(this.id_row(id), this.addItemMeta({}, meta), ctx);
 				}, this);
 			},
 
@@ -5862,7 +5873,10 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					lockItem: true,
 					silent: true,
 					refreshMeta: true,
-					accessMeta: true
+					accessMeta: true,
+					meta: {
+						pendingInsert: true
+					}
 				}).success(function (data) {
 					data = this.partialStore.cachedStore.removeItemSupp(data);
 					this.storeHistory.sourceInsert(data);
@@ -5887,7 +5901,10 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					ignoreLock: true, // this was false before, not sure why.
 					silent: true,
 					refreshMeta: false,
-					accessMeta: true
+					accessMeta: true,
+					meta: {
+						pendingUpdate: true
+					}
 				}, ctx, transaction_id).success(function () {
 					data = this.partialStore.cachedStore.removeItemSupp(data);
 					this.storeHistory.sourceUpdate(id, data);
@@ -5909,11 +5926,18 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 						Objs.iter(unlockIds, function (value, id) {
 							if (value) {
 								if (value === true) {
-									this.partialStore.cachedStore.unlockItem(id);
+									this.partialStore.cachedStore.unlockItem(id, undefined, {
+										meta: {
+											pendingUpdate: false
+										}
+									});
 								} else {
 									this.partialStore.cachedStore.cacheUpdate(id, value, {
 										unlockItem: true,
-										silent: false
+										silent: false,
+										meta: {
+											pendingInsert: false
+										}
 									});
 								}
 							}
@@ -6063,7 +6087,7 @@ Scoped.define("module:Stores.PartialStore", [
 			
 			_update: function (id, data, ctx, transaction_id) {
 				return this.cachedStore.cacheOnlyGet(id, {}, ctx).mapSuccess(function (cachedData) {
-					var diff = Objs.diff(data, cachedData);
+					var diff = Objs.diff(data, cachedData || {});
 					return Types.is_empty(diff) ? cachedData : this.writeStrategy.update(id, data, ctx, transaction_id);
 				}, this);
 			},

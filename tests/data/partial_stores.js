@@ -398,3 +398,48 @@ QUnit.test("commit strategy push", function (assert) {
 	});
 
 });
+
+
+
+
+QUnit.test("test partial stores, commit write strategy, meta", function (assert) {
+	var remoteStore = new BetaJS.Data.Stores.SimulatorStore(new BetaJS.Data.Stores.MemoryStore({
+		id_generator: new BetaJS.IdGenerators.PrefixedIdGenerator(
+			"remote_id",
+			new BetaJS.IdGenerators.TimedIdGenerator()
+		)
+	}));
+	var id = remoteStore.insert({i:3,j:5}).value().id;
+	var globalTime = 0;
+	var store = new BetaJS.Data.Stores.PartialStore(remoteStore, {
+		cacheStrategy: new BetaJS.Data.Stores.CacheStrategies.ExpiryCacheStrategy({
+			itemRefreshTime: 20,
+			itemAccessTime: 10,
+			queryRefreshTime: 20,
+			queryAccessTime: 10,
+			now: function () {
+				return globalTime;
+			}
+		}),
+		writeStrategy: new BetaJS.Data.Stores.PartialStoreWriteStrategies.CommitStrategy(),
+		itemCache: new BetaJS.Data.Stores.MemoryStore({
+			id_generator: new BetaJS.IdGenerators.PrefixedIdGenerator(
+				"local_id",
+				new BetaJS.IdGenerators.TimedIdGenerator()
+			)
+		}),
+		hideMetaData: false
+	});
+	assert.ok(store.get(id).value().meta);
+	assert.ok(!store.get(id).value().meta.pendingUpdate);
+	store.once("update", function (dummy, data) {
+		assert.equal(data.meta.pendingUpdate, true);
+	});
+	store.update(id, {k: 7});
+	assert.ok(store.get(id).value().meta.pendingUpdate);
+	store.once("update", function (dummy, data) {
+		assert.equal(data.meta.pendingUpdate, false);
+	});
+	store.writeStrategy.push();
+	assert.ok(!store.get(id).value().meta.pendingUpdate);
+});
