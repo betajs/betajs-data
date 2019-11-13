@@ -160,7 +160,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 			constructor: function (historyStore, options) {
 				inherited.constructor.call(this);
 				this._options = options || {};
-				this.historyStore = this._options.historyStore || this.auto_destroy(new MemoryStore());
+				this.historyStore = historyStore || this.auto_destroy(new MemoryStore());
 			},
 			
 			init: function (partialStore) {

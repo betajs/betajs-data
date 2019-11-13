@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.157 - 2019-10-28
+betajs-data - v1.0.158 - 2019-11-12
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.157 - 2019-10-28
+betajs-data - v1.0.158 - 2019-11-12
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1022,8 +1022,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.157",
-    "datetime": 1572282287748
+    "version": "1.0.158",
+    "datetime": 1573607605002
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6851,7 +6851,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 			constructor: function (historyStore, options) {
 				inherited.constructor.call(this);
 				this._options = options || {};
-				this.historyStore = this._options.historyStore || this.auto_destroy(new MemoryStore());
+				this.historyStore = historyStore || this.auto_destroy(new MemoryStore());
 			},
 			
 			init: function (partialStore) {
