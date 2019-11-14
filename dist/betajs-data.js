@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.158 - 2019-11-12
+betajs-data - v1.0.159 - 2019-11-13
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.158 - 2019-11-12
+betajs-data - v1.0.159 - 2019-11-13
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1022,8 +1022,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.158",
-    "datetime": 1573607605002
+    "version": "1.0.159",
+    "datetime": 1573704353745
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6929,76 +6929,77 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 				var unlockIds = {};
 				var hs = this.storeHistory.historyStore;
                 this.storeHistory.lockCommits();
-				var iter = hs.query({success: false}, {sort: {commit_id: 1}}).value();
-				var next = function () {
-					if (!iter.hasNext()) {
-						this.pushing = false;
-						this.storeHistory.unlockCommits();
-						Objs.iter(unlockIds, function (value, id) {
-							if (value) {
-								if (value === true) {
-									this.partialStore.cachedStore.unlockItem(id, undefined, {
-										meta: {
-											pendingUpdate: false
-										}
-									});
-								} else {
-									this.partialStore.cachedStore.cacheUpdate(id, value, {
-										unlockItem: true,
-										silent: false,
-										meta: {
-											pendingInsert: false
-										}
-									});
+				return hs.query({success: false}, {sort: {commit_id: 1}}).mapSuccess(function (iter) {
+					var next = function () {
+						if (!iter.hasNext()) {
+							this.pushing = false;
+							this.storeHistory.unlockCommits();
+							Objs.iter(unlockIds, function (value, id) {
+								if (value) {
+									if (value === true) {
+										this.partialStore.cachedStore.unlockItem(id, undefined, {
+											meta: {
+												pendingUpdate: false
+											}
+										});
+									} else {
+										this.partialStore.cachedStore.cacheUpdate(id, value, {
+											unlockItem: true,
+											silent: false,
+											meta: {
+												pendingInsert: false
+											}
+										});
+									}
 								}
-							}
-						}, this);
-						iter.destroy();
-						return Promise.value(true);
-					}
-					var commit = iter.next();
-					var commit_id = hs.id_of(commit);
-					if (commit_id in failedIds) {
-						hs.update(commit_id, {
-							pushed: this._options.pushedStateOnFail,
-							success: false
-						});
-						return next.apply(this);
-					} else {
-						var promise = null;
-						if (commit.type === "insert") {
-							promise = this.partialStore.remoteStore.insert(commit.row);
-						} else if (commit.type === "update") {
-							promise = this.partialStore.cachedStore.cachedIdToRemoteId(commit.row_id).mapSuccess(function (remoteId) {
-								return this.partialStore.remoteStore.update(remoteId, commit.row);
 							}, this);
-						} else if (commit.type === "remove") {
-							promise = this.partialStore.remoteStore.remove(commit.row ? this.partialStore.remoteStore.id_of(commit.row) : commit.row_id);
+							iter.destroy();
+							return Promise.value(true);
 						}
-						return promise.mapSuccess(function (ret) {
-							hs.update(commit_id, {
-								pushed: true,
-								success: true
-							});
-							if (!(commit.row_id in unlockIds)) {
-								unlockIds[commit.row_id] = true;
-								if (commit.type === "insert") {
-									unlockIds[commit.row_id] = ret;
-								}
-							}
-							return next.apply(this);
-						}, this).mapError(function () {
+						var commit = iter.next();
+						var commit_id = hs.id_of(commit);
+						if (commit_id in failedIds) {
 							hs.update(commit_id, {
 								pushed: this._options.pushedStateOnFail,
 								success: false
 							});
-							failedIds[commit_id] = true;
-							unlockIds[commit.row_id] = false;
 							return next.apply(this);
-						}, this);
-					}
-				};
-				return next.apply(this);
+						} else {
+							var promise = null;
+							if (commit.type === "insert") {
+								promise = this.partialStore.remoteStore.insert(commit.row);
+							} else if (commit.type === "update") {
+								promise = this.partialStore.cachedStore.cachedIdToRemoteId(commit.row_id).mapSuccess(function (remoteId) {
+									return this.partialStore.remoteStore.update(remoteId, commit.row);
+								}, this);
+							} else if (commit.type === "remove") {
+								promise = this.partialStore.remoteStore.remove(commit.row ? this.partialStore.remoteStore.id_of(commit.row) : commit.row_id);
+							}
+							return promise.mapSuccess(function (ret) {
+								hs.update(commit_id, {
+									pushed: true,
+									success: true
+								});
+								if (!(commit.row_id in unlockIds)) {
+									unlockIds[commit.row_id] = true;
+									if (commit.type === "insert") {
+										unlockIds[commit.row_id] = ret;
+									}
+								}
+								return next.apply(this);
+							}, this).mapError(function () {
+								hs.update(commit_id, {
+									pushed: this._options.pushedStateOnFail,
+									success: false
+								});
+								failedIds[commit_id] = true;
+								unlockIds[commit.row_id] = false;
+								return next.apply(this);
+							}, this);
+						}
+					};
+					return next.apply(this);
+				}, this);
 			}
 
 		};
