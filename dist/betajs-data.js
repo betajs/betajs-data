@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.159 - 2019-11-13
+betajs-data - v1.0.160 - 2019-11-26
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.159 - 2019-11-13
+betajs-data - v1.0.160 - 2019-11-26
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1022,8 +1022,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.159",
-    "datetime": 1573704353745
+    "version": "1.0.160",
+    "datetime": 1574808296355
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -1624,7 +1624,8 @@ Scoped.define("module:Stores.DatabaseStore", [
                 this.__table_name = table_name;
                 this.__table = this.__database.getTable(this.__table_name, table_options);
                 inherited.constructor.call(this, {
-                    id_key: id_key || this.__table.primary_key()
+                    id_key: id_key || this.__table.primary_key(),
+                    create_ids: separate_ids
                 });
                 this.__separate_ids = separate_ids;
                 this.__map_ids = !this.__separate_ids && this.id_key() !== this.__table.primary_key();
@@ -1650,6 +1651,7 @@ Scoped.define("module:Stores.DatabaseStore", [
             },
 
             _update: function(id, data) {
+                delete data[this.__table.primary_key()];
                 return this.__separate_ids ?
                     this.table().updateRow(this.id_row(id), data) :
                     this.table().updateById(id, data);
