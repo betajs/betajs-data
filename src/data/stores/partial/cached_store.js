@@ -417,6 +417,7 @@ Scoped.define("module:Stores.CachedStore", [
 			},
 
 			removeItemMeta: function (data) {
+				data = data || {};
 				data = Objs.clone(data, 1);
 				delete data[this._options.itemMetaKey];
 				return data;

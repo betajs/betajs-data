@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.160 - 2019-11-26
+betajs-data - v1.0.161 - 2019-12-06
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.160",
-    "datetime": 1574808296355
+    "version": "1.0.161",
+    "datetime": 1575680187137
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -3351,7 +3351,7 @@ Scoped.define("module:Stores.ContextualizedStore", [
 
 			_update: function (id, data) {
 				var decoded = this._decodeId(id);
-				this.__store.update(decoded.id, data, decoded.ctx).mapSuccess(function (row) {
+				return this.__store.update(decoded.id, data, decoded.ctx).mapSuccess(function (row) {
 					return row;
 				}, this);
 			},
@@ -3462,7 +3462,7 @@ Scoped.define("module:Stores.AbstractDecontextualizedStore", [
             		if (!row)
             			return true;
             		return Promise.box(this._encodeUpdate, this, [id, data, ctx, row]).mapSuccess(function (updatedData) {
-            		    this.__store.update(id, updatedData).mapSuccess(function (updatedData) {
+            		    return this.__store.update(id, updatedData).mapSuccess(function (updatedData) {
                             this._undecodedUpdated(id, updatedData, ctx, row);
                             return this._decodeRow(updatedData, ctx);
                         }, this);
@@ -5493,6 +5493,7 @@ Scoped.define("module:Stores.CachedStore", [
 			},
 
 			removeItemMeta: function (data) {
+				data = data || {};
 				data = Objs.clone(data, 1);
 				delete data[this._options.itemMetaKey];
 				return data;

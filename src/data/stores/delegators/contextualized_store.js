@@ -60,7 +60,7 @@ Scoped.define("module:Stores.ContextualizedStore", [
 
 			_update: function (id, data) {
 				var decoded = this._decodeId(id);
-				this.__store.update(decoded.id, data, decoded.ctx).mapSuccess(function (row) {
+				return this.__store.update(decoded.id, data, decoded.ctx).mapSuccess(function (row) {
 					return row;
 				}, this);
 			},
@@ -171,7 +171,7 @@ Scoped.define("module:Stores.AbstractDecontextualizedStore", [
             		if (!row)
             			return true;
             		return Promise.box(this._encodeUpdate, this, [id, data, ctx, row]).mapSuccess(function (updatedData) {
-            		    this.__store.update(id, updatedData).mapSuccess(function (updatedData) {
+            		    return this.__store.update(id, updatedData).mapSuccess(function (updatedData) {
                             this._undecodedUpdated(id, updatedData, ctx, row);
                             return this._decodeRow(updatedData, ctx);
                         }, this);
