@@ -4,8 +4,9 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
     "base:Classes.SharedObjectFactoryPool",
     "module:Collections.TableQueryCollection",
     "base:Objs",
-    "base:Functions"
-], function(TableAssociation, SharedObjectFactory, SharedObjectFactoryPool, TableQueryCollection, Objs, Functions, scoped) {
+    "base:Functions",
+    "base:Promise"
+], function(TableAssociation, SharedObjectFactory, SharedObjectFactoryPool, TableQueryCollection, Objs, Functions, Promise, scoped) {
     return TableAssociation.extend({
         scoped: scoped
     }, function(inherited) {
@@ -18,8 +19,13 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
                 if (this._model && this._model.isNew && !this._model.destroyed()) {
                     if (this._model.isNew())
                         this._model.once("save", this._queryChanged, this);
-                    if (this._options.delete_cascade)
-                        this._model.once("remove", this.removeAll, this);
+                    if (this._options.delete_cascade) {
+                        this._model.registerHook("remove", function(result) {
+                            return this.removeAll().mapSuccess(function() {
+                                return result;
+                            });
+                        }, this);
+                    }
                 }
             },
 
@@ -74,15 +80,18 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
             },
 
             remove: function(item) {
-                if (item && !item.destroyed() && this._options.delete_cascade)
-                    item.weaklyRemove();
-                return this._remove(item);
+                var promise = item && !item.destroyed() && this._options.delete_cascade ? item.weaklyRemove() : Promise.value(true);
+                return promise.mapSuccess(function() {
+                    return this._remove(item);
+                }, this);
             },
 
             removeAll: function() {
-                this.allBy().success(function(iter) {
+                return this.allBy().mapSuccess(function(iter) {
+                    var promises = [];
                     while (iter.hasNext())
-                        this.remove(iter.next());
+                        promises.push(this.remove(iter.next()));
+                    return Promise.and(promises);
                 }, this);
             },
 

@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.161 - 2019-12-06
+betajs-data - v1.0.162 - 2020-01-08
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.161",
-    "datetime": 1575680187137
+    "version": "1.0.162",
+    "datetime": 1578521332272
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6966,8 +6966,9 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
     "base:Classes.SharedObjectFactoryPool",
     "module:Collections.TableQueryCollection",
     "base:Objs",
-    "base:Functions"
-], function(TableAssociation, SharedObjectFactory, SharedObjectFactoryPool, TableQueryCollection, Objs, Functions, scoped) {
+    "base:Functions",
+    "base:Promise"
+], function(TableAssociation, SharedObjectFactory, SharedObjectFactoryPool, TableQueryCollection, Objs, Functions, Promise, scoped) {
     return TableAssociation.extend({
         scoped: scoped
     }, function(inherited) {
@@ -6980,8 +6981,13 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
                 if (this._model && this._model.isNew && !this._model.destroyed()) {
                     if (this._model.isNew())
                         this._model.once("save", this._queryChanged, this);
-                    if (this._options.delete_cascade)
-                        this._model.once("remove", this.removeAll, this);
+                    if (this._options.delete_cascade) {
+                        this._model.registerHook("remove", function(result) {
+                            return this.removeAll().mapSuccess(function() {
+                                return result;
+                            });
+                        }, this);
+                    }
                 }
             },
 
@@ -7036,15 +7042,18 @@ Scoped.define("module:Modelling.Associations.HasManyAssociation", [
             },
 
             remove: function(item) {
-                if (item && !item.destroyed() && this._options.delete_cascade)
-                    item.weaklyRemove();
-                return this._remove(item);
+                var promise = item && !item.destroyed() && this._options.delete_cascade ? item.weaklyRemove() : Promise.value(true);
+                return promise.mapSuccess(function() {
+                    return this._remove(item);
+                }, this);
             },
 
             removeAll: function() {
-                this.allBy().success(function(iter) {
+                return this.allBy().mapSuccess(function(iter) {
+                    var promises = [];
                     while (iter.hasNext())
-                        this.remove(iter.next());
+                        promises.push(this.remove(iter.next()));
+                    return Promise.and(promises);
                 }, this);
             },
 
@@ -7303,8 +7312,13 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
                 inherited.constructor.apply(this, arguments);
                 this.active = new SharedObjectFactory(this.newActiveModel, this);
                 if (this._model && this._model.isNew && !this._model.destroyed()) {
-                    if (this._options.delete_cascade)
-                        this._model.once("remove", this.remove, this);
+                    if (this._options.delete_cascade) {
+                        this._model.registerHook("remove", function(result) {
+                            return this.remove().mapSuccess(function() {
+                                return result;
+                            });
+                        }, this);
+                    }
                 }
             },
 
@@ -7340,7 +7354,7 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
             },
 
             remove: function() {
-                this.assertExistence().success(function(model) {
+                return this.assertExistence().success(function(model) {
                     model.increaseRef();
                     this.active.destroy();
                     model.weaklyRemove();
@@ -7761,6 +7775,7 @@ Scoped.define("module:Modelling.GroupedProperties", [
 });
 Scoped.define("module:Modelling.Model", [
     "module:Modelling.AssociatedProperties",
+    "base:Events.HooksMixin",
     "module:Modelling.ModelInvalidException",
     "base:Objs",
     "base:Promise",
@@ -7768,10 +7783,10 @@ Scoped.define("module:Modelling.Model", [
     "base:Strings",
     "base:Tokens",
     "module:Modelling.Table"
-], function(AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Strings, Tokens, Table, scoped) {
+], function(AssociatedProperties, HooksMixin, ModelInvalidException, Objs, Promise, Types, Strings, Tokens, Table, scoped) {
     return AssociatedProperties.extend({
         scoped: scoped
-    }, function(inherited) {
+    }, [HooksMixin, function(inherited) {
         return {
 
             constructor: function(attributes, table, options, ctx) {
@@ -7983,11 +7998,12 @@ Scoped.define("module:Modelling.Model", [
                 this.__removing = true;
                 return this.__table.store().remove(this.id(), this.__ctx).callback(function() {
                     this.__removing = false;
-                }, this).success(function() {
+                }, this).mapSuccess(function(result) {
                     if (this.destroyed())
-                        return;
+                        return result;
                     this.__options.removed = true;
                     this.trigger("remove");
+                    return this.invokeHook("remove", result);
                 }, this);
             },
 
@@ -8012,7 +8028,7 @@ Scoped.define("module:Modelling.Model", [
             }
 
         };
-    }, {
+    }], {
 
         type: function() {
             return Strings.last_after(this.classname, ".").toLowerCase();

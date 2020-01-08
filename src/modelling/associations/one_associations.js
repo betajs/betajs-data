@@ -13,8 +13,13 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
                 inherited.constructor.apply(this, arguments);
                 this.active = new SharedObjectFactory(this.newActiveModel, this);
                 if (this._model && this._model.isNew && !this._model.destroyed()) {
-                    if (this._options.delete_cascade)
-                        this._model.once("remove", this.remove, this);
+                    if (this._options.delete_cascade) {
+                        this._model.registerHook("remove", function(result) {
+                            return this.remove().mapSuccess(function() {
+                                return result;
+                            });
+                        }, this);
+                    }
                 }
             },
 
@@ -50,7 +55,7 @@ Scoped.define("module:Modelling.Associations.OneAssociation", [
             },
 
             remove: function() {
-                this.assertExistence().success(function(model) {
+                return this.assertExistence().success(function(model) {
                     model.increaseRef();
                     this.active.destroy();
                     model.weaklyRemove();

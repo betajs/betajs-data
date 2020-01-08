@@ -1,5 +1,6 @@
 Scoped.define("module:Modelling.Model", [
     "module:Modelling.AssociatedProperties",
+    "base:Events.HooksMixin",
     "module:Modelling.ModelInvalidException",
     "base:Objs",
     "base:Promise",
@@ -7,10 +8,10 @@ Scoped.define("module:Modelling.Model", [
     "base:Strings",
     "base:Tokens",
     "module:Modelling.Table"
-], function(AssociatedProperties, ModelInvalidException, Objs, Promise, Types, Strings, Tokens, Table, scoped) {
+], function(AssociatedProperties, HooksMixin, ModelInvalidException, Objs, Promise, Types, Strings, Tokens, Table, scoped) {
     return AssociatedProperties.extend({
         scoped: scoped
-    }, function(inherited) {
+    }, [HooksMixin, function(inherited) {
         return {
 
             constructor: function(attributes, table, options, ctx) {
@@ -222,11 +223,12 @@ Scoped.define("module:Modelling.Model", [
                 this.__removing = true;
                 return this.__table.store().remove(this.id(), this.__ctx).callback(function() {
                     this.__removing = false;
-                }, this).success(function() {
+                }, this).mapSuccess(function(result) {
                     if (this.destroyed())
-                        return;
+                        return result;
                     this.__options.removed = true;
                     this.trigger("remove");
+                    return this.invokeHook("remove", result);
                 }, this);
             },
 
@@ -251,7 +253,7 @@ Scoped.define("module:Modelling.Model", [
             }
 
         };
-    }, {
+    }], {
 
         type: function() {
             return Strings.last_after(this.classname, ".").toLowerCase();
