@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.162 - 2020-01-08
+betajs-data - v1.0.163 - 2020-01-14
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.162 - 2020-01-08
+betajs-data - v1.0.163 - 2020-01-14
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1022,8 +1022,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.162",
-    "datetime": 1578521332272
+    "version": "1.0.163",
+    "datetime": 1579055289523
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -1829,6 +1829,30 @@ Scoped.define("module:Databases.DatabaseTable", [
 
             _renameTable: function(newName) {
                 throw "Unsupported";
+            },
+
+            createTable: function() {
+                return this._createTable(this._table_name);
+            },
+
+            _createTable: function(newName) {
+                throw "Unsupported";
+            },
+
+            deleteTable: function() {
+                return this._deleteTable(this._table_name);
+            },
+
+            _deleteTable: function(newName) {
+                throw "Unsupported";
+            },
+
+            ensureTable: function() {
+                var promise = Promise.create();
+                this.createTable().callback(function() {
+                    promise.asyncSuccess(true);
+                });
+                return promise;
             }
 
         };
@@ -3811,13 +3835,14 @@ Scoped.define("module:Stores.StoreException", ["base:Exceptions.Exception"], fun
 
 Scoped.define("module:Stores.StoreHistory", [
 	"base:Class",
+	"base:Classes.CriticalSectionMixin",
 	"base:Events.EventsMixin",
 	"base:Objs",
 	"base:Types",
 	"base:Promise",
 	"module:Stores.MemoryStore"
-], function (Class, EventsMixin, Objs, Types, Promise, MemoryStore, scoped) {
-	return Class.extend({scoped: scoped}, [EventsMixin, function (inherited) {
+], function (Class, CriticalSectionMixin, EventsMixin, Objs, Types, Promise, MemoryStore, scoped) {
+	return Class.extend({scoped: scoped}, [EventsMixin, CriticalSectionMixin, function (inherited) {
 		return {
 
 			constructor: function (sourceStore, historyStore, options) {
@@ -3850,100 +3875,110 @@ Scoped.define("module:Stores.StoreHistory", [
 			},
 
 			sourceInsert: function (data) {
-				this.commitId++;
-				this.historyStore.insert(Objs.extend({
-					row: data,
-					type: "insert",
-					row_id: data[this._options.source_id_key],
-					commit_id: this.commitId
-				}, this._options.row_data));
-				this.trigger("insert", this.commitId);
-				return this.commitId;
+				return this.criticalSection("commit", function () {
+					this.commitId++;
+					return this.historyStore.insert(Objs.extend({
+						row: data,
+						type: "insert",
+						row_id: data[this._options.source_id_key],
+						commit_id: this.commitId
+					}, this._options.row_data)).mapSuccess(function () {
+						this.trigger("insert", this.commitId);
+						return this.commitId;
+					}, this);
+				});
 			},
 
 			sourceUpdate: function (row, data, dummy_ctx, pre_data) {
-				this.commitId++;
-				var row_id = Types.is_object(row) ? row[this._options.source_id_key] : row;
-				var target_type = "update";
-				var cont = Promise.create();
-				if (this._options.combine_insert_update || this._options.combine_update_update) {
-					var types = [];
-					if (this._options.combine_insert_update)
-						types.push({"type": "insert"});
-					if (this._options.combine_update_update)
-						types.push({"type": "update"});
-					var combined_data = {};
-					var delete_ids = [];
-					var query = Objs.extend({ row_id: row_id }, this._options.filter_data);
-					if (this.lockedCommits)
-						query.commit_id = {"$gt": this.lockedCommits};
-					if (types.length === 1)
-						query = Objs.extend(query, types[0]);
-					else
-						query.$or = types;
-                    this.historyStore.query(query, {sort: {commit_id: 1}}).success(function (iter) {
-                        while (iter.hasNext()) {
-                            var itemData = iter.next();
-                            if (itemData.type === "insert")
-                                target_type = "insert";
-                            combined_data = Objs.extend(combined_data, itemData.row);
-                            delete_ids.push(this.historyStore.id_of(itemData));
-                        }
-                        iter.destroy();
-                        data = Objs.extend(combined_data, data);
-                        this.historyStore.removeAllByIds(delete_ids);
-                        cont.asyncSuccess(true);
+				return this.criticalSection("commit", function () {
+					this.commitId++;
+					var row_id = Types.is_object(row) ? row[this._options.source_id_key] : row;
+					var target_type = "update";
+					var cont = Promise.create();
+					if (this._options.combine_insert_update || this._options.combine_update_update) {
+						var types = [];
+						if (this._options.combine_insert_update)
+							types.push({"type": "insert"});
+						if (this._options.combine_update_update)
+							types.push({"type": "update"});
+						var combined_data = {};
+						var delete_ids = [];
+						var query = Objs.extend({ row_id: row_id }, this._options.filter_data);
+						if (this.lockedCommits)
+							query.commit_id = {"$gt": this.lockedCommits};
+						if (types.length === 1)
+							query = Objs.extend(query, types[0]);
+						else
+							query.$or = types;
+						this.historyStore.query(query, {sort: {commit_id: 1}}).success(function (iter) {
+							while (iter.hasNext()) {
+								var itemData = iter.next();
+								if (itemData.type === "insert")
+									target_type = "insert";
+								combined_data = Objs.extend(combined_data, itemData.row);
+								delete_ids.push(this.historyStore.id_of(itemData));
+							}
+							iter.destroy();
+							data = Objs.extend(combined_data, data);
+							this.historyStore.removeAllByIds(delete_ids);
+							cont.asyncSuccess(true);
+						}, this);
+					} else
+						cont.asyncSuccess(true);
+					return cont.mapSuccess(function () {
+						return this.historyStore.insert(Objs.extend({
+							row: data,
+							pre_data: pre_data,
+							type: target_type,
+							row_id: row_id,
+							commit_id: this.commitId
+						}, this._options.row_data)).success(function () {
+							this.trigger("update", this.commitId);
+							this.trigger("update:" + row_id, this.commitId);
+						}, this);
 					}, this);
-				} else
-					cont.asyncSuccess(true);
-				cont.success(function () {
-                    this.historyStore.insert(Objs.extend({
-                        row: data,
-                        pre_data: pre_data,
-                        type: target_type,
-                        row_id: row_id,
-                        commit_id: this.commitId
-                    }, this._options.row_data));
-                    this.trigger("update", this.commitId);
-                    this.trigger("update:" + row_id, this.commitId);
-				}, this);
+				});
 			},
 
 			sourceRemove: function (id, data) {
-                this.commitId++;
-                var cont = Promise.create();
-				if (this._options.combine_insert_remove) {
-                    this.historyStore.query(Objs.extend({
-                        type: "insert",
-                        row_id: id
-                    }, this._options.filter_data)).success(function (iter) {
-						if (iter.hasNext()) {
-                            this.historyStore.removeAllByQuery(Objs.extend({
-                                row_id: id
-                            }, this._options.filter_data));
-                            return;
-						} else
-							cont.asyncSuccess(true);
-						iter.destroy();
+				return this.criticalSection("commit", function () {
+					this.commitId++;
+					var cont = Promise.create();
+					if (this._options.combine_insert_remove) {
+						this.historyStore.query(Objs.extend({
+							type: "insert",
+							row_id: id
+						}, this._options.filter_data)).success(function (iter) {
+							if (iter.hasNext()) {
+								this.historyStore.removeAllByQuery(Objs.extend({
+									row_id: id
+								}, this._options.filter_data)).forwardCallback(cont);
+							} else
+								cont.asyncSuccess(true);
+							iter.destroy();
+						}, this);
+					} else
+						cont.asyncSuccess(true);
+					if (this._options.combine_update_remove) {
+						cont = cont.mapSuccess(function () {
+							return this.historyStore.removeAllByQuery(Objs.extend({
+								type: "update",
+								row_id: id
+							}, this._options.filter_data));
+						}, this);
+					}
+					return cont.mapSuccess(function () {
+						return this.historyStore.insert(Objs.extend({
+							type: "remove",
+							row_id: id,
+							row: data,
+							commit_id: this.commitId
+						}, this._options.row_data)).success(function () {
+							this.trigger("remove", this.commitId);
+							this.trigger("remove:" + id, this.commitId);
+						}, this);
 					}, this);
-				} else
-					cont.asyncSuccess(true);
-				cont.success(function () {
-                    if (this._options.combine_update_remove) {
-                        this.historyStore.removeAllByQuery(Objs.extend({
-                            type: "update",
-                            row_id: id
-                        }, this._options.filter_data));
-                    }
-                    this.historyStore.insert(Objs.extend({
-                        type: "remove",
-                        row_id: id,
-                        row: data,
-                        commit_id: this.commitId
-                    }, this._options.row_data));
-                    this.trigger("remove", this.commitId);
-                    this.trigger("remove:" + id, this.commitId);
-				}, this);
+				});
 			},
 
 			getCommitById: function (commitId) {

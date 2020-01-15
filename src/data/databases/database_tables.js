@@ -130,6 +130,30 @@ Scoped.define("module:Databases.DatabaseTable", [
 
             _renameTable: function(newName) {
                 throw "Unsupported";
+            },
+
+            createTable: function() {
+                return this._createTable(this._table_name);
+            },
+
+            _createTable: function(newName) {
+                throw "Unsupported";
+            },
+
+            deleteTable: function() {
+                return this._deleteTable(this._table_name);
+            },
+
+            _deleteTable: function(newName) {
+                throw "Unsupported";
+            },
+
+            ensureTable: function() {
+                var promise = Promise.create();
+                this.createTable().callback(function() {
+                    promise.asyncSuccess(true);
+                });
+                return promise;
             }
 
         };
