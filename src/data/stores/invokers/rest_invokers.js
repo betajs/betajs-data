@@ -33,6 +33,12 @@ Scoped.define("module:Stores.Invokers.StoreInvokeeRestInvoker", [
 							if (result.sort)
 								result.sort = JSON.stringify(result.sort);
 							return result;
+						},
+						"update": function (data, context) {
+							var result = {};
+							if (data.transaction_id)
+								result.transactionid = data.transaction_id;
+							return result;
 						}
 					},
 					toGet: null,
@@ -113,7 +119,8 @@ Scoped.define("module:Stores.Invokers.RouteredRestInvokeeStoreInvoker", [
 						"update": function (member, uriData, post, get, ctx) {
 							return {
 								id: uriData.id,
-								data: post
+								data: post,
+								transaction_id: get.transactionid
 							};
 						},
 						"get": function (member, uriData, post, get, ctx) {

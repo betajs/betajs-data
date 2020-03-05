@@ -12,7 +12,7 @@ Scoped.define("module:Stores.Watchers.ConsumerWatcher", [
 					if (message === "insert")
 						this._insertedWatchedInsert(data);
 					if (message === "update")
-						this._updatedWatchedItem(data.row, data.data);
+						this._updatedWatchedItem(data.row, data.data, data.transaction_id);
 					else if (message === "remove")
 						this._removedWatchedItem(data);
 				}, this);
@@ -66,8 +66,8 @@ Scoped.define("module:Stores.Watchers.ProducerWatcher", [
 				}, this);
 				watcher.on("insert", function (data) {
 					sender.send("insert", data);
-				}, this).on("update", function (row, data) {
-					sender.send("update", {row: row, data: data});
+				}, this).on("update", function (row, data, transaction_id) {
+					sender.send("update", {row: row, data: data, transaction_id: transaction_id});
 				}, this).on("remove", function (id) {
 					sender.send("remove", id);
 				}, this);

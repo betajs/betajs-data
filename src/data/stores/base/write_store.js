@@ -64,7 +64,7 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			return Promise.create(null, new StoreException("unsupported: remove"));
 		},
 
-		_update: function (id, data, ctx) {
+		_update: function (id, data, ctx, transaction_id) {
 			return Promise.create(null, new StoreException("unsupported: update"));
 		},
 

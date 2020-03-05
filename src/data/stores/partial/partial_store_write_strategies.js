@@ -218,7 +218,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 			update: function (id, data, ctx, transaction_id) {
 				return this.partialStore.cachedStore.cacheUpdate(id, data, {
 					lockAttrs: true,
-					ignoreLock: true, // this was false before, not sure why.
+					ignoreLock: true,
 					silent: true,
 					refreshMeta: false,
 					accessMeta: true,
@@ -227,7 +227,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					}
 				}, ctx, transaction_id).success(function () {
 					data = this.partialStore.cachedStore.removeItemSupp(data);
-					this.storeHistory.sourceUpdate(id, data);
+					this.storeHistory.sourceUpdate(id, data, undefined, undefined, transaction_id);
 				}, this);
 			},
 			
@@ -279,7 +279,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 								promise = this.partialStore.remoteStore.insert(commit.row);
 							} else if (commit.type === "update") {
 								promise = this.partialStore.cachedStore.cachedIdToRemoteId(commit.row_id).mapSuccess(function (remoteId) {
-									return this.partialStore.remoteStore.update(remoteId, commit.row);
+									return this.partialStore.remoteStore.update(remoteId, commit.row, undefined, commit.transaction_id);
 								}, this);
 							} else if (commit.type === "remove") {
 								promise = this.partialStore.remoteStore.remove(commit.row ? this.partialStore.remoteStore.id_of(commit.row) : commit.row_id);

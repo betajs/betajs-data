@@ -13,8 +13,8 @@ Scoped.define("module:Stores.Watchers.StoreWatcherMixin", [], function() {
 			this.trigger("remove", id);
 		},
 
-		_updatedWatchedItem : function(row, data) {
-			this.trigger("update", row, data);
+		_updatedWatchedItem : function(row, data, transaction_id) {
+			this.trigger("update", row, data, transaction_id);
 		},
 
 		_insertedWatchedInsert : function(data) {
@@ -24,8 +24,8 @@ Scoped.define("module:Stores.Watchers.StoreWatcherMixin", [], function() {
 		delegateStoreEvents: function (store) {
 			this.on("insert", function (data) {
 				store.trigger("insert", data);
-			}, store).on("update", function (row, data) {
-				store.trigger("update", row, data);
+			}, store).on("update", function (row, data, transaction_id) {
+				store.trigger("update", row, data, transaction_id);
 			}, store).on("remove", function (id) {
 				store.trigger("remove", id);
 			}, store);
@@ -112,12 +112,12 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				this._removedWatchedItem(id);
 			},
 
-			_updatedItem : function(row, data, ctx) {
+			_updatedItem : function(row, data, ctx, transaction_id) {
                 if (!this._ctxFilter(ctx, row))
                     return;
 				var id = row[this.id_key];
 				if (this.__items.get(id))
-					this._updatedWatchedItem(row, data);
+					this._updatedWatchedItem(row, data, transaction_id);
 				this._insertedInsert(Objs.extend(Objs.clone(row, 1), data), ctx);
 			},
 

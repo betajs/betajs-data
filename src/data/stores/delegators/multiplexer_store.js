@@ -47,9 +47,9 @@ Scoped.define("module:Stores.MultiplexerStore", [
 				}, this);
 			},
 
-			_update: function (id, data, ctx) {
+			_update: function (id, data, ctx, transaction_id) {
 				return this._acquireStore(ctx).mapSuccess(function (store) {
-					return store.update(id, data, this._mapContext(ctx)).callback(function () {
+					return store.update(id, data, this._mapContext(ctx), transaction_id).callback(function () {
 						this._releaseStore(ctx, store);
 					}, this);
 				}, this);

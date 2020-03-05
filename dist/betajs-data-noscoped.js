@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.163 - 2020-01-14
+betajs-data - v1.0.164 - 2020-03-04
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.163",
-    "datetime": 1579055289523
+    "version": "1.0.164",
+    "datetime": 1583370750505
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -2878,7 +2878,7 @@ Scoped.define("module:Stores.StoreHistory", [
 				});
 			},
 
-			sourceUpdate: function (row, data, dummy_ctx, pre_data) {
+			sourceUpdate: function (row, data, dummy_ctx, pre_data, transaction_id) {
 				return this.criticalSection("commit", function () {
 					this.commitId++;
 					var row_id = Types.is_object(row) ? row[this._options.source_id_key] : row;
@@ -2920,7 +2920,8 @@ Scoped.define("module:Stores.StoreHistory", [
 							pre_data: pre_data,
 							type: target_type,
 							row_id: row_id,
-							commit_id: this.commitId
+							commit_id: this.commitId,
+							transaction_id: transaction_id
 						}, this._options.row_data)).success(function () {
 							this.trigger("update", this.commitId);
 							this.trigger("update:" + row_id, this.commitId);
@@ -3070,7 +3071,7 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			return Promise.create(null, new StoreException("unsupported: remove"));
 		},
 
-		_update: function (id, data, ctx) {
+		_update: function (id, data, ctx, transaction_id) {
 			return Promise.create(null, new StoreException("unsupported: update"));
 		},
 
@@ -3833,9 +3834,9 @@ Scoped.define("module:Stores.MultiplexerStore", [
 				}, this);
 			},
 
-			_update: function (id, data, ctx) {
+			_update: function (id, data, ctx, transaction_id) {
 				return this._acquireStore(ctx).mapSuccess(function (store) {
-					return store.update(id, data, this._mapContext(ctx)).callback(function () {
+					return store.update(id, data, this._mapContext(ctx), transaction_id).callback(function () {
 						this._releaseStore(ctx, store);
 					}, this);
 				}, this);
@@ -4292,12 +4293,12 @@ Scoped.define("module:Stores.TableStore", [
 				}, this);
 			},
 
-			_update: function (id, data, ctx) {
+			_update: function (id, data, ctx, transaction_id) {
 				return this.__table.findById(id, ctx).mapSuccess(function (model) {
 					if (!model)
 						return model;
 					model.setByTags(data, this.__options.updateTags);
-					return model.save().mapSuccess(function () {
+					return model.save(transaction_id).mapSuccess(function () {
                         var rec = model.asRecord(this.__options.readTags);
                         model.decreaseRef();
                         return rec;
@@ -4914,6 +4915,12 @@ Scoped.define("module:Stores.Invokers.StoreInvokeeRestInvoker", [
 							if (result.sort)
 								result.sort = JSON.stringify(result.sort);
 							return result;
+						},
+						"update": function (data, context) {
+							var result = {};
+							if (data.transaction_id)
+								result.transactionid = data.transaction_id;
+							return result;
 						}
 					},
 					toGet: null,
@@ -4994,7 +5001,8 @@ Scoped.define("module:Stores.Invokers.RouteredRestInvokeeStoreInvoker", [
 						"update": function (member, uriData, post, get, ctx) {
 							return {
 								id: uriData.id,
-								data: post
+								data: post,
+								transaction_id: get.transactionid
 							};
 						},
 						"get": function (member, uriData, post, get, ctx) {
@@ -5936,7 +5944,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 			update: function (id, data, ctx, transaction_id) {
 				return this.partialStore.cachedStore.cacheUpdate(id, data, {
 					lockAttrs: true,
-					ignoreLock: true, // this was false before, not sure why.
+					ignoreLock: true,
 					silent: true,
 					refreshMeta: false,
 					accessMeta: true,
@@ -5945,7 +5953,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 					}
 				}, ctx, transaction_id).success(function () {
 					data = this.partialStore.cachedStore.removeItemSupp(data);
-					this.storeHistory.sourceUpdate(id, data);
+					this.storeHistory.sourceUpdate(id, data, undefined, undefined, transaction_id);
 				}, this);
 			},
 			
@@ -5997,7 +6005,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 								promise = this.partialStore.remoteStore.insert(commit.row);
 							} else if (commit.type === "update") {
 								promise = this.partialStore.cachedStore.cachedIdToRemoteId(commit.row_id).mapSuccess(function (remoteId) {
-									return this.partialStore.remoteStore.update(remoteId, commit.row);
+									return this.partialStore.remoteStore.update(remoteId, commit.row, undefined, commit.transaction_id);
 								}, this);
 							} else if (commit.type === "remove") {
 								promise = this.partialStore.remoteStore.remove(commit.row ? this.partialStore.remoteStore.id_of(commit.row) : commit.row_id);
@@ -6362,7 +6370,7 @@ Scoped.define("module:Stores.Watchers.ConsumerWatcher", [
 					if (message === "insert")
 						this._insertedWatchedInsert(data);
 					if (message === "update")
-						this._updatedWatchedItem(data.row, data.data);
+						this._updatedWatchedItem(data.row, data.data, data.transaction_id);
 					else if (message === "remove")
 						this._removedWatchedItem(data);
 				}, this);
@@ -6416,8 +6424,8 @@ Scoped.define("module:Stores.Watchers.ProducerWatcher", [
 				}, this);
 				watcher.on("insert", function (data) {
 					sender.send("insert", data);
-				}, this).on("update", function (row, data) {
-					sender.send("update", {row: row, data: data});
+				}, this).on("update", function (row, data, transaction_id) {
+					sender.send("update", {row: row, data: data, transaction_id: transaction_id});
 				}, this).on("remove", function (id) {
 					sender.send("remove", id);
 				}, this);
@@ -6523,8 +6531,8 @@ Scoped.define("module:Stores.Watchers.LocalWatcher", [
 				this._store = store;
 				this._store.on("insert", function (data, ctx) {
 					this._insertedInsert(data, ctx);
-				}, this).on("update", function (row, data, ctx) {
-					this._updatedItem(row, data, ctx);
+				}, this).on("update", function (row, data, ctx, pre_data, transaction_id) {
+					this._updatedItem(row, data, ctx, transaction_id);
 				}, this).on("remove", function (id, ctx) {
 					this._removedItem(id, ctx);
 				}, this);
@@ -6677,8 +6685,8 @@ Scoped.define("module:Stores.Watchers.StoreWatcherMixin", [], function() {
 			this.trigger("remove", id);
 		},
 
-		_updatedWatchedItem : function(row, data) {
-			this.trigger("update", row, data);
+		_updatedWatchedItem : function(row, data, transaction_id) {
+			this.trigger("update", row, data, transaction_id);
 		},
 
 		_insertedWatchedInsert : function(data) {
@@ -6688,8 +6696,8 @@ Scoped.define("module:Stores.Watchers.StoreWatcherMixin", [], function() {
 		delegateStoreEvents: function (store) {
 			this.on("insert", function (data) {
 				store.trigger("insert", data);
-			}, store).on("update", function (row, data) {
-				store.trigger("update", row, data);
+			}, store).on("update", function (row, data, transaction_id) {
+				store.trigger("update", row, data, transaction_id);
 			}, store).on("remove", function (id) {
 				store.trigger("remove", id);
 			}, store);
@@ -6776,12 +6784,12 @@ Scoped.define("module:Stores.Watchers.StoreWatcher", [
 				this._removedWatchedItem(id);
 			},
 
-			_updatedItem : function(row, data, ctx) {
+			_updatedItem : function(row, data, ctx, transaction_id) {
                 if (!this._ctxFilter(ctx, row))
                     return;
 				var id = row[this.id_key];
 				if (this.__items.get(id))
-					this._updatedWatchedItem(row, data);
+					this._updatedWatchedItem(row, data, transaction_id);
 				this._insertedInsert(Objs.extend(Objs.clone(row, 1), data), ctx);
 			},
 
@@ -7954,7 +7962,7 @@ Scoped.define("module:Modelling.Model", [
                     this.save();
             },
 
-            save: function() {
+            save: function(transaction_id) {
                 if (this.isRemoved())
                     return Promise.create({});
                 var promise = this.option("save_invalid") ? Promise.value(true) : this.validate();
@@ -7986,7 +7994,7 @@ Scoped.define("module:Modelling.Model", [
                             return Promise.create(attrs);
                     }
                     var wasNew = this.isNew();
-                    var promise = this.isNew() ? this.__table._insertModel(attrs, this.__ctx) : this.__table._updateModel(this.id(), attrs, this.__ctx, this.newTransactionId());
+                    var promise = this.isNew() ? this.__table._insertModel(attrs, this.__ctx) : this.__table._updateModel(this.id(), attrs, this.__ctx, transaction_id || this.newTransactionId());
                     return promise.mapCallback(function(err, result) {
                         if (this.destroyed())
                             return this;

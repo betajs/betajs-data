@@ -54,7 +54,7 @@ Scoped.define("module:Stores.StoreHistory", [
 				});
 			},
 
-			sourceUpdate: function (row, data, dummy_ctx, pre_data) {
+			sourceUpdate: function (row, data, dummy_ctx, pre_data, transaction_id) {
 				return this.criticalSection("commit", function () {
 					this.commitId++;
 					var row_id = Types.is_object(row) ? row[this._options.source_id_key] : row;
@@ -96,7 +96,8 @@ Scoped.define("module:Stores.StoreHistory", [
 							pre_data: pre_data,
 							type: target_type,
 							row_id: row_id,
-							commit_id: this.commitId
+							commit_id: this.commitId,
+							transaction_id: transaction_id
 						}, this._options.row_data)).success(function () {
 							this.trigger("update", this.commitId);
 							this.trigger("update:" + row_id, this.commitId);

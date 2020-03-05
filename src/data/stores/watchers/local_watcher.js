@@ -11,8 +11,8 @@ Scoped.define("module:Stores.Watchers.LocalWatcher", [
 				this._store = store;
 				this._store.on("insert", function (data, ctx) {
 					this._insertedInsert(data, ctx);
-				}, this).on("update", function (row, data, ctx) {
-					this._updatedItem(row, data, ctx);
+				}, this).on("update", function (row, data, ctx, pre_data, transaction_id) {
+					this._updatedItem(row, data, ctx, transaction_id);
 				}, this).on("remove", function (id, ctx) {
 					this._removedItem(id, ctx);
 				}, this);

@@ -54,12 +54,12 @@ Scoped.define("module:Stores.TableStore", [
 				}, this);
 			},
 
-			_update: function (id, data, ctx) {
+			_update: function (id, data, ctx, transaction_id) {
 				return this.__table.findById(id, ctx).mapSuccess(function (model) {
 					if (!model)
 						return model;
 					model.setByTags(data, this.__options.updateTags);
-					return model.save().mapSuccess(function () {
+					return model.save(transaction_id).mapSuccess(function () {
                         var rec = model.asRecord(this.__options.readTags);
                         model.decreaseRef();
                         return rec;

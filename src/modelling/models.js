@@ -144,7 +144,7 @@ Scoped.define("module:Modelling.Model", [
                     this.save();
             },
 
-            save: function() {
+            save: function(transaction_id) {
                 if (this.isRemoved())
                     return Promise.create({});
                 var promise = this.option("save_invalid") ? Promise.value(true) : this.validate();
@@ -176,7 +176,7 @@ Scoped.define("module:Modelling.Model", [
                             return Promise.create(attrs);
                     }
                     var wasNew = this.isNew();
-                    var promise = this.isNew() ? this.__table._insertModel(attrs, this.__ctx) : this.__table._updateModel(this.id(), attrs, this.__ctx, this.newTransactionId());
+                    var promise = this.isNew() ? this.__table._insertModel(attrs, this.__ctx) : this.__table._updateModel(this.id(), attrs, this.__ctx, transaction_id || this.newTransactionId());
                     return promise.mapCallback(function(err, result) {
                         if (this.destroyed())
                             return this;
