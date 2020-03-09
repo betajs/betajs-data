@@ -355,7 +355,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 if (row && !data[this.__contextAccessKey])
                     data[this.__contextAccessKey] = row[this.__contextAccessKey];
                 if (data[this.__contextAccessKey]) {
-                    return this.__expandContextAccess(ctxId, data, ctx).mapSuccess(function (data) {
+                    return this.__expandContextAccess(ctxId, data, ctx, row).mapSuccess(function (data) {
                         if (this.__contextDataUpdater)
                             data = this.__contextDataUpdater(id, data, ctx, row);
                         return data;
@@ -383,8 +383,8 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 return this.__expandContextAccess(ctxId, data, ctx);
             },
 
-            __expandContextAccess: function (ctxId, data, ctx) {
-                var otherContexts = Promise.value(this.__contextAccessExpander.call(this, data, ctx));
+            __expandContextAccess: function (ctxId, data, ctx, row) {
+                var otherContexts = Promise.value(this.__contextAccessExpander.call(this, data, ctx, row));
                 return otherContexts.mapSuccess(function (otherContexts) {
                     otherContexts = otherContexts.filter(function (otherCtxId) {
                         return this.__subContext === "$eq" ? otherCtxId !== ctxId : otherCtxId[this.__subContext] !== ctxId;

@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.164 - 2020-03-04
+betajs-data - v1.0.164 - 2020-03-09
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.164 - 2020-03-04
+betajs-data - v1.0.164 - 2020-03-09
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1023,7 +1023,7 @@ Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
     "version": "1.0.164",
-    "datetime": 1583370750505
+    "datetime": 1583784386451
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -4693,7 +4693,7 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 if (row && !data[this.__contextAccessKey])
                     data[this.__contextAccessKey] = row[this.__contextAccessKey];
                 if (data[this.__contextAccessKey]) {
-                    return this.__expandContextAccess(ctxId, data, ctx).mapSuccess(function (data) {
+                    return this.__expandContextAccess(ctxId, data, ctx, row).mapSuccess(function (data) {
                         if (this.__contextDataUpdater)
                             data = this.__contextDataUpdater(id, data, ctx, row);
                         return data;
@@ -4721,8 +4721,8 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 return this.__expandContextAccess(ctxId, data, ctx);
             },
 
-            __expandContextAccess: function (ctxId, data, ctx) {
-                var otherContexts = Promise.value(this.__contextAccessExpander.call(this, data, ctx));
+            __expandContextAccess: function (ctxId, data, ctx, row) {
+                var otherContexts = Promise.value(this.__contextAccessExpander.call(this, data, ctx, row));
                 return otherContexts.mapSuccess(function (otherContexts) {
                     otherContexts = otherContexts.filter(function (otherCtxId) {
                         return this.__subContext === "$eq" ? otherCtxId !== ctxId : otherCtxId[this.__subContext] !== ctxId;
