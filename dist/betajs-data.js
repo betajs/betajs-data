@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.164 - 2020-03-09
+betajs-data - v1.0.165 - 2020-03-10
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.164 - 2020-03-09
+betajs-data - v1.0.165 - 2020-03-10
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1022,8 +1022,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.164",
-    "datetime": 1583784386451
+    "version": "1.0.165",
+    "datetime": 1583896454232
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6410,7 +6410,10 @@ Scoped.define("module:Stores.CachedStore", [
 								silent: options.silentUpdate,
 								accessMeta: true,
 								refreshMeta: true
-							}, ctx);
+							}, ctx).mapSuccess(function (cacheResult) {
+								data[this.itemCache.id_key()] = cached_id;
+								return Objs.extend(data, cacheResult);
+							}, this);
 						} else {
 							return this.cacheRemove(cached_id, {
 								ignoreLock: false,

@@ -280,7 +280,10 @@ Scoped.define("module:Stores.CachedStore", [
 								silent: options.silentUpdate,
 								accessMeta: true,
 								refreshMeta: true
-							}, ctx);
+							}, ctx).mapSuccess(function (cacheResult) {
+								data[this.itemCache.id_key()] = cached_id;
+								return Objs.extend(data, cacheResult);
+							}, this);
 						} else {
 							return this.cacheRemove(cached_id, {
 								ignoreLock: false,
