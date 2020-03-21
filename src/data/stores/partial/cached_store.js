@@ -166,7 +166,7 @@ Scoped.define("module:Stores.CachedStore", [
 						}, this);
 					}
 					if (options.refreshMeta)
-						meta.refreshMeta = this.cacheStrategy.itemRefreshMeta(meta.refreshMeta);
+						meta.refreshMeta = this.cacheStrategy.itemRefreshMeta(/*meta.refreshMeta*/);
 					if (options.accessMeta)
 						meta.accessMeta = this.cacheStrategy.itemAccessMeta(meta.accessMeta);
 					return this.itemCache.update(this.itemCache.id_of(item), this.addItemMeta(data, meta), ctx, transaction_id).mapSuccess(function (result) {
@@ -369,7 +369,9 @@ Scoped.define("module:Stores.CachedStore", [
 								accessMeta: options.accessMeta,
 								refreshMeta: options.refreshMeta,
 								foreignKey: true
-							}, ctx));
+							}, ctx).mapSuccess(function (result) {
+								return this.cacheOnlyGet(this.id_of(result), null, ctx);
+							}, this));
 						}, this);
 						return Promise.and(promises).mapSuccess(function (items) {
 							var arrIter = new ArrayIterator(items);
