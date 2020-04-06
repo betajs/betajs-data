@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.167 - 2020-03-20
+betajs-data - v1.0.168 - 2020-04-06
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.167 - 2020-03-20
+betajs-data - v1.0.168 - 2020-04-06
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1022,8 +1022,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.167",
-    "datetime": 1584760948683
+    "version": "1.0.168",
+    "datetime": 1586214279757
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -8998,6 +8998,9 @@ Scoped.define("module:Modelling.Model", [
                 }
                 if (this.option("auto_create") && this.isNew())
                     this.save();
+                this.registerHook("beforeRemove", function() {
+                    return BetaJS.Promise.value(true);
+                });
             },
 
             destroy: function() {
@@ -9186,6 +9189,7 @@ Scoped.define("module:Modelling.Model", [
                 if (this.isNew() || this.isRemoved())
                     return Promise.create(true);
                 this.__removing = true;
+                this.invokeHook("beforeRemove");
                 return this.__table.store().remove(this.id(), this.__ctx).callback(function() {
                     this.__removing = false;
                 }, this).mapSuccess(function(result) {

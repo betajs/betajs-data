@@ -33,6 +33,9 @@ Scoped.define("module:Modelling.Model", [
                 }
                 if (this.option("auto_create") && this.isNew())
                     this.save();
+                this.registerHook("beforeRemove", function() {
+                    return BetaJS.Promise.value(true);
+                });
             },
 
             destroy: function() {
@@ -221,6 +224,7 @@ Scoped.define("module:Modelling.Model", [
                 if (this.isNew() || this.isRemoved())
                     return Promise.create(true);
                 this.__removing = true;
+                this.invokeHook("beforeRemove");
                 return this.__table.store().remove(this.id(), this.__ctx).callback(function() {
                     this.__removing = false;
                 }, this).mapSuccess(function(result) {
