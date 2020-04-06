@@ -22,26 +22,26 @@
         "Pablo Iglesias"
     ],
     "devDependencies": {
-        "lodash": "",
-        "qunitjs": "^2.4.1",
-        "grunt": "",
-        "grunt-contrib-jshint": "",
-        "grunt-contrib-concat": "",
-        "grunt-contrib-uglify": "^4.0.0",
-        "grunt-contrib-clean": "",
-        "grunt-preprocess": "",
-        "grunt-closure-tools": "",
-        "grunt-jsdoc": "",
-        "grunt-shell": "",
-        "grunt-githooks": "",
-        "grunt-template": "",
-        "grunt-benchmark": "",
-        "grunt-betajs-docs-compile": "~0.0.19",
+        "betajs": "^1.0.206",
+        "betajs-compile": "0.0.46",
         "betajs-scoped": "~0.0.13",
         "betajs-shims": "~0.0.13",
-        "betajs-compile": "~0.0.28",
-        "betajs": "~1.0.141",
-        "js-beautify": ""
+        "grunt": "",
+        "grunt-benchmark": "",
+        "grunt-betajs-docs-compile": "~0.0.19",
+        "grunt-closure-tools": "",
+        "grunt-contrib-clean": "",
+        "grunt-contrib-concat": "",
+        "grunt-contrib-jshint": "",
+        "grunt-contrib-uglify": "^4.0.0",
+        "grunt-githooks": "",
+        "grunt-jsdoc": "",
+        "grunt-preprocess": "",
+        "grunt-shell": "",
+        "grunt-template": "",
+        "js-beautify": "",
+        "lodash": "",
+        "qunitjs": "^2.4.1"
     },
     "main": "dist/betajs-data.js",
     "repository": {
@@ -97,5 +97,10 @@
             "betajs-data-noscoped.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data-noscoped.js",
             "betajs-data-noscoped.min.js": "http://cdn.rawgit.com/betajs/betajs-data/master/dist/betajs-data-noscoped.min.js"
         }
+    },
+    "dependencies": {
+        "grunt": "^1.1.0",
+        "grunt-jsdoc": "^2.4.1",
+        "js-beautify": "^1.11.0"
     }
 }
