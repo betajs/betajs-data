@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.168 - 2020-04-06
+betajs-data - v1.0.169 - 2020-04-08
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.168",
-    "datetime": 1586214279757
+    "version": "1.0.169",
+    "datetime": 1586395477717
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
