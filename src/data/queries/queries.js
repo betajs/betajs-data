@@ -103,6 +103,10 @@ Scoped.define("module:Queries", [
 
         SYNTAX_CONDITION_KEYS: SYNTAX_CONDITION_KEYS,
 
+        isEqualValueKey: function(query, key) {
+            return (key in query) && this.is_simple_atom(query[key]);
+        },
+
         validate: function(query, capabilities) {
             return this.validate_query(query, capabilities);
         },
@@ -138,8 +142,12 @@ Scoped.define("module:Queries", [
             return this.validate_value(value, capabilities);
         },
 
+        is_simple_atom: function(value) {
+            return value === null || !Types.is_object(value) || value.toString() !== "[object Object]";
+        },
+
         is_query_atom: function(value) {
-            return value === null || !Types.is_object(value) || value.toString() !== "[object Object]" || Objs.all(value, function(v, key) {
+            return this.is_simple_atom(value) || Objs.all(value, function(v, key) {
                 return !(key in this.SYNTAX_CONDITION_KEYS);
             }, this);
         },

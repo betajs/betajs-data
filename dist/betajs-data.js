@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.169 - 2020-04-08
+betajs-data - v1.0.170 - 2020-05-29
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.169 - 2020-04-08
+betajs-data - v1.0.170 - 2020-05-29
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1022,8 +1022,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.169",
-    "datetime": 1586395477717
+    "version": "1.0.170",
+    "datetime": 1590791084867
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -2624,6 +2624,10 @@ Scoped.define("module:Queries", [
 
         SYNTAX_CONDITION_KEYS: SYNTAX_CONDITION_KEYS,
 
+        isEqualValueKey: function(query, key) {
+            return (key in query) && this.is_simple_atom(query[key]);
+        },
+
         validate: function(query, capabilities) {
             return this.validate_query(query, capabilities);
         },
@@ -2659,8 +2663,12 @@ Scoped.define("module:Queries", [
             return this.validate_value(value, capabilities);
         },
 
+        is_simple_atom: function(value) {
+            return value === null || !Types.is_object(value) || value.toString() !== "[object Object]";
+        },
+
         is_query_atom: function(value) {
-            return value === null || !Types.is_object(value) || value.toString() !== "[object Object]" || Objs.all(value, function(v, key) {
+            return this.is_simple_atom(value) || Objs.all(value, function(v, key) {
                 return !(key in this.SYNTAX_CONDITION_KEYS);
             }, this);
         },
