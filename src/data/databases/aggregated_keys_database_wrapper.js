@@ -1,7 +1,8 @@
 Scoped.define("module:Databases.AggregatedKeysDatabaseTableWrapper", [
     "module:Databases.DatabaseTable",
-    "base:Objs"
-], function(Class, Objs, scoped) {
+    "base:Objs",
+    "base:Types"
+], function(Class, Objs, Types, scoped) {
     return Class.extend({
         scoped: scoped
     }, function(inherited) {
@@ -36,17 +37,35 @@ Scoped.define("module:Databases.AggregatedKeysDatabaseTableWrapper", [
                 return this.__databaseTable;
             },
 
+            deleteTable: function() {
+                return this.databaseTable().deleteTable();
+            },
+
+            createTable: function() {
+                return this.databaseTable().createTable();
+            },
+
             _aggregatesOf: function(row) {
                 var result = {};
                 Objs.iter(this._aggregation.aggregates, function(aggregate, aggregateName) {
                     var valid = true;
-                    var temp = aggregate.map(function(key) {
+                    var mapped = aggregate.map(function(key) {
                         if (!(key in row))
                             valid = false;
                         return row[key];
-                    }).join("_");
-                    if (valid)
-                        result[aggregateName] = temp;
+                    });
+                    if (valid) {
+                        var keys = [];
+                        var values = [];
+                        mapped.forEach(function(entry) {
+                            if (Types.is_object(entry)) {
+                                keys.push(Objs.ithKey(entry));
+                                values.push(Objs.ithValue(entry));
+                            } else
+                                values.push(entry);
+                        });
+                        result[aggregateName] = keys.length > 0 ? Objs.objectBy(keys[0], values.join("_")) : values.join("_");
+                    }
                 }, this);
                 return result;
             },
@@ -96,7 +115,7 @@ Scoped.define("module:Databases.AggregatedKeysDatabaseTableWrapper", [
             },
 
             _find: function(query, options) {
-                return this.databaseTable().query(Objs.extend(this._aggregatesOf(query), query), options);
+                return this.databaseTable().find(Objs.extend(this._aggregatesOf(query), query), options);
             }
 
         };

@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.170 - 2020-05-29
+betajs-data - v1.0.171 - 2020-06-08
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.170",
-    "datetime": 1590791084867
+    "version": "1.0.171",
+    "datetime": 1591667590454
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -598,8 +598,9 @@ Scoped.define("module:Collections.TableQueryCollection", [
 });
 Scoped.define("module:Databases.AggregatedKeysDatabaseTableWrapper", [
     "module:Databases.DatabaseTable",
-    "base:Objs"
-], function(Class, Objs, scoped) {
+    "base:Objs",
+    "base:Types"
+], function(Class, Objs, Types, scoped) {
     return Class.extend({
         scoped: scoped
     }, function(inherited) {
@@ -634,17 +635,35 @@ Scoped.define("module:Databases.AggregatedKeysDatabaseTableWrapper", [
                 return this.__databaseTable;
             },
 
+            deleteTable: function() {
+                return this.databaseTable().deleteTable();
+            },
+
+            createTable: function() {
+                return this.databaseTable().createTable();
+            },
+
             _aggregatesOf: function(row) {
                 var result = {};
                 Objs.iter(this._aggregation.aggregates, function(aggregate, aggregateName) {
                     var valid = true;
-                    var temp = aggregate.map(function(key) {
+                    var mapped = aggregate.map(function(key) {
                         if (!(key in row))
                             valid = false;
                         return row[key];
-                    }).join("_");
-                    if (valid)
-                        result[aggregateName] = temp;
+                    });
+                    if (valid) {
+                        var keys = [];
+                        var values = [];
+                        mapped.forEach(function(entry) {
+                            if (Types.is_object(entry)) {
+                                keys.push(Objs.ithKey(entry));
+                                values.push(Objs.ithValue(entry));
+                            } else
+                                values.push(entry);
+                        });
+                        result[aggregateName] = keys.length > 0 ? Objs.objectBy(keys[0], values.join("_")) : values.join("_");
+                    }
                 }, this);
                 return result;
             },
@@ -694,7 +713,7 @@ Scoped.define("module:Databases.AggregatedKeysDatabaseTableWrapper", [
             },
 
             _find: function(query, options) {
-                return this.databaseTable().query(Objs.extend(this._aggregatesOf(query), query), options);
+                return this.databaseTable().find(Objs.extend(this._aggregatesOf(query), query), options);
             }
 
         };
