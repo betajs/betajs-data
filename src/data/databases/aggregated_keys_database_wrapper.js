@@ -99,6 +99,7 @@ Scoped.define("module:Databases.AggregatedKeysDatabaseTableWrapper", [
             },
 
             _updateRow: function(query, row) {
+                query = query || {};
                 var missingDeps = this._missingAggregateDependencies(row);
                 for (var key in missingDeps) {
                     if (key in query) {

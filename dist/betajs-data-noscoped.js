@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.171 - 2020-06-08
+betajs-data - v1.0.171 - 2020-06-12
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -12,7 +12,7 @@ Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
     "version": "1.0.171",
-    "datetime": 1591667590454
+    "datetime": 1591992573614
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -697,6 +697,7 @@ Scoped.define("module:Databases.AggregatedKeysDatabaseTableWrapper", [
             },
 
             _updateRow: function(query, row) {
+                query = query || {};
                 var missingDeps = this._missingAggregateDependencies(row);
                 for (var key in missingDeps) {
                     if (key in query) {
@@ -1633,7 +1634,7 @@ Scoped.define("module:Queries", [
         SYNTAX_CONDITION_KEYS: SYNTAX_CONDITION_KEYS,
 
         isEqualValueKey: function(query, key) {
-            return (key in query) && this.is_simple_atom(query[key]);
+            return query && (key in query) && this.is_simple_atom(query[key]);
         },
 
         validate: function(query, capabilities) {

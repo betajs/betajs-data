@@ -104,7 +104,7 @@ Scoped.define("module:Queries", [
         SYNTAX_CONDITION_KEYS: SYNTAX_CONDITION_KEYS,
 
         isEqualValueKey: function(query, key) {
-            return (key in query) && this.is_simple_atom(query[key]);
+            return query && (key in query) && this.is_simple_atom(query[key]);
         },
 
         validate: function(query, capabilities) {
