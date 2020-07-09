@@ -140,6 +140,7 @@ Scoped.define("module:Stores.CachedStore", [
 
 			cacheUpdate: function (id, data, options, ctx, transaction_id) {
 				var foreignKey = options.foreignKey && this._foreignKey;
+				var idKey = foreignKey ? this.remoteStore.id_key() : this.id_key();
 				var itemPromise = foreignKey ?
 					              this.itemCache.getBy(this.remoteStore.id_key(), id, ctx)
 					            : this.itemCache.get(id, ctx);
@@ -171,6 +172,8 @@ Scoped.define("module:Stores.CachedStore", [
 						meta.accessMeta = this.cacheStrategy.itemAccessMeta(meta.accessMeta);
 					return this.itemCache.update(this.itemCache.id_of(item), this.addItemMeta(data, meta), ctx, transaction_id).mapSuccess(function (result) {
 						result = this._options.hideMetaData ? this.removeItemMeta(result) : result;
+						if (!result[idKey])
+							result[idKey] = id;
 						if (!options.silent)
 							this._updated(result, data, ctx, transaction_id);
 						else if (options.meta)
@@ -443,18 +446,19 @@ Scoped.define("module:Stores.CachedStore", [
 			},
 
 			unlockItem: function (id, ctx, opts) {
-				this.itemCache.get(id, ctx).success(function (data) {
+				return this.itemCache.get(id, ctx).mapSuccess(function (data) {
 					if (!data)
-						return;
+						return data;
 					var meta = this.readItemMeta(data);
 					meta.lockedItem = false;
 					meta.lockedAttrs = {};
 					opts = opts || {};
 					if (opts.meta)
 						meta = Objs.extend(Objs.clone(meta, 1), opts.meta);
-					this.itemCache.update(id, this.addItemMeta({}, meta), ctx);
-					if (opts.meta)
-                        this._updated(this.id_row(id), this.addItemMeta({}, meta), ctx);
+					return this.itemCache.update(id, this.addItemMeta({}, meta), ctx).success(function () {
+						if (opts.meta)
+							this._updated(this.id_row(id), this.addItemMeta({}, meta), ctx);
+					}, this);
 				}, this);
 			},
 

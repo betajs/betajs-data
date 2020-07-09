@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.172 - 2020-06-21
+betajs-data - v1.0.174 - 2020-07-09
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.172 - 2020-06-21
+betajs-data - v1.0.174 - 2020-07-09
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1022,8 +1022,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.172",
-    "datetime": 1592783239553
+    "version": "1.0.174",
+    "datetime": 1594326487404
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6429,6 +6429,7 @@ Scoped.define("module:Stores.CachedStore", [
 
 			cacheUpdate: function (id, data, options, ctx, transaction_id) {
 				var foreignKey = options.foreignKey && this._foreignKey;
+				var idKey = foreignKey ? this.remoteStore.id_key() : this.id_key();
 				var itemPromise = foreignKey ?
 					              this.itemCache.getBy(this.remoteStore.id_key(), id, ctx)
 					            : this.itemCache.get(id, ctx);
@@ -6460,6 +6461,8 @@ Scoped.define("module:Stores.CachedStore", [
 						meta.accessMeta = this.cacheStrategy.itemAccessMeta(meta.accessMeta);
 					return this.itemCache.update(this.itemCache.id_of(item), this.addItemMeta(data, meta), ctx, transaction_id).mapSuccess(function (result) {
 						result = this._options.hideMetaData ? this.removeItemMeta(result) : result;
+						if (!result[idKey])
+							result[idKey] = id;
 						if (!options.silent)
 							this._updated(result, data, ctx, transaction_id);
 						else if (options.meta)
@@ -6732,18 +6735,19 @@ Scoped.define("module:Stores.CachedStore", [
 			},
 
 			unlockItem: function (id, ctx, opts) {
-				this.itemCache.get(id, ctx).success(function (data) {
+				return this.itemCache.get(id, ctx).mapSuccess(function (data) {
 					if (!data)
-						return;
+						return data;
 					var meta = this.readItemMeta(data);
 					meta.lockedItem = false;
 					meta.lockedAttrs = {};
 					opts = opts || {};
 					if (opts.meta)
 						meta = Objs.extend(Objs.clone(meta, 1), opts.meta);
-					this.itemCache.update(id, this.addItemMeta({}, meta), ctx);
-					if (opts.meta)
-                        this._updated(this.id_row(id), this.addItemMeta({}, meta), ctx);
+					return this.itemCache.update(id, this.addItemMeta({}, meta), ctx).success(function () {
+						if (opts.meta)
+							this._updated(this.id_row(id), this.addItemMeta({}, meta), ctx);
+					}, this);
 				}, this);
 			},
 
@@ -7142,18 +7146,19 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 				return hs.query({success: false}, {sort: {commit_id: 1}}).mapSuccess(function (iter) {
 					var next = function () {
 						if (!iter.hasNext()) {
+							iter.destroy();
 							this.pushing = false;
 							this.storeHistory.unlockCommits();
-							Objs.iter(unlockIds, function (value, id) {
+							var promises = Objs.values(Objs.map(unlockIds, function (value, id) {
 								if (value) {
 									if (value === true) {
-										this.partialStore.cachedStore.unlockItem(id, undefined, {
+										return this.partialStore.cachedStore.unlockItem(id, undefined, {
 											meta: {
 												pendingUpdate: false
 											}
 										});
 									} else {
-										this.partialStore.cachedStore.cacheUpdate(id, value, {
+										return this.partialStore.cachedStore.cacheUpdate(id, value, {
 											unlockItem: true,
 											silent: false,
 											meta: {
@@ -7161,10 +7166,10 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 											}
 										});
 									}
-								}
-							}, this);
-							iter.destroy();
-							return Promise.value(true);
+								} else
+									return Promise.value(true);
+							}, this));
+							return Promise.and(promises);
 						}
 						var commit = iter.next();
 						var commit_id = hs.id_of(commit);

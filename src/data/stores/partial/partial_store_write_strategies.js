@@ -241,18 +241,19 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 				return hs.query({success: false}, {sort: {commit_id: 1}}).mapSuccess(function (iter) {
 					var next = function () {
 						if (!iter.hasNext()) {
+							iter.destroy();
 							this.pushing = false;
 							this.storeHistory.unlockCommits();
-							Objs.iter(unlockIds, function (value, id) {
+							var promises = Objs.values(Objs.map(unlockIds, function (value, id) {
 								if (value) {
 									if (value === true) {
-										this.partialStore.cachedStore.unlockItem(id, undefined, {
+										return this.partialStore.cachedStore.unlockItem(id, undefined, {
 											meta: {
 												pendingUpdate: false
 											}
 										});
 									} else {
-										this.partialStore.cachedStore.cacheUpdate(id, value, {
+										return this.partialStore.cachedStore.cacheUpdate(id, value, {
 											unlockItem: true,
 											silent: false,
 											meta: {
@@ -260,10 +261,10 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 											}
 										});
 									}
-								}
-							}, this);
-							iter.destroy();
-							return Promise.value(true);
+								} else
+									return Promise.value(true);
+							}, this));
+							return Promise.and(promises);
 						}
 						var commit = iter.next();
 						var commit_id = hs.id_of(commit);
