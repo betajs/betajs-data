@@ -44,6 +44,7 @@ Scoped.define("module:Collections.AbstractQueryCollection", [
                 inherited.constructor.call(this, {
                     release_references: true,
                     uniqueness: options.uniqueness,
+                    progressiveUniqueness: options.progressiveUniqueness,
                     indices: options.indices
                 });
                 if (ConstrainedQueryBuilder.is_instance_of(query)) {
