@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.175 - 2020-09-02
+betajs-data - v1.0.176 - 2020-09-05
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.175",
-    "datetime": 1599077233063
+    "version": "1.0.176",
+    "datetime": 1599353113778
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -5471,6 +5471,8 @@ Scoped.define("module:Stores.CachedStore", [
 					options.foreignKey = false;
 					if (!item)
                         return this.cacheInsert(data, options, ctx);
+					if (options.keepCache)
+						return item;
 					var backup = Objs.clone(data, 1);
 					var itemId = this.itemCache.id_of(item);
 					backup[this.itemCache.id_key()] = itemId;
@@ -6327,7 +6329,8 @@ Scoped.define("module:Stores.PartialStore", [
 					silent: false,
 					refreshMeta: true,
 					accessMeta: true,
-					foreignKey: true
+					foreignKey: true,
+					keepCache: true
 				}, ctx);
 			},
 			

@@ -192,6 +192,8 @@ Scoped.define("module:Stores.CachedStore", [
 					options.foreignKey = false;
 					if (!item)
                         return this.cacheInsert(data, options, ctx);
+					if (options.keepCache)
+						return item;
 					var backup = Objs.clone(data, 1);
 					var itemId = this.itemCache.id_of(item);
 					backup[this.itemCache.id_key()] = itemId;

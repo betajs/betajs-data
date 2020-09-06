@@ -75,7 +75,8 @@ Scoped.define("module:Stores.PartialStore", [
 					silent: false,
 					refreshMeta: true,
 					accessMeta: true,
-					foreignKey: true
+					foreignKey: true,
+					keepCache: true
 				}, ctx);
 			},
 			
