@@ -175,9 +175,9 @@ Scoped.define("module:Stores.CachedStore", [
 						if (!result[idKey])
 							result[idKey] = id;
 						if (!options.silent)
-							this._updated(result, data, ctx, transaction_id);
+							this._updated(result, data, ctx, undefined, transaction_id);
 						else if (options.meta)
-							this._updated(result, this.addItemMeta({}, meta), ctx, transaction_id);
+							this._updated(result, this.addItemMeta({}, meta), ctx, undefined, transaction_id);
 						return result;
 					}, this);
 				}, this);

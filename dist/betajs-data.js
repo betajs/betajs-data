@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.176 - 2020-09-05
+betajs-data - v1.0.177 - 2020-10-07
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.176 - 2020-09-05
+betajs-data - v1.0.177 - 2020-10-07
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1022,8 +1022,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.176",
-    "datetime": 1599353113778
+    "version": "1.0.177",
+    "datetime": 1602064789009
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -4664,20 +4664,20 @@ Scoped.define("module:Stores.AbstractDecontextualizedStore", [
                 }, this);
             },
 
-            _update: function (id, data, ctx) {
+            _update: function (id, data, ctx, transaction_id) {
             	return this._rawGet(id, ctx).mapSuccess(function (row) {
             		if (!row)
             			return true;
             		return Promise.box(this._encodeUpdate, this, [id, data, ctx, row]).mapSuccess(function (updatedData) {
             		    return this.__store.update(id, updatedData).mapSuccess(function (updatedData) {
-                            this._undecodedUpdated(id, updatedData, ctx, row);
+                            this._undecodedUpdated(id, updatedData, ctx, row, transaction_id);
                             return this._decodeRow(updatedData, ctx);
                         }, this);
                     }, this);
 				}, this);
             },
 
-            _undecodedUpdated: function (id, updatedData, ctx) {},
+            _undecodedUpdated: function (id, updatedData, ctx, row, transaction_id) {},
 
             _encodeRow: function (data, ctx) {
 				throw "Abstract";
@@ -4707,8 +4707,8 @@ Scoped.define("module:Stores.AbstractDecontextualizedStore", [
                 inherited._removed.call(this, id, ctx, this._decodeRow(data, ctx));
             },
 
-            _updated: function (row, data, ctx, pre_data) {
-                inherited._updated.call(this, this._decodeRow(row, ctx), this._decodeRow(data, ctx), ctx, this._decodeRow(pre_data, ctx));
+            _updated: function (row, data, ctx, pre_data, transaction_id) {
+                inherited._updated.call(this, this._decodeRow(row, ctx), this._decodeRow(data, ctx), ctx, this._decodeRow(pre_data, ctx), transaction_id);
             }
 
         };
@@ -4903,12 +4903,12 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 }, this);
             },
 
-            _undecodedUpdated: function (id, updatedData, ctx, row) {
+            _undecodedUpdated: function (id, updatedData, ctx, row, transaction_id) {
                 (row[this.__contextAccessKey]).forEach(function (cctxId) {
                     if (ctx[this.__contextKey] === cctxId)
                         return;
                     var cctx = Objs.objectBy(this.__contextKey, cctxId);
-                    this._updated(row, updatedData, cctx, row);
+                    this._updated(row, updatedData, cctx, row, transaction_id);
                 }, this);
             },
 
@@ -6465,9 +6465,9 @@ Scoped.define("module:Stores.CachedStore", [
 						if (!result[idKey])
 							result[idKey] = id;
 						if (!options.silent)
-							this._updated(result, data, ctx, transaction_id);
+							this._updated(result, data, ctx, undefined, transaction_id);
 						else if (options.meta)
-							this._updated(result, this.addItemMeta({}, meta), ctx, transaction_id);
+							this._updated(result, this.addItemMeta({}, meta), ctx, undefined, transaction_id);
 						return result;
 					}, this);
 				}, this);
@@ -7345,7 +7345,7 @@ Scoped.define("module:Stores.PartialStore", [
 				}, ctx);
 			},
 			
-			_remoteUpdate: function (row, data, ctx) {
+			_remoteUpdate: function (row, data, ctx, pre_data, transaction_id) {
 				var id = this.remoteStore.id_of(row);
 				this.cachedStore.cacheUpdate(id, data, {
 					ignoreLock: false,
@@ -7354,7 +7354,7 @@ Scoped.define("module:Stores.PartialStore", [
 					accessMeta: true,
 					refreshMeta: true,
 					foreignKey: true
-				}, ctx);
+				}, ctx, transaction_id);
 			},
 			
 			_remoteRemove: function (id, ctx) {
@@ -7870,7 +7870,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcherMixin", [], function() {
 		},
 
 		_updatedWatchedItem : function(row, data, transaction_id) {
-			this.trigger("update", row, data, transaction_id);
+			this.trigger("update", row, data, null, null, transaction_id);
 		},
 
 		_insertedWatchedInsert : function(data) {
@@ -7881,7 +7881,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcherMixin", [], function() {
 			this.on("insert", function (data) {
 				store.trigger("insert", data);
 			}, store).on("update", function (row, data, transaction_id) {
-				store.trigger("update", row, data, transaction_id);
+				store.trigger("update", row, data, null, null, transaction_id);
 			}, store).on("remove", function (id) {
 				store.trigger("remove", id);
 			}, store);

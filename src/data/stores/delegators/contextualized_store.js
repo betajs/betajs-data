@@ -166,20 +166,20 @@ Scoped.define("module:Stores.AbstractDecontextualizedStore", [
                 }, this);
             },
 
-            _update: function (id, data, ctx) {
+            _update: function (id, data, ctx, transaction_id) {
             	return this._rawGet(id, ctx).mapSuccess(function (row) {
             		if (!row)
             			return true;
             		return Promise.box(this._encodeUpdate, this, [id, data, ctx, row]).mapSuccess(function (updatedData) {
             		    return this.__store.update(id, updatedData).mapSuccess(function (updatedData) {
-                            this._undecodedUpdated(id, updatedData, ctx, row);
+                            this._undecodedUpdated(id, updatedData, ctx, row, transaction_id);
                             return this._decodeRow(updatedData, ctx);
                         }, this);
                     }, this);
 				}, this);
             },
 
-            _undecodedUpdated: function (id, updatedData, ctx) {},
+            _undecodedUpdated: function (id, updatedData, ctx, row, transaction_id) {},
 
             _encodeRow: function (data, ctx) {
 				throw "Abstract";
@@ -209,8 +209,8 @@ Scoped.define("module:Stores.AbstractDecontextualizedStore", [
                 inherited._removed.call(this, id, ctx, this._decodeRow(data, ctx));
             },
 
-            _updated: function (row, data, ctx, pre_data) {
-                inherited._updated.call(this, this._decodeRow(row, ctx), this._decodeRow(data, ctx), ctx, this._decodeRow(pre_data, ctx));
+            _updated: function (row, data, ctx, pre_data, transaction_id) {
+                inherited._updated.call(this, this._decodeRow(row, ctx), this._decodeRow(data, ctx), ctx, this._decodeRow(pre_data, ctx), transaction_id);
             }
 
         };
@@ -405,12 +405,12 @@ Scoped.define("module:Stores.DecontextualizedMultiAccessStore", [
                 }, this);
             },
 
-            _undecodedUpdated: function (id, updatedData, ctx, row) {
+            _undecodedUpdated: function (id, updatedData, ctx, row, transaction_id) {
                 (row[this.__contextAccessKey]).forEach(function (cctxId) {
                     if (ctx[this.__contextKey] === cctxId)
                         return;
                     var cctx = Objs.objectBy(this.__contextKey, cctxId);
-                    this._updated(row, updatedData, cctx, row);
+                    this._updated(row, updatedData, cctx, row, transaction_id);
                 }, this);
             },
 

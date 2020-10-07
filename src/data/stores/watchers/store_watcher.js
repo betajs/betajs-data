@@ -14,7 +14,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcherMixin", [], function() {
 		},
 
 		_updatedWatchedItem : function(row, data, transaction_id) {
-			this.trigger("update", row, data, transaction_id);
+			this.trigger("update", row, data, null, null, transaction_id);
 		},
 
 		_insertedWatchedInsert : function(data) {
@@ -25,7 +25,7 @@ Scoped.define("module:Stores.Watchers.StoreWatcherMixin", [], function() {
 			this.on("insert", function (data) {
 				store.trigger("insert", data);
 			}, store).on("update", function (row, data, transaction_id) {
-				store.trigger("update", row, data, transaction_id);
+				store.trigger("update", row, data, null, null, transaction_id);
 			}, store).on("remove", function (id) {
 				store.trigger("remove", id);
 			}, store);

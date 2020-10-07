@@ -80,7 +80,7 @@ Scoped.define("module:Stores.PartialStore", [
 				}, ctx);
 			},
 			
-			_remoteUpdate: function (row, data, ctx) {
+			_remoteUpdate: function (row, data, ctx, pre_data, transaction_id) {
 				var id = this.remoteStore.id_of(row);
 				this.cachedStore.cacheUpdate(id, data, {
 					ignoreLock: false,
@@ -89,7 +89,7 @@ Scoped.define("module:Stores.PartialStore", [
 					accessMeta: true,
 					refreshMeta: true,
 					foreignKey: true
-				}, ctx);
+				}, ctx, transaction_id);
 			},
 			
 			_remoteRemove: function (id, ctx) {
