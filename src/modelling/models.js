@@ -6,9 +6,8 @@ Scoped.define("module:Modelling.Model", [
     "base:Promise",
     "base:Types",
     "base:Strings",
-    "base:Tokens",
     "module:Modelling.Table"
-], function(AssociatedProperties, HooksMixin, ModelInvalidException, Objs, Promise, Types, Strings, Tokens, Table, scoped) {
+], function(AssociatedProperties, HooksMixin, ModelInvalidException, Objs, Promise, Types, Strings, Table, scoped) {
     return AssociatedProperties.extend({
         scoped: scoped
     }, [HooksMixin, function(inherited) {
@@ -24,7 +23,6 @@ Scoped.define("module:Modelling.Model", [
                 this.__ctx = ctx;
                 this.__silent = 1;
                 inherited.constructor.call(this, attributes);
-                this.__transactionPrefix = Tokens.generate_token();
                 this.__silent = 0;
                 this.__removeOnDestroy = false;
                 if (!this.isNew()) {
@@ -47,14 +45,6 @@ Scoped.define("module:Modelling.Model", [
                     this.table().off(null, null, this);
                 this.trigger("destroy");
                 inherited.destroy.call(this);
-            },
-
-            newTransactionId: function() {
-                return this.__transactionPrefix + "-" + Tokens.generate_token();
-            },
-
-            isMyTransactionId: function(transactionId) {
-                return transactionId && transactionId.indexOf(this.__transactionPrefix) === 0;
             },
 
             ctx: function() {
@@ -114,10 +104,8 @@ Scoped.define("module:Modelling.Model", [
             _registerEvents: function() {
                 if (!this.table().options().active_models)
                     return;
-                this.__table.on("update:" + this.id(), function(data, row, pre_data, transaction_id) {
+                this.__table.on("update:" + this.id(), function(data, row, pre_data) {
                     if (this.isRemoved())
-                        return;
-                    if (this.isMyTransactionId(transaction_id))
                         return;
                     this.setAllNoChange(data);
                 }, this);
@@ -179,7 +167,7 @@ Scoped.define("module:Modelling.Model", [
                             return Promise.create(attrs);
                     }
                     var wasNew = this.isNew();
-                    var promise = this.isNew() ? this.__table._insertModel(attrs, this.__ctx) : this.__table._updateModel(this.id(), attrs, this.__ctx, transaction_id || this.newTransactionId());
+                    var promise = this.isNew() ? this.__table._insertModel(attrs, this.__ctx) : this.__table._updateModel(this.id(), attrs, this.__ctx, transaction_id);
                     return promise.mapCallback(function(err, result) {
                         if (this.destroyed())
                             return this;

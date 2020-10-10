@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.177 - 2020-10-07
+betajs-data - v1.0.178 - 2020-10-10
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,8 +11,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.177",
-    "datetime": 1602064789009
+    "version": "1.0.178",
+    "datetime": 1602355100141
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -3169,8 +3169,9 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 	"module:Stores.StoreException",
 	"base:Promise",
 	"base:IdGenerators.TimedIdGenerator",
-	"base:Objs"
-], function (StoreException, Promise, TimedIdGenerator, Objs) {
+	"base:Objs",
+	"base:Tokens"
+], function (StoreException, Promise, TimedIdGenerator, Objs, Tokens) {
 	return {
 
 		_initializeWriteStore: function (options) {
@@ -3179,11 +3180,22 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			this._create_ids = options.create_ids || false;
             this._validate_ids = options.validate_ids || false;
 			this._id_lock = options.id_lock || false;
+			this._useTransactionIds = options.use_transaction_ids || false;
 			this.preserve_preupdate_data = options.preserve_preupdate_data || false;
 			if (this._create_ids)
 				this._id_generator = options.id_generator || this._auto_destroy(new TimedIdGenerator());
 			if (this._validate_ids)
 				this._id_validator = options.id_validator || this._id_generator;
+			if (this._useTransactionIds)
+				this.__transactionPrefix = Tokens.generate_token();
+		},
+
+		newTransactionId: function() {
+			return this.__transactionPrefix + "-" + Tokens.generate_token();
+		},
+
+		isMyTransactionId: function(transactionId) {
+			return transactionId && transactionId.indexOf(this.__transactionPrefix) === 0;
 		},
 
 		id_key: function () {
@@ -3270,6 +3282,8 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 		},
 
 		update: function (id, data, ctx, transaction_id) {
+			if (!transaction_id && this._useTransactionIds)
+				transaction_id = this.newTransactionId();
 			if (this.preserve_preupdate_data) {
                 return this.get(id, ctx).mapSuccess(function (pre_data) {
                 	var pre_data_filtered = {};
@@ -6335,6 +6349,8 @@ Scoped.define("module:Stores.PartialStore", [
 			},
 			
 			_remoteUpdate: function (row, data, ctx, pre_data, transaction_id) {
+				if (transaction_id && this._useTransactionIds && this.isMyTransactionId(transaction_id))
+					return;
 				var id = this.remoteStore.id_of(row);
 				this.cachedStore.cacheUpdate(id, data, {
 					ignoreLock: false,
@@ -6597,7 +6613,7 @@ Scoped.define("module:Stores.Watchers.ProducerWatcher", [
 				}, this);
 				watcher.on("insert", function (data) {
 					sender.send("insert", data);
-				}, this).on("update", function (row, data, transaction_id) {
+				}, this).on("update", function (row, data, dummy1, dummy2, transaction_id) {
 					sender.send("update", {row: row, data: data, transaction_id: transaction_id});
 				}, this).on("remove", function (id) {
 					sender.send("remove", id);
@@ -7997,9 +8013,8 @@ Scoped.define("module:Modelling.Model", [
     "base:Promise",
     "base:Types",
     "base:Strings",
-    "base:Tokens",
     "module:Modelling.Table"
-], function(AssociatedProperties, HooksMixin, ModelInvalidException, Objs, Promise, Types, Strings, Tokens, Table, scoped) {
+], function(AssociatedProperties, HooksMixin, ModelInvalidException, Objs, Promise, Types, Strings, Table, scoped) {
     return AssociatedProperties.extend({
         scoped: scoped
     }, [HooksMixin, function(inherited) {
@@ -8015,7 +8030,6 @@ Scoped.define("module:Modelling.Model", [
                 this.__ctx = ctx;
                 this.__silent = 1;
                 inherited.constructor.call(this, attributes);
-                this.__transactionPrefix = Tokens.generate_token();
                 this.__silent = 0;
                 this.__removeOnDestroy = false;
                 if (!this.isNew()) {
@@ -8038,14 +8052,6 @@ Scoped.define("module:Modelling.Model", [
                     this.table().off(null, null, this);
                 this.trigger("destroy");
                 inherited.destroy.call(this);
-            },
-
-            newTransactionId: function() {
-                return this.__transactionPrefix + "-" + Tokens.generate_token();
-            },
-
-            isMyTransactionId: function(transactionId) {
-                return transactionId && transactionId.indexOf(this.__transactionPrefix) === 0;
             },
 
             ctx: function() {
@@ -8105,10 +8111,8 @@ Scoped.define("module:Modelling.Model", [
             _registerEvents: function() {
                 if (!this.table().options().active_models)
                     return;
-                this.__table.on("update:" + this.id(), function(data, row, pre_data, transaction_id) {
+                this.__table.on("update:" + this.id(), function(data, row, pre_data) {
                     if (this.isRemoved())
-                        return;
-                    if (this.isMyTransactionId(transaction_id))
                         return;
                     this.setAllNoChange(data);
                 }, this);
@@ -8170,7 +8174,7 @@ Scoped.define("module:Modelling.Model", [
                             return Promise.create(attrs);
                     }
                     var wasNew = this.isNew();
-                    var promise = this.isNew() ? this.__table._insertModel(attrs, this.__ctx) : this.__table._updateModel(this.id(), attrs, this.__ctx, transaction_id || this.newTransactionId());
+                    var promise = this.isNew() ? this.__table._insertModel(attrs, this.__ctx) : this.__table._updateModel(this.id(), attrs, this.__ctx, transaction_id);
                     return promise.mapCallback(function(err, result) {
                         if (this.destroyed())
                             return this;

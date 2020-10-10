@@ -81,6 +81,8 @@ Scoped.define("module:Stores.PartialStore", [
 			},
 			
 			_remoteUpdate: function (row, data, ctx, pre_data, transaction_id) {
+				if (transaction_id && this._useTransactionIds && this.isMyTransactionId(transaction_id))
+					return;
 				var id = this.remoteStore.id_of(row);
 				this.cachedStore.cacheUpdate(id, data, {
 					ignoreLock: false,

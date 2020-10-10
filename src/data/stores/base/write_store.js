@@ -2,8 +2,9 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 	"module:Stores.StoreException",
 	"base:Promise",
 	"base:IdGenerators.TimedIdGenerator",
-	"base:Objs"
-], function (StoreException, Promise, TimedIdGenerator, Objs) {
+	"base:Objs",
+	"base:Tokens"
+], function (StoreException, Promise, TimedIdGenerator, Objs, Tokens) {
 	return {
 
 		_initializeWriteStore: function (options) {
@@ -12,11 +13,22 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 			this._create_ids = options.create_ids || false;
             this._validate_ids = options.validate_ids || false;
 			this._id_lock = options.id_lock || false;
+			this._useTransactionIds = options.use_transaction_ids || false;
 			this.preserve_preupdate_data = options.preserve_preupdate_data || false;
 			if (this._create_ids)
 				this._id_generator = options.id_generator || this._auto_destroy(new TimedIdGenerator());
 			if (this._validate_ids)
 				this._id_validator = options.id_validator || this._id_generator;
+			if (this._useTransactionIds)
+				this.__transactionPrefix = Tokens.generate_token();
+		},
+
+		newTransactionId: function() {
+			return this.__transactionPrefix + "-" + Tokens.generate_token();
+		},
+
+		isMyTransactionId: function(transactionId) {
+			return transactionId && transactionId.indexOf(this.__transactionPrefix) === 0;
 		},
 
 		id_key: function () {
@@ -103,6 +115,8 @@ Scoped.define("module:Stores.WriteStoreMixin", [
 		},
 
 		update: function (id, data, ctx, transaction_id) {
+			if (!transaction_id && this._useTransactionIds)
+				transaction_id = this.newTransactionId();
 			if (this.preserve_preupdate_data) {
                 return this.get(id, ctx).mapSuccess(function (pre_data) {
                 	var pre_data_filtered = {};

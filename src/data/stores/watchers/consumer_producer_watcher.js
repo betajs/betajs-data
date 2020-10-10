@@ -66,7 +66,7 @@ Scoped.define("module:Stores.Watchers.ProducerWatcher", [
 				}, this);
 				watcher.on("insert", function (data) {
 					sender.send("insert", data);
-				}, this).on("update", function (row, data, transaction_id) {
+				}, this).on("update", function (row, data, dummy1, dummy2, transaction_id) {
 					sender.send("update", {row: row, data: data, transaction_id: transaction_id});
 				}, this).on("remove", function (id) {
 					sender.send("remove", id);
