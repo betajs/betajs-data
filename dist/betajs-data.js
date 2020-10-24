@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.178 - 2020-10-10
+betajs-data - v1.0.179 - 2020-10-24
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.178 - 2020-10-10
+betajs-data - v1.0.179 - 2020-10-24
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1022,8 +1022,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.178",
-    "datetime": 1602355100141
+    "version": "1.0.179",
+    "datetime": 1603572511099
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -7215,7 +7215,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 								if (!(commit.row_id in unlockIds)) {
 									unlockIds[commit.row_id] = true;
 									if (commit.type === "insert") {
-										unlockIds[commit.row_id] = ret;
+										unlockIds[commit.row_id] = this.partialStore.remoteStore.id_row(this.partialStore.remoteStore.id_of(commit.row));
 									}
 								}
 								return next.apply(this);

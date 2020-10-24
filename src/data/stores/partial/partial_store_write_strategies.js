@@ -293,7 +293,7 @@ Scoped.define("module:Stores.PartialStoreWriteStrategies.CommitStrategy", [
 								if (!(commit.row_id in unlockIds)) {
 									unlockIds[commit.row_id] = true;
 									if (commit.type === "insert") {
-										unlockIds[commit.row_id] = ret;
+										unlockIds[commit.row_id] = this.partialStore.remoteStore.id_row(this.partialStore.remoteStore.id_of(commit.row));
 									}
 								}
 								return next.apply(this);
