@@ -155,6 +155,17 @@ Scoped.define("module:Modelling.GroupedProperties", [
         },
 
         gettersHelper: {
+            max: {
+                add: function(groupValue, itemValue) {
+                    return Math.max(groupValue || 0, itemValue || 0);
+                },
+                remove: function(groupValue, itemValue) {
+                    return groupValue || 0;
+                },
+                update: function(groupValue, newItemValue, oldItemValue) {
+                    return groupValue || 0;
+                }
+            },
             exists: {
                 add: function(groupValue, itemValue) {
                     return (groupValue || 0) + (itemValue ? 1 : 0);

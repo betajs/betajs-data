@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.179 - 2020-10-24
+betajs-data - v1.0.180 - 2021-01-09
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.179 - 2020-10-24
+betajs-data - v1.0.180 - 2021-01-09
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1022,8 +1022,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.179",
-    "datetime": 1603572511099
+    "version": "1.0.180",
+    "datetime": 1610242967588
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -8925,6 +8925,17 @@ Scoped.define("module:Modelling.GroupedProperties", [
         },
 
         gettersHelper: {
+            max: {
+                add: function(groupValue, itemValue) {
+                    return Math.max(groupValue || 0, itemValue || 0);
+                },
+                remove: function(groupValue, itemValue) {
+                    return groupValue || 0;
+                },
+                update: function(groupValue, newItemValue, oldItemValue) {
+                    return groupValue || 0;
+                }
+            },
             exists: {
                 add: function(groupValue, itemValue) {
                     return (groupValue || 0) + (itemValue ? 1 : 0);
