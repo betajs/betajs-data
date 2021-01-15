@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.180 - 2021-01-09
+betajs-data - v1.0.180 - 2021-01-14
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.180 - 2021-01-09
+betajs-data - v1.0.180 - 2021-01-14
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1023,7 +1023,7 @@ Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
     "version": "1.0.180",
-    "datetime": 1610242967588
+    "datetime": 1610670080274
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -2685,7 +2685,7 @@ Scoped.define("module:Queries", [
         },
 
         is_simple_atom: function(value) {
-            return value === null || (!Types.is_object(value) && value.toString() !== "[object Object]");
+            return !value || (!Types.is_object(value) && value.toString() !== "[object Object]");
         },
 
         is_query_atom: function(value) {

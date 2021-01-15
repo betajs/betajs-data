@@ -143,7 +143,7 @@ Scoped.define("module:Queries", [
         },
 
         is_simple_atom: function(value) {
-            return value === null || (!Types.is_object(value) && value.toString() !== "[object Object]");
+            return !value || (!Types.is_object(value) && value.toString() !== "[object Object]");
         },
 
         is_query_atom: function(value) {
