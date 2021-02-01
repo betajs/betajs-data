@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.180 - 2021-01-14
+betajs-data - v1.0.182 - 2021-02-01
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.180 - 2021-01-14
+betajs-data - v1.0.182 - 2021-02-01
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1022,8 +1022,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.180",
-    "datetime": 1610670080274
+    "version": "1.0.182",
+    "datetime": 1612204962784
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -6328,6 +6328,9 @@ Scoped.define("module:Stores.CachedStore", [
 			constructor: function (remoteStore, options) {
 				inherited.constructor.call(this);
 				this.remoteStore = remoteStore;
+				this.__remoteQueryAggregate = Promise.aggregateExecution(this.remoteStore.query, this.remoteStore, null, function (data) {
+					return data ? data.asArray() : data;
+				});
 				this._options = Objs.extend({
 					itemMetaKey: "meta",
 					queryMetaKey: "meta",
@@ -6658,9 +6661,9 @@ Scoped.define("module:Stores.CachedStore", [
 					// Note: This is probably not good enough in the most general cases.
 					if (Queries.queryDeterminedByAttrs(query, this._options.suppAttrs, true))
 						return this.itemCache.query(query, queryOptions, ctx);
-					var remotePromise = this.remoteStore.query(this.removeItemSupp(query), queryOptions, ctx).mapSuccess(function (items) {
+					var remotePromise = this.__remoteQueryAggregate(this.removeItemSupp(query), queryOptions, ctx).mapSuccess(function (items) {
 						this.online();
-						items = items.asArray();
+						items = items.asArray ? items.asArray() : items;
 						var meta = {
 							refreshMeta: options.queryRefreshMeta ? this.cacheStrategy.queryRefreshMeta() : null,
 							accessMeta: options.queryAccessMeta ? this.cacheStrategy.queryAccessMeta() : null

@@ -24,6 +24,9 @@ Scoped.define("module:Stores.CachedStore", [
 			constructor: function (remoteStore, options) {
 				inherited.constructor.call(this);
 				this.remoteStore = remoteStore;
+				this.__remoteQueryAggregate = Promise.aggregateExecution(this.remoteStore.query, this.remoteStore, null, function (data) {
+					return data ? data.asArray() : data;
+				});
 				this._options = Objs.extend({
 					itemMetaKey: "meta",
 					queryMetaKey: "meta",
@@ -354,9 +357,9 @@ Scoped.define("module:Stores.CachedStore", [
 					// Note: This is probably not good enough in the most general cases.
 					if (Queries.queryDeterminedByAttrs(query, this._options.suppAttrs, true))
 						return this.itemCache.query(query, queryOptions, ctx);
-					var remotePromise = this.remoteStore.query(this.removeItemSupp(query), queryOptions, ctx).mapSuccess(function (items) {
+					var remotePromise = this.__remoteQueryAggregate(this.removeItemSupp(query), queryOptions, ctx).mapSuccess(function (items) {
 						this.online();
-						items = items.asArray();
+						items = items.asArray ? items.asArray() : items;
 						var meta = {
 							refreshMeta: options.queryRefreshMeta ? this.cacheStrategy.queryRefreshMeta() : null,
 							accessMeta: options.queryAccessMeta ? this.cacheStrategy.queryAccessMeta() : null
