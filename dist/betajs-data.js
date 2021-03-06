@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.182 - 2021-02-01
+betajs-data - v1.0.183 - 2021-03-06
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.182 - 2021-02-01
+betajs-data - v1.0.183 - 2021-03-06
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1022,8 +1022,8 @@ Scoped.binding('base', 'global:BetaJS');
 Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
-    "version": "1.0.182",
-    "datetime": 1612204962784
+    "version": "1.0.183",
+    "datetime": 1615065464679
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -9066,6 +9066,9 @@ Scoped.define("module:Modelling.Model", [
                 this.registerHook("beforeRemove", function() {
                     return BetaJS.Promise.value(true);
                 });
+                this.registerHook("beforeUpdate", function() {
+                    return BetaJS.Promise.value(true);
+                });
             },
 
             destroy: function() {
@@ -9194,6 +9197,7 @@ Scoped.define("module:Modelling.Model", [
                             attrs[this.option("type_column")] = classname;
                         }
                     } else {
+                        this.invokeHook("beforeUpdate");
                         attrs = this.cls.filterPersistent(this.properties_changed());
                         if (Types.is_empty(attrs))
                             return Promise.create(attrs);
