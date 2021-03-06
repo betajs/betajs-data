@@ -162,6 +162,7 @@ Scoped.define("module:Modelling.Model", [
                             attrs[this.option("type_column")] = classname;
                         }
                     } else {
+                        this.invokeHook("beforeUpdate");
                         attrs = this.cls.filterPersistent(this.properties_changed());
                         if (Types.is_empty(attrs))
                             return Promise.create(attrs);
