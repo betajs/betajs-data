@@ -167,6 +167,12 @@ Scoped.define("module:Modelling.Table", [
                 return this.allBy.apply(this, arguments);
             },
 
+            count: function(query, options, ctx) {
+                return this.__store.count(query, options, ctx).mapSuccess(function(result) {
+                    return result;
+                }, this);
+            },
+
             scheme: function() {
                 return this.__model_type.scheme();
             },

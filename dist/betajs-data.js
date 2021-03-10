@@ -1,5 +1,5 @@
 /*!
-betajs-data - v1.0.183 - 2021-03-06
+betajs-data - v1.0.183 - 2021-03-10
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1010,7 +1010,7 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-data - v1.0.183 - 2021-03-06
+betajs-data - v1.0.183 - 2021-03-10
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1023,7 +1023,7 @@ Scoped.define("module:", function () {
 	return {
     "guid": "70ed7146-bb6d-4da4-97dc-5a8e2d23a23f",
     "version": "1.0.183",
-    "datetime": 1615065464679
+    "datetime": 1615378770094
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.141');
@@ -9066,9 +9066,6 @@ Scoped.define("module:Modelling.Model", [
                 this.registerHook("beforeRemove", function() {
                     return BetaJS.Promise.value(true);
                 });
-                this.registerHook("beforeUpdate", function() {
-                    return BetaJS.Promise.value(true);
-                });
             },
 
             destroy: function() {
@@ -9744,6 +9741,12 @@ Scoped.define("module:Modelling.Table", [
             query: function() {
                 // Alias
                 return this.allBy.apply(this, arguments);
+            },
+
+            count: function(query, options, ctx) {
+                return this.__store.count(query, options, ctx).mapSuccess(function(result) {
+                    return result;
+                }, this);
             },
 
             scheme: function() {
